@@ -74,13 +74,39 @@ class ErrorHandler(BaseHTTPRequestHandler):
             ram_used_gb = round(mem.used / (1024**3), 1)
             ram_total_gb = round(mem.total / (1024**3), 1)
             
-            # Disk - All three drives with specific labels
-            # Windows (C:)
-            disk_c = psutil.disk_usage('C:/')
-            # Micro SSD (D:)
-            disk_d = psutil.disk_usage('D:/')
-            # HDD (E:)
-            disk_e = psutil.disk_usage('E:/')
+            # Disk usage - dynamically discover all drives
+            disks = []
+            if platform.system() == "Windows":
+                # Get all drive letters (C:, D:, E:, etc.)
+                import string
+                from ctypes import windll
+                for letter in string.ascii_uppercase:
+                    drive = f"{letter}:\\"
+                    # Check if drive exists and is accessible via psutil
+                    try:
+                        usage = psutil.disk_usage(drive)
+                        disks.append({
+                            "mount": drive,
+                            "total": usage.total,
+                            "used": usage.used,
+                            "free": usage.free,
+                            "percent": usage.percent
+                        })
+                    except:
+                        pass
+            else:
+                for part in psutil.disk_partitions():
+                    try:
+                        usage = psutil.disk_usage(part.mountpoint)
+                        disks.append({
+                            "mount": part.mountpoint,
+                            "total": usage.total,
+                            "used": usage.used,
+                            "free": usage.free,
+                            "percent": usage.percent
+                        })
+                    except:
+                        pass
             
             # Temperatures - Use WMI on Windows (psutil doesn't work well on Windows)
             cpu_temp = None
@@ -108,26 +134,30 @@ class ErrorHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     print(f"[System] WMI temperature query failed: {e}")
             
+            # Legacy drive fields for backward compatibility
+            disk_c = next((d for d in disks if d['mount'] == 'C:\\'), None)
+            disk_d = next((d for d in disks if d['mount'] == 'D:\\'), None)
+            disk_e = next((d for d in disks if d['mount'] == 'E:\\'), None)
+            
             response = {
                 "cpu_percent": cpu_percent,
                 "ram_percent": ram_percent,
                 "ram_used_gb": ram_used_gb,
                 "ram_total_gb": ram_total_gb,
-                # Windows (C:)
+                "disks": disks,
+                # Legacy fields for backward compatibility
                 "disk_c_label": "Windows (C:)",
-                "disk_c_percent": disk_c.percent,
-                "disk_c_used_gb": int(round(disk_c.used / (1024**3), 0)),
-                "disk_c_total_gb": int(round(disk_c.total / (1024**3), 0)),
-                # Micro SSD (D:)
+                "disk_c_percent": disk_c['percent'] if disk_c else None,
+                "disk_c_used_gb": int(round(disk_c['used'] / (1024**3), 0)) if disk_c else None,
+                "disk_c_total_gb": int(round(disk_c['total'] / (1024**3), 0)) if disk_c else None,
                 "disk_d_label": "Micro SSD (D:)",
-                "disk_d_percent": disk_d.percent,
-                "disk_d_used_gb": int(round(disk_d.used / (1024**3), 0)),
-                "disk_d_total_gb": int(round(disk_d.total / (1024**3), 0)),
-                # HDD (E:)
+                "disk_d_percent": disk_d['percent'] if disk_d else None,
+                "disk_d_used_gb": int(round(disk_d['used'] / (1024**3), 0)) if disk_d else None,
+                "disk_d_total_gb": int(round(disk_d['total'] / (1024**3), 0)) if disk_d else None,
                 "disk_e_label": "HDD (E:)",
-                "disk_e_percent": disk_e.percent,
-                "disk_e_used_gb": int(round(disk_e.used / (1024**3), 0)),
-                "disk_e_total_gb": int(round(disk_e.total / (1024**3), 0)),
+                "disk_e_percent": disk_e['percent'] if disk_e else None,
+                "disk_e_used_gb": int(round(disk_e['used'] / (1024**3), 0)) if disk_e else None,
+                "disk_e_total_gb": int(round(disk_e['total'] / (1024**3), 0)) if disk_e else None,
                 # Temperatures (may be None on Windows)
                 "cpu_temp": cpu_temp,
                 "gpu_temp": gpu_temp,
