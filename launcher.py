@@ -94,6 +94,9 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
     creationflags = subprocess.CREATE_NO_WINDOW
     
     try:
+        # Use shell=True on Windows for non-executable commands like npm
+        use_shell = os.name == 'nt' and config["cmd"][0] == "npm"
+        
         process = subprocess.Popen(
             config["cmd"],
             cwd=config["cwd"],
@@ -102,6 +105,7 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
             stdin=subprocess.DEVNULL,
             creationflags=creationflags,
             start_new_session=False,
+            shell=use_shell
         )
         
         processes[service_id] = {
@@ -242,7 +246,7 @@ def main():
         log_message("All services started successfully!")
         log_message("- API Server: http://localhost:5050")
         log_message("- WebSocket: ws://localhost:8765")
-        log_message("- Dashboard: http://localhost:8080")
+        log_message("- Dashboard: http://localhost:8081")
         log_message("- Logs: C:\\Projects\\Operator\\logs\\")
         log_message("=" * 60)
         log_message("\nPress Ctrl+C to stop all services gracefully.")

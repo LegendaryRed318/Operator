@@ -178,3 +178,61 @@ Shutting down all services...
 [2026-04-12 16:58:17] Stopping HTTP API Server (PID: 24172)...
 [2026-04-12 16:58:17]   ✓ HTTP API Server stopped gracefully
 [2026-04-12 16:58:17] All services stopped.
+[2026-04-12 17:03:24] ============================================================
+[2026-04-12 17:03:24] Operator (Jarvis) Silent Launcher
+[2026-04-12 17:03:24] Root Directory: C:\Projects\Operator
+[2026-04-12 17:03:24] Logs Directory: C:\Projects\Operator\logs
+[2026-04-12 17:03:24] ============================================================
+[2026-04-12 17:03:24] Using virtual environment Python
+[2026-04-12 17:03:24] 
+Starting services...
+[2026-04-12 17:03:24] ✓ Started HTTP API Server (PID: 7400)
+[2026-04-12 17:03:24] Waiting 2s before starting WebSocket Server...
+[2026-04-12 17:03:26] ✓ Started WebSocket Server (PID: 10340)
+[2026-04-12 17:03:26] Waiting 2s before starting File Watcher...
+[2026-04-12 17:03:28] ✓ Started File Watcher (PID: 22928)
+[2026-04-12 17:03:28] Waiting 2s before starting Project Launcher...
+[2026-04-12 17:03:30] ✓ Started Project Launcher (PID: 25576)
+[2026-04-12 17:03:30] Waiting 8s before starting Frontend (Vite)...
+[2026-04-12 17:03:38] ✗ Failed to start Frontend (Vite): [WinError 2] The system cannot find the file specified
+[2026-04-12 17:03:38] 
+Launcher error: [WinError 2] The system cannot find the file specified
+[2026-04-12 17:03:38] 
+Shutting down all services...
+[2026-04-12 17:03:38] Stopping Project Launcher (PID: 25576)...
+[2026-04-12 17:03:38]   ✓ Project Launcher stopped gracefully
+[2026-04-12 17:03:38] Stopping File Watcher (PID: 22928)...
+[2026-04-12 17:03:38]   ✓ File Watcher stopped gracefully
+[2026-04-12 17:03:38] Stopping WebSocket Server (PID: 10340)...
+[2026-04-12 17:03:38]   ✓ WebSocket Server stopped gracefully
+[2026-04-12 17:03:38] Stopping HTTP API Server (PID: 7400)...
+[2026-04-12 17:03:38]   ✓ HTTP API Server stopped gracefully
+[2026-04-12 17:03:38] All services stopped.
+[2026-04-12 17:09:45] ============================================================
+[2026-04-12 17:09:45] Operator (Jarvis) Silent Launcher
+[2026-04-12 17:09:45] Root Directory: C:\Projects\Operator
+[2026-04-12 17:09:45] Logs Directory: C:\Projects\Operator\logs
+[2026-04-12 17:09:45] ============================================================
+[2026-04-12 17:09:45] Using virtual environment Python
+[2026-04-12 17:09:45] 
+Starting services...
+[2026-04-12 17:09:45] ✓ Started HTTP API Server (PID: 16992)
+[2026-04-12 17:09:45] Waiting 2s before starting WebSocket Server...
+[2026-04-12 17:09:47] ✓ Started WebSocket Server (PID: 23812)
+[2026-04-12 17:09:47] Waiting 2s before starting File Watcher...
+[2026-04-12 17:09:49] ✓ Started File Watcher (PID: 24176)
+[2026-04-12 17:09:49] Waiting 2s before starting Project Launcher...
+[2026-04-12 17:09:51] ✓ Started Project Launcher (PID: 6124)
+[2026-04-12 17:09:51] Waiting 8s before starting Frontend (Vite)...
+[2026-04-12 17:09:59] ✓ Started Frontend (Vite) (PID: 4756)
+[2026-04-12 17:09:59] 
+============================================================
+[2026-04-12 17:09:59] All services started successfully!
+[2026-04-12 17:09:59] - API Server: http://localhost:5050
+[2026-04-12 17:09:59] - WebSocket: ws://localhost:8765
+[2026-04-12 17:09:59] - Dashboard: http://localhost:8081
+[2026-04-12 17:09:59] - Logs: C:\Projects\Operator\logs\
+[2026-04-12 17:09:59] ============================================================
+[2026-04-12 17:09:59] 
+Press Ctrl+C to stop all services gracefully.
+[2026-04-12 17:10:04] ⚠ Frontend (Vite) has exited (code: 2)

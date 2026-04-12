@@ -72,8 +72,8 @@ class OperatorTray:
     
     def open_dashboard(self):
         """Open the dashboard in default browser."""
-        print(f"[TRAY] Opening dashboard at http://localhost:8080")
-        webbrowser.open("http://localhost:8080")
+        print(f"[TRAY] Opening dashboard at http://localhost:8081")
+        webbrowser.open("http://localhost:8081")
     
     def quit_app(self):
         """Quit the tray application."""

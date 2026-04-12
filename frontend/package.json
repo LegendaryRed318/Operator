@@ -4,10 +4,10 @@
   "description": "AI-powered error monitoring and voice assistant",
   "type": "module",
   "scripts": {
-    "dev": "npx tsc && npx vite --host 0.0.0.0 --port 8080",
+    "dev": "npx tsc && npx vite --host 0.0.0.0 --port 8081",
     "dev:local": "npx tsc && npx vite --host localhost --port 5173",
     "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0 --port 8080",
+    "preview": "vite preview --host 0.0.0.0 --port 8081",
     "tauri": "tauri",
     "tauri-dev": "tauri dev"
   },

@@ -23,7 +23,7 @@ echo   - All output logged to C:\Projects\Operator\logs\
 echo   - Graceful shutdown on Ctrl+C
 echo.
 echo Dashboard URLs:
-echo   - http://localhost:8080 (Frontend)
+echo   - http://localhost:8081 (Frontend)
 echo   - http://localhost:5050 (API)
 echo   - ws://localhost:8765 (WebSocket)
 echo.

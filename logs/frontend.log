@@ -22,3 +22,16 @@
 ============================================================
 [2026-04-12 16:58:17] Starting Frontend (Vite)
 ============================================================
+
+============================================================
+[2026-04-12 17:03:38] Starting Frontend (Vite)
+============================================================
+
+============================================================
+[2026-04-12 17:09:59] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/components/HandTracker.tsx(97,15): error TS2353: Object literal may only specify known properties, and 'exposureMode' does not exist in type 'MediaTrackConstraints'.
