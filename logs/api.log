@@ -1,0 +1,12 @@
+
+============================================================
+[2026-04-12 13:15:43] Starting HTTP API Server
+============================================================
+C:\Projects\Operator\backend\server.py:94: SyntaxWarning: "\w" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\w"? A raw string is also an option.
+  ['wmic', '/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],
+
+============================================================
+[2026-04-12 13:29:47] Starting HTTP API Server
+============================================================
+C:\Projects\Operator\backend\server.py:94: SyntaxWarning: "\w" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\w"? A raw string is also an option.
+  ['wmic', '/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],

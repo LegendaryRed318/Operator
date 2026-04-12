@@ -1,0 +1,40 @@
+{
+  "name": "jarvis-operator",
+  "version": "1.0.0",
+  "description": "AI-powered error monitoring and voice assistant",
+  "type": "module",
+  "scripts": {
+    "dev": "npx tsc && npx vite --host 0.0.0.0 --port 8080",
+    "dev:local": "npx tsc && npx vite --host localhost --port 5173",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 8080",
+    "tauri": "tauri",
+    "tauri-dev": "tauri dev"
+  },
+  "keywords": [
+    "ai",
+    "voice",
+    "monitoring",
+    "jarvis"
+  ],
+  "author": "RED",
+  "license": "ISC",
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.183.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "three": "^0.183.2",
+    "typescript": "^6.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.8",
+    "workbox-window": "^7.0.0"
+  }
+}
