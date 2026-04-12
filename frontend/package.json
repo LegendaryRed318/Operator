@@ -20,8 +20,6 @@
   "author": "RED",
   "license": "ISC",
   "dependencies": {
-    "@mediapipe/camera_utils": "^0.3.1675466862",
-    "@mediapipe/hands": "^0.4.1675469240",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/cli": "^2.10.1",
     "@types/react": "^19.2.14",

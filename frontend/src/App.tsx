@@ -5,7 +5,7 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { ProjectsView } from './components/ProjectsView';
 import { SystemView } from './components/SystemView';
-import { HandTracker } from './components/HandTracker';
+import HandTracker from './components/HandTracker';
 import { VoiceProvider } from './contexts/VoiceContext';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { ErrorItem, Project } from './types';
@@ -287,7 +287,7 @@ const AppContent: React.FC = () => {
           `}</style>
         </div>
       )}
-      <HandTracker enabled={!isLoading} />
+      <HandTracker onWave={() => console.log('[App] Wave detected')} />
     </>
   );
 };

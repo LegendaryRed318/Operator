@@ -22,3 +22,51 @@ INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
 INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
 WARNING:__main__:[WebSocket] Port 8765 is already in use - another instance may be running
 WARNING:__main__:[WebSocket] Skipping server start to avoid conflict
+
+============================================================
+[2026-04-12 15:43:52] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+WARNING:__main__:[WebSocket] Port 8765 is already in use - another instance may be running
+WARNING:__main__:[WebSocket] Skipping server start to avoid conflict
+
+============================================================
+[2026-04-12 15:51:19] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+WARNING:__main__:[WebSocket] Port 8765 is already in use - another instance may be running
+WARNING:__main__:[WebSocket] Skipping server start to avoid conflict
+
+============================================================
+[2026-04-12 16:12:07] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+WARNING:__main__:[WebSocket] Port 8765 is already in use - another instance may be running
+WARNING:__main__:[WebSocket] Skipping server start to avoid conflict
+
+============================================================
+[2026-04-12 16:58:05] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+WARNING:__main__:[WebSocket] Port 8765 is already in use - another instance may be running
+WARNING:__main__:[WebSocket] Skipping server start to avoid conflict
