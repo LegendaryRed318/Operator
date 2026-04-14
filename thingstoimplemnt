@@ -1,0 +1,285 @@
+You are working on "Operator" — a personal AI system guardian called JARVIS built by RED (LegendaryRed318). 
+Project root: C:\Projects\Operator
+Dashboard: http://localhost:8081
+GitHub: github.com/LegendaryRed318/Operator
+
+Read ALL files before making any changes. Understand the full codebase first.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1 — BUG FIXES (do these first, in order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FIX 1 — HandTracker AbortError
+File: frontend/src/components/HandTracker.tsx
+Problem: "AbortError: The play() request was interrupted by a new load request"
+React Strict Mode mounts twice, causing camera.start() to be called before first play() resolves.
+Fix:
+- Add isInitialized = useRef(false) at top of component
+- Check if (isInitialized.current) return; at start of useEffect, set true immediately
+- Wrap camera.start() in promise chain:
+  const startPromise = camera.start();
+  if (startPromise !== undefined) {
+    startPromise.catch((err) => {
+      if (err.name === 'AbortError') { isInitialized.current = false; }
+    });
+  }
+- Never call hands.close() or camera.stop() on unmount — let it persist
+
+FIX 2 — Hotword log spam
+File: frontend/src/contexts/VoiceContext.tsx
+Problem: "[Hotword] No network for browser speech, using backend loop" prints every loop iteration
+Fix: Add a ref hasLoggedNoNetwork = useRef(false). Log the message only once per hotword session. Reset the flag when hotword mode deactivates.
+
+FIX 3 — Storage showing 0GB for D: and E: drives
+File: backend/server.py
+Problem: psutil.disk_usage() fails on Windows with forward slashes
+Fix: Use 'D:\\' and 'E:\\' (double backslash). Wrap each in try/except returning null if drive unavailable:
+  try:
+    d = psutil.disk_usage('D:\\')
+    disk_d = {"total_gb": round(d.total/1e9,1), "used_gb": round(d.used/1e9,1), "percent": d.percent}
+  except:
+    disk_d = {"total_gb": 29.1, "used_gb": 0.5, "percent": 1.7}
+
+FIX 4 — Temperature showing 0°C
+File: backend/server.py  
+Problem: psutil.sensors_temperatures() not supported on Windows
+Fix: Use WMI via subprocess:
+  import subprocess, re
+  def get_cpu_temp():
+    try:
+      result = subprocess.run(
+        ['wmic', 'path', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature'],
+        capture_output=True, text=True, timeout=3
+      )
+      temps = re.findall(r'\d+', result.stdout)
+      if temps:
+        kelvin = int(temps[0])
+        return round((kelvin / 10) - 273.15, 1)
+    except: pass
+    return None
+If WMI returns nothing (common on some systems), hide the temperature display entirely rather than showing 0°C.
+
+FIX 5 — WebSocket initialising twice
+File: frontend/src/hooks/useWebSocket.ts and App.tsx
+Problem: "[WebSocket] Waiting 10s before first connection..." appears twice — two components creating separate WebSocket instances
+Fix: Ensure WebSocket is created exactly ONCE at the App.tsx level only. Pass the ws instance down as props or context. Remove any secondary useWebSocket calls in child components.
+
+FIX 6 — Port conflict crash on restart
+File: backend/ws_server.py
+The is_port_in_use check exists but the process still crashes with OSError 10048 on fast restart.
+Fix: Add SO_REUSEADDR socket option and a 3-second retry loop before giving up:
+  for attempt in range(3):
+    try:
+      async with websockets.serve(handler, "localhost", 8765, reuse_address=True):
+        logger.info("[WebSocket] Server ready")
+        await asyncio.Future()
+      break
+    except OSError as e:
+      if attempt < 2:
+        logger.warning(f"Port busy, retrying in 3s... ({attempt+1}/3)")
+        await asyncio.sleep(3)
+      else:
+        logger.error("Port 8765 unavailable after 3 attempts")
+        await asyncio.Future()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2 — SMART AI MODEL SWITCHING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: backend/decision_engine.py and backend/ws_server.py
+
+Implement RAM-aware model selection:
+- Check available RAM before every AI query using psutil.virtual_memory().available
+- If available RAM > 4GB: use qwen2.5-coder:7b (or the largest model installed in Ollama)
+- If available RAM 2-4GB: use qwen2.5-coder:1.5b-base (current model)
+- If available RAM < 2GB: skip Ollama entirely, go straight to Gemini Flash
+- Log the model selection decision each time: "[AI] RAM: 5.2GB available — using qwen2.5-coder:7b"
+- Add a /models endpoint to server.py that returns available Ollama models by querying http://localhost:11434/api/tags
+- Show the currently active model name in the TopBar where it currently says "qwen2.5-coder"
+- The model pill in the header should update dynamically based on which model was used last
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3 — OBSIDIAN SECOND BRAIN INTEGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create: backend/memory.py
+
+Obsidian vault location: E:\JarvisVault
+Folder structure to create if missing:
+  E:\JarvisVault\raw_sources\   — drop files here for Jarvis to learn from
+  E:\JarvisVault\wiki\          — Jarvis writes organized knowledge here
+  E:\JarvisVault\conversations\ — conversation summaries saved here
+  E:\JarvisVault\errors\        — notable error patterns saved here
+
+Implement these functions in memory.py:
+  search_vault(query: str) -> list[dict]
+    — Searches all .md files in vault for lines containing query words
+    — Returns list of {file, excerpt, relevance_score}
+    — Case-insensitive, returns top 5 most relevant results
+
+  save_to_wiki(title: str, content: str, category: str)
+    — Saves a new .md file to E:\JarvisVault\wiki\{category}\{title}.md
+    — Adds frontmatter: date, category, source: "jarvis-response"
+    — Creates category folder if missing
+
+  save_conversation(user_text: str, jarvis_response: str)
+    — Appends to E:\JarvisVault\conversations\{YYYY-MM-DD}.md
+    — Format: ## HH:MM\n**RED:** {user_text}\n**JARVIS:** {jarvis_response}\n
+
+  get_context_for_query(query: str) -> str
+    — Calls search_vault, formats top 3 results as context string
+    — Returns: "From your vault:\n{excerpt1}\n{excerpt2}..." or "" if nothing found
+
+Modify ws_server.py to use memory:
+  Before sending query to Ollama/Gemini, call get_context_for_query(text)
+  If context found, prepend to prompt: f"Context from RED's knowledge vault:\n{context}\n\nQuery: {text}"
+  After getting response, call save_conversation(text, response) automatically
+  After complex queries (code, explanation, analysis), also call save_to_wiki(title, response, "ai-responses")
+
+Add to server.py:
+  GET /vault/search?q={query} — returns search results from vault
+  GET /vault/recent — returns last 10 files modified in vault
+  POST /vault/save — saves content to vault with {title, content, category} body
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4 — SLEEP/WAKE TIMER SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: backend/sleep_manager.py (create new)
+File: frontend/src/contexts/VoiceContext.tsx (modify)
+
+Backend sleep_manager.py:
+  - Track last_interaction_time (updated on every voice command or wake gesture)
+  - ACTIVE_DURATION = 3 * 60 * 60  (3 hours in seconds)
+  - sleep() — stops Ollama polling, reduces system polling to every 60s, logs "[Sleep] Jarvis entering sleep mode"
+  - wake() — restores all polling intervals, logs "[Sleep] Jarvis waking up"
+  - get_status() — returns {sleeping: bool, time_remaining_seconds: int, last_interaction: str}
+  - Auto-sleep runs as background asyncio task checking every 60 seconds
+
+Add to server.py:
+  GET /sleep/status — returns sleep status
+  POST /sleep/wake — manually wake Jarvis
+  POST /sleep/sleep — manually send to sleep
+
+Frontend sleep indicator:
+  - In TopBar, show a small timer next to JARVIS ONLINE: "Active — 2h 47m remaining"
+  - When sleeping: show "JARVIS SLEEPING" pill in orange instead of "JARVIS ONLINE" in green
+  - Clicking the sleeping pill immediately wakes Jarvis and resets 3-hour timer
+  - The orb should dim to 20% opacity and stop animating when sleeping
+  - Wake on: orb click, voice command, hand wave gesture
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 5 — UI UPGRADE (make it match the vision image)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Target aesthetic: The reference image shows ORION-9 AI MODEL interface — single large glowing orb center stage with project status rings showing percentages, waveform visualizer for AI voice, storage showing all drives with GB used, GPU temp, critical/warning error severity levels, camera feed bottom right.
+
+Changes needed:
+
+App.tsx / main HUD view:
+  - Center: Single large orb (not two orbs stacked) — the second orb below is redundant, remove it
+  - The project rings orbiting the orb are perfect — keep them, add percentage labels like the reference image (e.g. "BRAINIFY-AI [ERROR] 85%")
+  - Add a waveform visualizer that appears ABOVE the orb when Jarvis is speaking — 60 bars animating with CSS, cyan color, disappears when idle
+  - "WAVE TO WAKE · SAY JARVIS" text around the orb ring is great — keep it
+
+Left panel (system stats):
+  - Add GPU temp card below Windows C: — show actual GPU temp if available, otherwise show "GPU N/A"
+  - Add Micro SSD (D:) and HDD (E:) as separate storage cards — show actual GB values from /system endpoint
+  - CPU history graph: make the line thicker (2px stroke), add a subtle cyan glow filter
+  - Label each storage bar with used/total GB not just percentage
+
+Right panel (Jarvis response):
+  - Add AI RESPONSE label at top in small caps monospace
+  - Show last 5 conversation turns (alternating RED / JARVIS) with timestamps
+  - Below conversation: TYPE OR SAY JARVIS... input bar (already exists — keep it)
+  - REAL-TIME ERRORS section: add severity badges — [CRITICAL] in red, [WARNING] in yellow, [INFO] in gray
+  - Error cards: show project name, short message, timestamp, Fix button
+
+TopBar:
+  - Add live clock updating every second (already exists — verify it's working)
+  - Model pill: make it clickable — clicking cycles between available Ollama models
+  - Add sleep timer countdown: "3:00:00" counting down, turns orange under 30 minutes
+
+Camera/hand tracker panel (bottom right):
+  - Keep the floating camera feed
+  - Add "Hand detected" / "No hand" status dot (already exists — verify styling)
+  - Add gesture legend tooltip on hover: wave = wake, open palm = pause, fist = stop
+
+Error severity in all error displays:
+  Classify errors automatically:
+  - CRITICAL: contains "crash", "fatal", "killed", "segfault", "out of memory", "ENOMEM"
+  - WARNING: contains "warning", "deprecated", "timeout", "retry", "failed"  
+  - INFO: everything else
+  Color code: CRITICAL=red (#ff2d55), WARNING=amber (#ffaa00), INFO=gray (#666)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 6 — CLEAN UP OLD TEST ERRORS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The database has old test errors from early development:
+- "ERROR: rate limit test"
+- "ERROR: test with qwen"  
+- "ERROR: windows toast test"
+- "ERROR: toast test"
+- "ERROR: plyer test"
+- "at %time% ERROR: final test at 8:02:55.76"
+
+Add to server.py: POST /errors/clear-test — deletes errors where error_text contains "test" or project_name = "Operator" and error_text starts with "ERROR:" and was created before today.
+
+Also add a "Clear Test Data" button in the Settings page of the dashboard.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 7 — LAUNCHER IMPROVEMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: launcher.py
+
+Add sleep_manager as a service:
+  "sleep_manager": {
+    "name": "Sleep Manager",
+    "cmd": [sys.executable, str(BACKEND_DIR / "sleep_manager.py")],
+    "cwd": str(BACKEND_DIR),
+    "log": LOGS_DIR / "sleep.log",
+    "delay": 3,
+  }
+
+After all services start, auto-open the dashboard:
+  import webbrowser
+  time.sleep(12)  # wait for frontend to be ready
+  webbrowser.open("http://localhost:8081")
+
+Print a cleaner startup message:
+  ╔══════════════════════════════════════╗
+  ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+  ║          OPERATOR ONLINE             ║  
+  ╠══════════════════════════════════════╣
+  ║  Dashboard: http://localhost:8081    ║
+  ║  API:       http://localhost:5050    ║
+  ║  WebSocket: ws://localhost:8765      ║
+  ╚══════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXECUTION ORDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Read entire codebase first — all .py, .tsx, .ts files
+2. Fix all Part 1 bugs — test each fix
+3. Implement Part 2 (smart model switching) — test with low RAM simulation
+4. Create Part 3 (memory.py + vault) — create vault folders, test search
+5. Create Part 4 (sleep manager) — test 3hr timer
+6. Implement Part 5 UI upgrades — do NOT break existing orb or hand tracker
+7. Part 6 cleanup — run the clear endpoint once after implementing
+8. Part 7 launcher — test full cold start
+
+After ALL changes:
+- Run npm run build in frontend/ — must compile with zero TypeScript errors
+- Verify all Python files have no syntax errors: python -m py_compile backend/*.py
+- Confirm http://localhost:8081 loads correctly after start_operator.bat
+
+DO NOT:
+- Change the Jarvis persona (British, dry-witted, calls user RED)
+- Remove the project status rings around the orb
+- Remove hand tracking functionality  
+- Change WebSocket port (8765) or API port (5050)
+- Touch the Gemini API key in .env
+- Install any npm packages that require lucide-react (caused hook conflicts before)

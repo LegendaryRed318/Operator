@@ -10,6 +10,7 @@ import sys
 import os
 import time
 import signal
+import webbrowser
 from pathlib import Path
 from datetime import datetime
 
@@ -52,6 +53,13 @@ SERVICES = {
         "log": LOGS_DIR / "project_launcher.log",
         "delay": 2,
     },
+    "sleep_manager": {
+        "name": "Sleep Manager",
+        "cmd": [sys.executable, str(BACKEND_DIR / "sleep_manager.py")],
+        "cwd": str(BACKEND_DIR),
+        "log": LOGS_DIR / "sleep.log",
+        "delay": 3,
+    },
     "frontend": {
         "name": "Frontend (Vite)",
         "cmd": ["npm", "run", "dev"],
@@ -63,6 +71,8 @@ SERVICES = {
 
 # Track running processes
 processes = {}
+# Restart attempt counters per service
+restart_counts: dict = {}
 
 
 def log_message(message: str):
@@ -170,28 +180,42 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 
+MAX_RESTARTS = 3
+RESTART_BACKOFF = [5, 15, 30]  # seconds between restart attempts
+
+
 def check_service_health():
-    """Check if any services have crashed and log warnings."""
+    """Check if any services have crashed; restart them with exponential backoff."""
     crashed = []
     for service_id, info in list(processes.items()):
         process = info["process"]
         if process.poll() is not None:
-            # Process has exited
             exit_code = process.returncode
             config = info["config"]
             log_message(f"⚠ {config['name']} has exited (code: {exit_code})")
             crashed.append(service_id)
-            
-            # Close log handle
+
             try:
                 info["log_handle"].close()
-            except:
+            except Exception:
                 pass
-    
-    # Remove crashed services from tracking
+
     for service_id in crashed:
         del processes[service_id]
-    
+        attempts = restart_counts.get(service_id, 0)
+        if attempts < MAX_RESTARTS:
+            delay = RESTART_BACKOFF[min(attempts, len(RESTART_BACKOFF) - 1)]
+            config = SERVICES[service_id]
+            log_message(f"↻ Restarting {config['name']} in {delay}s (attempt {attempts + 1}/{MAX_RESTARTS})...")
+            time.sleep(delay)
+            try:
+                start_service(service_id, config)
+                restart_counts[service_id] = attempts + 1
+            except Exception as e:
+                log_message(f"✗ Failed to restart {config['name']}: {e}")
+        else:
+            log_message(f"✗ {SERVICES[service_id]['name']} has crashed {MAX_RESTARTS} times — giving up.")
+
     return len(crashed) == 0
 
 
@@ -242,14 +266,21 @@ def main():
             
             start_service(service_id, config)
         
-        log_message("\n" + "=" * 60)
-        log_message("All services started successfully!")
-        log_message("- API Server: http://localhost:5050")
-        log_message("- WebSocket: ws://localhost:8765")
-        log_message("- Dashboard: http://localhost:8081")
-        log_message("- Logs: C:\\Projects\\Operator\\logs\\")
-        log_message("=" * 60)
-        log_message("\nPress Ctrl+C to stop all services gracefully.")
+        log_message("\n╔══════════════════════════════════════╗")
+        log_message("║     JARVIS SYSTEM GUARDIAN v1.0      ║")
+        log_message("║          OPERATOR ONLINE             ║")
+        log_message("╠══════════════════════════════════════╣")
+        log_message("║  Dashboard: http://localhost:8081    ║")
+        log_message("║  API:       http://localhost:5050    ║")
+        log_message("║  WebSocket: ws://localhost:8765      ║")
+        log_message("╚══════════════════════════════════════╝\n")
+        log_message("Press Ctrl+C to stop all services gracefully.")
+
+        # Auto-open dashboard once the frontend dev server is ready
+        log_message("Waiting 12s for frontend to initialise before opening browser...")
+        time.sleep(12)
+        webbrowser.open("http://localhost:8081")
+        log_message("Browser opened → http://localhost:8081")
         
         # Monitor services
         while True:

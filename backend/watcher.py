@@ -8,6 +8,7 @@ import sys
 import json
 import sqlite3
 import subprocess
+import threading
 import time
 import re
 from datetime import datetime
@@ -18,10 +19,12 @@ from watchdog.events import FileSystemEventHandler
 
 from notifier import notify_new_error
 
-# Configuration
-CONFIG_PATH = Path(__file__).parent / "config.json"
-DB_PATH = Path("C:/Projects/Operator/database/errors.db")
-ALERT_FLAG_PATH = Path("C:/Projects/Operator/logs/alert.flag")
+# Configuration — all paths are relative to this file so the project is portable
+_HERE = Path(__file__).parent          # backend/
+_ROOT = _HERE.parent                   # project root
+CONFIG_PATH = _HERE / "config.json"
+DB_PATH = _ROOT / "database" / "errors.db"
+ALERT_FLAG_PATH = _ROOT / "logs" / "alert.flag"
 OLLAMA_MODEL = "qwen2.5-coder:1.5b-base"
 
 # Rate limiting: max 3 notifications per project per 60 seconds
@@ -124,30 +127,41 @@ def get_project_name(file_path):
 
 
 def query_ollama(error_text):
-    """Send error to Ollama and get fix suggestion."""
-    import re
-    # Brute-force: keep only printable ASCII, newline, and tab
+    """Send error to Ollama's HTTP API and get a fix suggestion.
+
+    Uses the REST API (localhost:11434) instead of subprocess so it works
+    reliably when Ollama isn't on PATH (e.g. when launched as a hidden process).
+    """
+    import json as _json
+    import urllib.request
+    import urllib.error
+
+    # Sanitise — keep only printable ASCII, newline, tab
     cleaned = re.sub(r'[^\x20-\x7E\n\t]', '', error_text)
     if len(cleaned) > 2000:
         cleaned = cleaned[:2000] + "... (truncated)"
+
+    prompt = f"Error: {cleaned}\n\nProvide a concise code fix as a unified diff."
+    payload = _json.dumps({
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+    }).encode("utf-8")
+
     try:
-        prompt = f"Error: {cleaned}\n\nProvide a code fix as a unified diff."
-        result = subprocess.run(
-            ["ollama", "run", OLLAMA_MODEL, prompt],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            encoding='utf-8',
-            errors='replace'
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
-        if result.returncode == 0:
-            return result.stdout.strip()
-        else:
-            return f"Ollama error: {result.stderr}"
-    except subprocess.TimeoutExpired:
-        return "Ollama query timed out (30s)"
-    except FileNotFoundError:
-        return "Ollama not found. Is it installed and in PATH?"
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            body = _json.loads(resp.read().decode("utf-8"))
+            return body.get("response", "").strip()
+    except urllib.error.URLError as e:
+        return f"Ollama unreachable — is it running? ({e.reason})"
+    except TimeoutError:
+        return "Ollama query timed out (60s)"
     except Exception as e:
         return f"Failed to query Ollama: {str(e)}"
 
@@ -317,9 +331,15 @@ class LogFileHandler(FileSystemEventHandler):
             # Get project name
             project_name = get_project_name(event.src_path)
             
-            # Store in database
+            # Store in database in a background thread so the watchdog
+            # event loop is never blocked by the 30-second Ollama call.
             print(f"[DEBUG] Storing error from line {line_num}: {error_line[:50]}...")
-            store_error(project_name, str(file_path), context)
+            t = threading.Thread(
+                target=store_error,
+                args=(project_name, str(file_path), context),
+                daemon=True,
+            )
+            t.start()
 
 
 def main():

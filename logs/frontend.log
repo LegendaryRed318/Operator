@@ -35,3 +35,143 @@
 > npx tsc && npx vite --host 0.0.0.0 --port 8081
 
 src/components/HandTracker.tsx(97,15): error TS2353: Object literal may only specify known properties, and 'exposureMode' does not exist in type 'MediaTrackConstraints'.
+
+============================================================
+[2026-04-12 19:38:33] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/components/HandTracker.tsx(97,15): error TS2353: Object literal may only specify known properties, and 'exposureMode' does not exist in type 'MediaTrackConstraints'.
+
+============================================================
+[2026-04-12 19:57:38] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[2m19:57:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+
+  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m543[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8081[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.11.247:[1m8081[22m/[39m
+[2m20:05:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m20:10:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m20:10:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m20:10:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m20:10:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m20:10:46[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m20:20:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m20:44:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m20:44:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m20:44:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m20:44:52[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m20:45:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m20:49:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m20:49:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m20:49:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m21:04:16[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m21:04:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m21:04:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m07:58:41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [2m16:56:19[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m16:56:20[22m [36m[1m[vite][22m[39m server restarted.
+, /src/index.css[22m
+[2m07:58:43[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32m✨ new dependencies optimized: [33mthree[32m[39m
+[2m16:45:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:45:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m16:54:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m16:54:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:54:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:54:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m16:56:19[22m [36m[1m[vite][22m[39m [32m.env changed, restarting server...[39m
+[2m16:56:20[22m [36m[1m[vite][22m[39m server restarted.
+[2m16:57:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/LockScreen.tsx[22m
+[2m16:58:05[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/HandTracker.tsx[22m
+[2m16:58:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m16:58:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/contexts/VoiceContext.tsx[22m
+[2m16:58:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:58:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m16:59:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/LockScreen.tsx[22m
+
+============================================================
+[2026-04-13 19:26:00] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(2,1): error TS6133: 'Sidebar' is declared but its value is never read.
+src/App.tsx(3,1): error TS6133: 'TopBar' is declared but its value is never read.
+src/App.tsx(6,1): error TS6133: 'DashboardView' is declared but its value is never read.
+src/App.tsx(8,1): error TS6133: 'ProjectsView' is declared but its value is never read.
+src/App.tsx(9,1): error TS6133: 'SystemView' is declared but its value is never read.
+src/App.tsx(29,9): error TS6133: 'activateHotwordMode' is declared but its value is never read.
+src/App.tsx(64,22): error TS6133: 'offline' is declared but its value is never read.
+src/App.tsx(64,31): error TS6133: 'connecting' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(1,46): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,29): error TS6133: 'wsConnected' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,42): error TS6133: 'apiConnected' is declared but its value is never read.
+src/components/HandTracker.tsx(20,10): error TS6133: 'handDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-13 19:26:10] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(2,1): error TS6133: 'Sidebar' is declared but its value is never read.
+src/App.tsx(3,1): error TS6133: 'TopBar' is declared but its value is never read.
+src/App.tsx(6,1): error TS6133: 'DashboardView' is declared but its value is never read.
+src/App.tsx(8,1): error TS6133: 'ProjectsView' is declared but its value is never read.
+src/App.tsx(9,1): error TS6133: 'SystemView' is declared but its value is never read.
+src/App.tsx(29,9): error TS6133: 'activateHotwordMode' is declared but its value is never read.
+src/App.tsx(64,22): error TS6133: 'offline' is declared but its value is never read.
+src/App.tsx(64,31): error TS6133: 'connecting' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(1,46): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,29): error TS6133: 'wsConnected' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,42): error TS6133: 'apiConnected' is declared but its value is never read.
+src/components/HandTracker.tsx(20,10): error TS6133: 'handDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-13 19:26:40] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(2,1): error TS6133: 'Sidebar' is declared but its value is never read.
+src/App.tsx(3,1): error TS6133: 'TopBar' is declared but its value is never read.
+src/App.tsx(6,1): error TS6133: 'DashboardView' is declared but its value is never read.
+src/App.tsx(8,1): error TS6133: 'ProjectsView' is declared but its value is never read.
+src/App.tsx(9,1): error TS6133: 'SystemView' is declared but its value is never read.
+src/App.tsx(29,9): error TS6133: 'activateHotwordMode' is declared but its value is never read.
+src/App.tsx(64,22): error TS6133: 'offline' is declared but its value is never read.
+src/App.tsx(64,31): error TS6133: 'connecting' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(1,46): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,29): error TS6133: 'wsConnected' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,42): error TS6133: 'apiConnected' is declared but its value is never read.
+src/components/HandTracker.tsx(20,10): error TS6133: 'handDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-13 19:27:15] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(2,1): error TS6133: 'Sidebar' is declared but its value is never read.
+src/App.tsx(3,1): error TS6133: 'TopBar' is declared but its value is never read.
+src/App.tsx(6,1): error TS6133: 'DashboardView' is declared but its value is never read.
+src/App.tsx(8,1): error TS6133: 'ProjectsView' is declared but its value is never read.
+src/App.tsx(9,1): error TS6133: 'SystemView' is declared but its value is never read.
+src/App.tsx(29,9): error TS6133: 'activateHotwordMode' is declared but its value is never read.
+src/App.tsx(64,22): error TS6133: 'offline' is declared but its value is never read.
+src/App.tsx(64,31): error TS6133: 'connecting' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(1,46): error TS6133: 'useCallback' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,29): error TS6133: 'wsConnected' is declared but its value is never read.
+src/components/dashboard/OperatorHUD.tsx(208,42): error TS6133: 'apiConnected' is declared but its value is never read.
+src/components/HandTracker.tsx(20,10): error TS6133: 'handDetected' is declared but its value is never read.

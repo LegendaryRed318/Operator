@@ -1,4 +1,31 @@
-node_modules
-node_modules
-node_modules
-.gitnexus
+# Dependencies
+node_modules/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+backend/venv/
+
+# Database (runtime data)
+database/*.db
+
+# GitNexus index
+.gitnexus/
+
+# OS
+.DS_Store
+Thumbs.db

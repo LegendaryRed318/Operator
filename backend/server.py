@@ -13,6 +13,7 @@ import platform
 DB_PATH = Path("C:/Projects/Operator/database/errors.db")
 LOGS_PATH = Path("C:/Projects/Operator/logs")
 TEMP_AUDIO_PATH = LOGS_PATH / "temp_audio.wav"
+HEARTBEAT_PATH = LOGS_PATH / "heartbeat.flag"
 PORT = 5050
 
 # Ensure directories exist
@@ -38,7 +39,15 @@ class ErrorHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._set_headers()
     
+    def _touch_heartbeat(self):
+        """Reset the sleep-manager idle timer on every request."""
+        try:
+            HEARTBEAT_PATH.touch()
+        except Exception:
+            pass
+
     def do_GET(self):
+        self._touch_heartbeat()
         if self.path == "/errors":
             self._handle_get_errors()
         elif self.path == "/system":
@@ -48,10 +57,13 @@ class ErrorHandler(BaseHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
-    
+
     def do_POST(self):
+        self._touch_heartbeat()
         if self.path == "/transcribe":
             self._handle_transcribe()
+        elif self.path == "/clear-errors":
+            self._handle_clear_errors()
         else:
             self.send_response(404)
             self.end_headers()
@@ -117,7 +129,7 @@ class ErrorHandler(BaseHTTPRequestHandler):
                     import subprocess
                     # Try WMI query for thermal zone temperature
                     result = subprocess.run(
-                        ['wmic', '/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],
+                        ['wmic', r'/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],
                         capture_output=True, text=True, timeout=5
                     )
                     if result.returncode == 0:
@@ -277,6 +289,23 @@ class ErrorHandler(BaseHTTPRequestHandler):
             self._set_headers(status=500)
             error_response = {"error": str(e), "text": ""}
             self.wfile.write(json.dumps(error_response).encode())
+
+
+    def _handle_clear_errors(self):
+        """DELETE all rows from the errors table (test-data wipe)."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM errors")
+            deleted = cursor.rowcount
+            conn.commit()
+            conn.close()
+            self._set_headers()
+            self.wfile.write(json.dumps({"status": "ok", "deleted": deleted}).encode())
+            print(f"[ClearErrors] Deleted {deleted} error(s)")
+        except Exception as e:
+            self._set_headers(status=500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
 
 
 def main():

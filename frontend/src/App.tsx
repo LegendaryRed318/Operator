@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { TopBar } from './components/TopBar';
 import { LoadingScreen } from './components/LoadingScreen';
-import { DashboardView } from './components/dashboard/DashboardView';
-import { ProjectsView } from './components/ProjectsView';
-import { SystemView } from './components/SystemView';
+import { LockScreen } from './components/LockScreen';
+import { OperatorHUD } from './components/dashboard/OperatorHUD';
 import HandTracker from './components/HandTracker';
-import { VoiceProvider } from './contexts/VoiceContext';
+import { VoiceProvider, useVoice } from './contexts/VoiceContext';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { ErrorItem, Project } from './types';
 
@@ -24,7 +21,9 @@ const mockErrors: ErrorItem[] = [
 
 // Inner App component that uses voice context
 const AppContent: React.FC = () => {
+  useVoice(); // ensures VoiceContext is consumed so the provider is active
   const [isLoading, setIsLoading] = useState(true);
+  const [locked, setLocked] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [errors, setErrors] = useState<ErrorItem[]>(mockErrors);
   const [projects] = useState<Project[]>(mockProjects);
@@ -57,7 +56,7 @@ const AppContent: React.FC = () => {
   const [cpuHistory, setCpuHistory] = useState<number[]>(Array(60).fill(0));
 
   // WebSocket hook with max 3 retries and 10s initial delay
-  const { connected, offline, connecting, connect, messages } = useWebSocket();
+  const { connected, connect, messages } = useWebSocket();
   const hasConnectedRef = useRef(false); // Prevent duplicate connections
 
   // Service health check
@@ -180,114 +179,29 @@ const AppContent: React.FC = () => {
 
   return (
     <>
+      {locked && <LockScreen onUnlock={() => setLocked(false)} />}
       <LoadingScreen isLoading={isLoading} />
-      
-      {!isLoading && (
-        <div className="app-container">
-          {/* HUD Grid Background */}
-          <div className="hud-grid" />
-          
-          {/* Sidebar */}
-          <Sidebar 
-            activeView={activeView} 
-            onViewChange={setActiveView}
-            errorCount={errors.length}
-          />
 
-          {/* Main Content Area */}
-          <div className="main-content">
-            {/* Top Bar with Status */}
-            <TopBar
-              wsConnected={connected}
-              wsOffline={offline}
-              wsConnecting={connecting}
-              apiConnected={apiConnected}
-              ollamaConnected={ollamaConnected}
-              activeModel="qwen2.5-coder"
-              clientCount={1}
-            />
-
-            {/* View Content */}
-            <main className="view-container">
-              {activeView === 'dashboard' && (
-                <DashboardView
-                  vitals={vitals}
-                  projects={projects}
-                  recentErrors={errors}
-                />
-              )}
-              
-              {activeView === 'projects' && (
-                <ProjectsView errors={errors} />
-              )}
-              
-              {activeView === 'errors' && (
-                <div className="placeholder-view">
-                  <h2>Error Intelligence</h2>
-                  <p>Detailed error analysis and fixes coming soon...</p>
-                </div>
-              )}
-              
-              {activeView === 'system' && (
-                <SystemView vitals={vitals} cpuHistory={cpuHistory} />
-              )}
-              
-              {activeView === 'chat' && (
-                <div className="placeholder-view">
-                  <h2>AI Assistant</h2>
-                  <p>Direct chat with JARVIS coming soon...</p>
-                </div>
-              )}
-              
-              {activeView === 'settings' && (
-                <div className="placeholder-view">
-                  <h2>Settings</h2>
-                  <p>Configuration panel coming soon...</p>
-                </div>
-              )}
-            </main>
-          </div>
-
-          <style>{`
-            .app-container {
-              display: flex;
-              height: 100vh;
-              width: 100vw;
-              background: #050508;
-              overflow: hidden;
-            }
-
-            .main-content {
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              overflow: hidden;
-            }
-
-            .view-container {
-              flex: 1;
-              overflow: hidden;
-              position: relative;
-            }
-
-            .placeholder-view {
-              height: 100%;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              gap: 1rem;
-              color: rgba(255, 255, 255, 0.5);
-            }
-
-            .placeholder-view h2 {
-              font-size: 1.5rem;
-              color: rgba(255, 255, 255, 0.8);
-            }
-          `}</style>
-        </div>
+      {/* HUD only mounts after login — no network calls leak through the lock screen */}
+      {!isLoading && !locked && (
+        <OperatorHUD
+          vitals={vitals}
+          projects={projects}
+          recentErrors={errors}
+          cpuHistory={cpuHistory}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          wsConnected={connected}
+          apiConnected={apiConnected}
+          ollamaConnected={ollamaConnected}
+        />
       )}
-      <HandTracker onWave={() => console.log('[App] Wave detected')} />
+
+      {/* HandTracker runs regardless so a wave can unlock from the lock screen */}
+      <HandTracker onWave={() => {
+        console.log('[App] Wave detected — entering hotword mode');
+        window.dispatchEvent(new CustomEvent('jarvis:wake'));
+      }} />
     </>
   );
 };

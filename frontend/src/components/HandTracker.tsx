@@ -17,7 +17,7 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
   const cameraRef = useRef<any>(null);
   const isInitialized = useRef(false);
   const lastWave = useRef(0);
-  const [handDetected, setHandDetected] = React.useState(false);
+  const handDetectedRef = useRef(false);
 
   useEffect(() => {
     if (isInitialized.current) return;
@@ -41,8 +41,10 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
     };
 
     const initHands = async () => {
-      await loadScripts();
+      // Guard must be set before any async work so Strict Mode's second mount
+      // is blocked immediately, not after scripts have already started loading.
       isInitialized.current = true;
+      await loadScripts();
 
       try {
         const hands = new window.Hands({
@@ -58,57 +60,67 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
 
         hands.onResults((results: any) => {
           if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            setHandDetected(true);
+            handDetectedRef.current = true;
             const landmarks = results.multiHandLandmarks[0];
-            // Log landmarks for debugging (remove in production)
-            console.log('Hand landmarks detected', landmarks);
             const indexTip = landmarks[8];
             const middleTip = landmarks[12];
+            const ringTip = landmarks[16];
+            const pinkyTip = landmarks[20];
             const indexMCP = landmarks[5];
             const middleMCP = landmarks[9];
-            const ringTip = landmarks[16];
             const ringMCP = landmarks[13];
-            const pinkyTip = landmarks[20];
             const pinkyMCP = landmarks[17];
 
-            const indexExtended = indexTip.y < indexMCP.y;
-            const middleExtended = middleTip.y < middleMCP.y;
-            const ringFolded = ringTip.y > ringMCP.y;
-            const pinkyFolded = pinkyTip.y > pinkyMCP.y;
+            // Open palm: at least 3 fingers extended
+            const indexExtended = indexTip.y < indexMCP.y - 0.04;
+            const middleExtended = middleTip.y < middleMCP.y - 0.04;
+            const ringExtended = ringTip.y < ringMCP.y - 0.04;
+            const pinkyExtended = pinkyTip.y < pinkyMCP.y - 0.04;
 
-            if (indexExtended && middleExtended && ringFolded && pinkyFolded) {
+            const fingersUp = [indexExtended, middleExtended, ringExtended, pinkyExtended]
+              .filter(Boolean).length;
+
+            if (fingersUp >= 3) {
               const now = Date.now();
-              if (now - lastWave.current > 2000) {
+              if (now - lastWave.current > 2500) {
                 lastWave.current = now;
+                console.log('[HandTracker] WAVE FIRED - fingers up:', fingersUp);
                 onWave();
               }
             }
           } else {
-            setHandDetected(false);
+            handDetectedRef.current = false;
           }
         });
 
         if (videoRef.current) {
-          // Request brighter exposure and higher resolution
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              exposureMode: 'continuous',
-              exposureCompensation: 1.0,
-            }
-          });
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-
           const camera = new window.Camera(videoRef.current, {
             onFrame: async () => {
               await hands.send({ image: videoRef.current! });
             },
-            width: 640,
-            height: 480,
+            // MediaPipe Camera manages getUserMedia + play() internally;
+            // do NOT call videoRef.current.play() manually — that races
+            // with Camera's own setup and causes the AbortError.
+            width: 1280,
+            height: 720,
           });
-          await camera.start();
+
+          const startPromise = camera.start();
+          if (startPromise !== undefined) {
+            startPromise
+              .then(() => {
+                console.log('[HandTracker] Camera started successfully');
+              })
+              .catch((error: Error) => {
+                if (error.name === 'AbortError') {
+                  console.log('[HandTracker] Camera start interrupted — resetting for retry');
+                  isInitialized.current = false;
+                } else {
+                  console.error('[HandTracker] Camera error:', error);
+                }
+              });
+          }
+
           cameraRef.current = camera;
         }
 
@@ -126,24 +138,21 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
   }, [onWave]);
 
   return (
-    <div style={{ position: 'fixed', bottom: 10, right: 10, zIndex: 1000, opacity: 0.8, pointerEvents: 'none' }}>
+    <>
       <video
         ref={videoRef}
         style={{
-          width: '200px',
-          borderRadius: '12px',
-          border: handDetected ? '2px solid #00ffaa' : '2px solid #ff5555',
-          filter: 'brightness(1.2) contrast(1.1)',
-          boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+          width: '1px',
+          height: '1px',
+          opacity: 0,
+          position: 'absolute',
+          pointerEvents: 'none',
         }}
         autoPlay
         muted
         playsInline
       />
-      <div style={{ textAlign: 'center', fontSize: '10px', marginTop: '4px', color: handDetected ? '#00ffaa' : '#ff5555' }}>
-        {handDetected ? '✋ Hand detected' : '🖐️ No hand'}
-      </div>
-    </div>
+    </>
   );
 };
 

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(python -m py_compile C:/Projects/Operator/backend/sleep_manager.py)",
+      "Bash(python -m py_compile C:/Projects/Operator/backend/server.py)",
+      "Bash(python -m py_compile C:/Projects/Operator/launcher.py)",
+      "Bash(python -m py_compile backend/sleep_manager.py)",
+      "Bash(python -m py_compile backend/server.py)",
+      "Bash(python -m py_compile backend/watcher.py)",
+      "Bash(python -m py_compile backend/ws_server.py)",
+      "Bash(python -m py_compile launcher.py)"
+    ]
+  }
+}
