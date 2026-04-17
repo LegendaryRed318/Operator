@@ -20,7 +20,6 @@
   "author": "RED",
   "license": "ISC",
   "dependencies": {
-    "@elevenlabs/react": "^1.1.1",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/cli": "^2.10.1",
     "@types/react": "^19.2.14",

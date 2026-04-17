@@ -24,10 +24,15 @@ class DecisionEngine:
         logger.info("DecisionEngine ready (using direct HTTP API)")
 
     def _query_ollama(self, prompt: str, system: str = "", max_tokens: int = 500, temperature: float = 0.3) -> str:
-        """Send a query to Ollama HTTP API."""
+        """Send a query to Ollama HTTP API with dynamic RAM-aware model selection."""
         try:
+            # Always check RAM before query for optimal model selection
+            selected_model = select_model_by_ram()
+            if selected_model is None:
+                raise Exception("No suitable model available (insufficient RAM or no models installed)")
+            
             payload = {
-                "model": self.model,
+                "model": selected_model,
                 "prompt": prompt,
                 "system": system,
                 "stream": False,
@@ -49,8 +54,14 @@ class DecisionEngine:
     def analyze_error(self, error_text: str, project_name: str) -> dict:
         """
         Use the structured bug‑fix prompt template to analyze an error.
+        Selects best model based on available RAM before querying.
         Returns a dict with keys: severity, should_auto_fix, suggested_plan.
         """
+        # Log model selection for this query
+        selected = select_model_by_ram()
+        if selected:
+            logger.info(f"[DecisionEngine] analyze_error using model: {selected}")
+        
         # Build the prompt following Ethan's Jarvis style
         prompt = f"""You are Jarvis, a loyal, dry‑witted British AI assistant. The user is called RED.
 
@@ -100,7 +111,12 @@ Do not include any other text. Only output the JSON object."""
             return {"severity": "medium", "should_auto_fix": False, "suggested_plan": "Fallback: manual review required."}
 
     def chat(self, user_message: str) -> str:
-        """Simple chat for voice commands, using Jarvis persona."""
+        """Simple chat for voice commands, using Jarvis persona with RAM-aware model selection."""
+        # Log model selection for this query
+        selected = select_model_by_ram()
+        if selected:
+            logger.info(f"[DecisionEngine] chat using model: {selected}")
+        
         system_prompt = "You are Jarvis, a loyal, dry‑witted British AI assistant. You address the user as RED. Keep responses concise and helpful."
         prompt = f"RED says: {user_message}\n\nYour response:"
         try:

@@ -41,8 +41,9 @@ ALERT_FLAG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def init_database():
     """Initialize the SQLite database with the errors table."""
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=5.0)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS errors (
@@ -196,8 +197,9 @@ def store_error(project_name, file_path, error_text):
     """Store error in database and query Ollama for fix."""
     error_id = None
     try:
-        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=5.0)
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         cursor = conn.cursor()
         
         # Insert error without fix first
@@ -241,8 +243,9 @@ def store_error(project_name, file_path, error_text):
     
     # Update database with fix
     try:
-        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=5.0)
         conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE errors SET suggested_fix = ? WHERE id = ?

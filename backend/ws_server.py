@@ -14,6 +14,7 @@ import aiohttp
 import requests
 import threading
 import queue
+import sqlite3 as _sqlite3
 from typing import AsyncGenerator
 from decision_engine import DecisionEngine, select_model_by_ram
 from pathlib import Path
@@ -56,25 +57,32 @@ MAX_HISTORY_TURNS = 4  # Keep last 4 user+assistant pairs = 8 messages
 _tts_queue = queue.Queue()
 
 def _tts_worker():
+    # Initialize engine ONCE outside the loop for massive speedup
+    try:
+        import pyttsx3
+        engine = pyttsx3.init()
+        voices = engine.getProperty('voices')
+        # Prefer a male British-sounding voice
+        preferred = None
+        for v in voices:
+            name_lower = v.name.lower()
+            if 'george' in name_lower or 'hazel' in name_lower or 'david' in name_lower:
+                preferred = v.id
+                break
+        if preferred:
+            engine.setProperty('voice', preferred)
+        engine.setProperty('rate', 165)
+        engine.setProperty('volume', 0.9)
+        logger.info("[TTS] Engine initialized successfully")
+    except Exception as e:
+        logger.error(f"[TTS] Failed to initialize engine: {e}")
+        return
+    
     while True:
         text = _tts_queue.get()
         if text is None:
             break
         try:
-            import pyttsx3
-            engine = pyttsx3.init()
-            voices = engine.getProperty('voices')
-            # Prefer a male British-sounding voice
-            preferred = None
-            for v in voices:
-                name_lower = v.name.lower()
-                if 'george' in name_lower or 'hazel' in name_lower or 'david' in name_lower:
-                    preferred = v.id
-                    break
-            if preferred:
-                engine.setProperty('voice', preferred)
-            engine.setProperty('rate', 165)
-            engine.setProperty('volume', 0.9)
             engine.say(text)
             engine.runAndWait()
         except Exception as e:
@@ -106,7 +114,8 @@ async def broadcast(state: dict):
     """Send state to all connected clients."""
     if connected_clients:
         message = json.dumps(state)
-        tasks = [asyncio.create_task(client.send(message)) for client in connected_clients.copy()]
+        # Use list() to prevent "Set changed size during iteration"
+        tasks = [asyncio.create_task(client.send(message)) for client in list(connected_clients)]
         await asyncio.gather(*tasks, return_exceptions=True)
 
 async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, None]:
@@ -120,7 +129,8 @@ async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, N
             "stream": True,
             "options": {
                 "temperature": 0.4,
-                "num_predict": 500
+                "num_predict": 4096,
+                "num_ctx": 8192
             }
         }
         
@@ -170,28 +180,78 @@ async def query_gemini(prompt: str) -> str:
         logger.error(f"[Gemini] API error: {e}")
         return f"The external service is unavailable, RED. Error: {e}"
 
+def classify_intent(text: str) -> str:
+    """Classify user intent for smart model routing."""
+    text_lower = text.lower()
+    
+    # Financial domain -> Gemini (Dexter integration later)
+    financial_words = ['stock', 'crypto', 'bitcoin', 'invest', 'portfolio', 'revenue', 'profit', 'market', 'price of', 'worth', 'wallet']
+    
+    # System control -> Local handling
+    system_words = ['open', 'launch', 'start', 'close', 'screenshot', 'what am i looking', 'show me', 'find file', 'list files']
+    
+    # Coding tasks -> Ollama (better for code)
+    code_words = ['write code', 'debug', 'fix', 'error in', 'patch', 'implement', 'function', 'script', 'class', 'import', 'build', 'test', 'create a', 'build', 'algorithm', 'optimize', 'refactor', 'explain how', 'what is the difference', 'compare', 'analyze code', 'review']
+    
+    # Memory/vault queries -> Ollama with context
+    memory_words = ['remember', 'what did i', 'from my notes', 'in my vault', 'obsidian', 'note', 'learn', 'save this']
+    
+    if any(w in text_lower for w in financial_words):
+        return 'financial'
+    if any(w in text_lower for w in system_words):
+        return 'system'
+    if any(w in text_lower for w in memory_words):
+        return 'memory'
+    if any(w in text_lower for w in code_words):
+        return 'coding'
+    return 'general'
+
 def is_complex_task(text: str) -> bool:
     """Determine if task should use Gemini (complex) or Ollama (simple)."""
-    complex_keywords = [
-        "write code", "create a", "build", "implement", "function", "class",
-        "algorithm", "debug", "fix", "optimize", "refactor", "explain how",
-        "what is the difference", "compare", "analyze code", "review"
-    ]
-    text_lower = text.lower()
-    return any(kw in text_lower for kw in complex_keywords)
+    intent = classify_intent(text)
+    # Financial queries go to Gemini, everything else to Ollama
+    return intent == 'financial'
 
 async def handle_voice_command(websocket, text: str):
-    """Process voice command with appropriate model."""
+    """Process voice command with skill check first, then AI fallback."""
     await broadcast({"type": "state", "state": "thinking"})
 
+    # PHASE 8: Check for built-in skill triggers FIRST
+    try:
+        from skills import try_handle_skill
+        skill_response = await asyncio.to_thread(try_handle_skill, text)
+        if skill_response:
+            # Skill matched - return immediately without AI
+            logger.info(f"[Voice] Skill triggered for: {text[:50]}...")
+            await websocket.send(json.dumps({
+                "type": "response", 
+                "text": skill_response, 
+                "model": "skill", 
+                "server_tts": True
+            }))
+            await broadcast({"type": "state", "state": "speaking"})
+            
+            # Save conversation to vault
+            try:
+                from memory import save_conversation
+                await asyncio.to_thread(save_conversation, text, skill_response)
+            except Exception:
+                pass
+            
+            await asyncio.sleep(2)
+            await broadcast({"type": "state", "state": "idle"})
+            return
+    except Exception as e:
+        logger.warning(f"[Voice] Skill check error: {e}")
+    
     # Get conversation history for this client
     history = conversation_histories.get(websocket, [])
 
-    # Get vault context if available
+    # Get vault context if available (wrapped in thread to prevent blocking)
     vault_context = ""
     try:
-        from memory import get_context_for_query, save_conversation, save_to_wiki
-        vault_context = get_context_for_query(text)
+        from memory import get_context_for_query
+        vault_context = await asyncio.to_thread(get_context_for_query, text)
     except Exception:
         pass
 
@@ -242,20 +302,25 @@ async def handle_voice_command(websocket, text: str):
             await broadcast({"type": "state", "state": "speaking"})
             response = full_response
 
-        # Update conversation history
+        # Update conversation history with length guards
         history.append({"role": "user", "content": text})
         history.append({"role": "assistant", "content": response})
-        conversation_histories[websocket] = history[-MAX_HISTORY_TURNS * 2:]
+        # Limit to last 8 turns and max 12000 chars total
+        while len(history) > MAX_HISTORY_TURNS * 2 or sum(len(str(m)) for m in history) > 12000:
+            if history: history.pop(0)
+            else: break
+        conversation_histories[websocket] = history
 
-        # Speak via server-side TTS
-        speak_server(response)
+        # Speak via server-side TTS only if no frontend connected (prevent double audio)
+        if not connected_clients:
+            speak_server(response)
 
-        # Save conversation to vault
+        # Save conversation to vault (wrapped in thread to prevent blocking)
         try:
             from memory import save_conversation, save_to_wiki
-            save_conversation(text, response)
+            await asyncio.to_thread(save_conversation, text, response)
             if is_complex_task(text):
-                save_to_wiki(text[:60], response, "ai-responses")
+                await asyncio.to_thread(save_to_wiki, text[:60], response, "ai-responses")
         except Exception:
             pass
 
@@ -299,14 +364,15 @@ async def handler(websocket):
 
 async def proactive_alert_loop():
     """Poll DB every 10s for new errors and broadcast voice alerts."""
-    import sqlite3 as _sqlite3
     DB_PATH = Path(__file__).parent.parent / "database" / "errors.db"
     last_known_id = 0
 
     # On startup, grab the current max ID so we only alert on NEW errors
     try:
         if DB_PATH.exists():
-            conn = _sqlite3.connect(str(DB_PATH))
+            conn = _sqlite3.connect(str(DB_PATH), timeout=5.0)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
             cursor = conn.cursor()
             cursor.execute("SELECT COALESCE(MAX(id), 0) FROM errors")
             last_known_id = cursor.fetchone()[0]
@@ -323,7 +389,7 @@ async def proactive_alert_loop():
         try:
             if not DB_PATH.exists():
                 continue
-            conn = _sqlite3.connect(str(DB_PATH))
+            conn = _sqlite3.connect(str(DB_PATH), timeout=5.0)
             conn.row_factory = _sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""

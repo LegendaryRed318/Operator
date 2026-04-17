@@ -2077,3 +2077,59 @@ ConnectionAbortedError: [WinError 10053] An established connection was aborted b
 ============================================================
 [2026-04-17 20:18:54] Starting HTTP API Server
 ============================================================
+
+============================================================
+[2026-04-17 21:59:25] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:00:05] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:00:30] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:01:20] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:08:05] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:08:45] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'
+
+============================================================
+[2026-04-17 22:09:11] Starting HTTP API Server
+============================================================
+Traceback (most recent call last):
+  File "C:\Projects\Operator\backend\server.py", line 25, in <module>
+    from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+ModuleNotFoundError: No module named 'fastapi'

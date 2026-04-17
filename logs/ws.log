@@ -453,3 +453,50 @@ INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
 INFO:websockets.server:server listening on [::1]:8765
 INFO:websockets.server:server listening on 127.0.0.1:8765
 INFO:__main__:[WebSocket] Server ready and accepting connections
+
+============================================================
+[2026-04-17 21:59:27] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on [::1]:8765
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0

@@ -20,7 +20,7 @@ interface VoiceProviderProps {
   children: ReactNode;
 }
 
-const HOTWORD_TIMEOUT_MS = 3 * 60 * 60 * 1000; // 3 hours
+const HOTWORD_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const WAKE_WORDS = ['jarvis', 'operator'];
 
 // Dynamic WebSocket URL: supports local development and ngrok remote access
@@ -59,6 +59,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const hotwordActive = useRef(false);
   const hotwordTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const networkFallbackLogged = useRef(false);
+  const hasLoggedNoNetwork = useRef(false);
   
   // Wave gesture debounce (2 seconds)
   const lastWaveTime = useRef(0);
@@ -66,6 +67,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   
   // Voice feedback loop prevention
   const isSpeakingRef = useRef(false);
+  const speakCooldown = useRef(false);
 
   // (Removed ElevenLabs mapped state logic)
 
@@ -170,24 +172,33 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // Browser TTS fallback - British male voice like JARVIS
   const speakWithBrowserTTS = useCallback((text: string, onDone?: () => void) => {
-    console.log('🗣️ Speaking with browser TTS:', text.substring(0, 60) + (text.length > 60 ? '...' : ''));
+    // Strip markdown for cleaner speech
+    const cleanText = text
+      .replace(/\*\*(.*?)\*\*/g, '$1')           // **bold** → bold
+      .replace(/\*(.*?)\*/g, '$1')               // *italic* → italic
+      .replace(/#{1,6}\s/g, '')                  // ### headers → remove
+      .replace(/`{1,3}(.*?)`{1,3}/gs, '$1')     // `code` → code
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')  // [link](url) → link
+      .replace(/[-*+]\s/g, '')                  // - bullet → remove
+      .trim();
+    
+    console.log('🗣️ Speaking with browser TTS:', cleanText.substring(0, 60) + (cleanText.length > 60 ? '...' : ''));
     
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.85;
+    utterance.pitch = 0.9;
+    utterance.volume = 1.0;
     
-    // Try to find British male voice
+    // Try to find British male voice (preferred order)
     const voices = window.speechSynthesis.getVoices();
-    const britishVoice = voices.find(v => 
-      v.lang === 'en-GB' || 
-      v.name.includes('British') ||
-      v.name.includes('Daniel') ||
-      v.name.includes('Male') && v.lang.startsWith('en')
+    const preferred = ['Microsoft David', 'Google UK English Male', 'Daniel', 'en-GB'];
+    const britishMale = voices.find(v => 
+      preferred.some(p => v.name.includes(p) || v.lang === 'en-GB') && !v.name.includes('Female')
     );
-    if (britishVoice) {
-      utterance.voice = britishVoice;
-      console.log('[Voice] Using British voice:', britishVoice.name);
+    if (britishMale) {
+      utterance.voice = britishMale;
+      console.log('[Voice] Using voice:', britishMale.name);
     } else {
       // Fallback to any English voice
       const englishVoice = voices.find(v => v.lang.startsWith('en'));
@@ -209,9 +220,14 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   const speak = useCallback((text: string, onDone?: () => void) => {
     isSpeakingRef.current = true;
+    speakCooldown.current = true;
     speakWithBrowserTTS(text, () => {
       isSpeakingRef.current = false;
-      onDone?.();
+      // 3 second cooldown before hotword can trigger again
+      setTimeout(() => { 
+        speakCooldown.current = false; 
+        onDone?.();
+      }, 3000);
     });
   }, [speakWithBrowserTTS]);
 
@@ -238,13 +254,17 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       const data = await response.json();
       console.log('[Voice] Transcription received:', data.text);
 
-      // Stop command — tears down hotword mode immediately
-      if (data.text && data.text.toLowerCase().includes('stop')) {
-        console.log('[Voice] Stop command received');
-        hotwordActive.current = false;
-        setVoiceState('idle');
-        // Stop any running TTS
+      // Stop command — expanded stop words
+      const lower = data.text.toLowerCase().trim();
+      const stopWords = ['stop', 'shut up', 'be quiet', 'silence', 'stop talking', 'shut it', 'quiet', 'enough'];
+      if (stopWords.some(w => lower.includes(w))) {
+        console.log('[Voice] Stop command received:', lower);
         window.speechSynthesis.cancel();
+        isSpeakingRef.current = false;
+        speakCooldown.current = false;
+        hotwordActive.current = false;
+        if (hotwordTimeout.current) clearTimeout(hotwordTimeout.current);
+        setVoiceState('idle');
         return;
       }
 
@@ -303,7 +323,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // Fallback local hotword loop (Python-based)
   const pythonHotwordLoop = useCallback(async () => {
-    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current) return;
+    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current || speakCooldown.current) return;
 
     try {
       const connected = await initWebSocket();
@@ -355,7 +375,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // Fast browser-based hotword loop
   const hotwordListenLoop = useCallback(() => {
-    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current) return;
+    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current || speakCooldown.current) return;
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -388,15 +408,15 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     recognition.onerror = (e: any) => {
       // network error = no internet for Google speech, fall back to python loop
       if (e.error === 'network') {
-        if (!networkFallbackLogged.current) {
+        if (!hasLoggedNoNetwork.current) {
           console.warn('[Hotword] No network for browser speech — switching to backend loop (logged once)');
-          networkFallbackLogged.current = true;
+          hasLoggedNoNetwork.current = true;
         }
         if (hotwordActive.current) setTimeout(() => pythonHotwordLoop(), 300);
         return;
       }
       // no-speech just means silence, loop again
-      if (hotwordActive.current && !isRecording.current) {
+      if (hotwordActive.current && !isRecording.current && !speakCooldown.current) {
         setTimeout(() => hotwordListenLoop(), 100);
       }
     };
@@ -420,6 +440,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       console.log('[Voice] Hotword mode activated');
       hotwordActive.current = true;
       networkFallbackLogged.current = false;
+      hasLoggedNoNetwork.current = false;
       setVoiceState('hotword');
     }
 

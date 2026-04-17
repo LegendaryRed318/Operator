@@ -62,31 +62,55 @@ const AppContent: React.FC = () => {
 
   // Check API and Ollama health
   useEffect(() => {
+    const abortController = new AbortController();
+    
     const checkServices = async () => {
-      // Check API
-      try {
-        const res = await fetch('http://localhost:5050/errors');
-        setApiConnected(res.ok);
-        if (res.ok) {
-          const data = await res.json();
-          setErrors(data);
+      // Check API with retry
+      let retries = 0;
+      const maxRetries = 3;
+      while (retries < maxRetries) {
+        try {
+          const res = await fetch('http://localhost:5050/errors', {
+            signal: abortController.signal,
+            cache: 'no-store'
+          });
+          setApiConnected(res.ok);
+          if (res.ok) {
+            const data = await res.json();
+            setErrors(data);
+          }
+          break;
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return;
+          retries++;
+          if (retries >= maxRetries) {
+            setApiConnected(false);
+          } else {
+            await new Promise(r => setTimeout(r, 1000 * retries));
+          }
         }
-      } catch {
-        setApiConnected(false);
       }
 
       // Check Ollama
       try {
-        const res = await fetch('http://localhost:11434/api/tags');
+        const res = await fetch('http://localhost:11434/api/tags', {
+          signal: abortController.signal,
+          cache: 'no-store'
+        });
         setOllamaConnected(res.ok);
-      } catch {
-        setOllamaConnected(false);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') {
+          setOllamaConnected(false);
+        }
       }
     };
 
     checkServices();
     const interval = setInterval(checkServices, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   // Process WebSocket messages
@@ -118,40 +142,58 @@ const AppContent: React.FC = () => {
 
   // Poll real project statuses from watcher DB every 10 seconds
   useEffect(() => {
+    const abortController = new AbortController();
+    
     const fetchProjects = async () => {
-      try {
-        const res = await fetch('http://localhost:5050/projects');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            // Merge DB data with existing mock projects — update status for known projects,
-            // add new ones, keep mocks for any not yet in DB
-            setProjects(prev => {
-              const updated = [...prev];
-              data.forEach((dbProj: { name: string; status: string }) => {
-                const idx = updated.findIndex(p => p.name.toLowerCase() === dbProj.name.toLowerCase());
-                if (idx >= 0) {
-                  updated[idx] = { ...updated[idx], status: dbProj.status as any };
-                } else {
-                  updated.push({
-                    id: dbProj.name,
-                    name: dbProj.name,
-                    status: dbProj.status as any,
-                    path: `/projects/${dbProj.name.toLowerCase()}`,
-                  });
-                }
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          const res = await fetch('http://localhost:5050/projects', {
+            signal: abortController.signal,
+            cache: 'no-store'
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              setProjects(prev => {
+                const updated = [...prev];
+                data.forEach((dbProj: { name: string; status: string }) => {
+                  const idx = updated.findIndex(p => p.name.toLowerCase() === dbProj.name.toLowerCase());
+                  if (idx >= 0) {
+                    updated[idx] = { ...updated[idx], status: dbProj.status as any };
+                  } else {
+                    updated.push({
+                      id: dbProj.name,
+                      name: dbProj.name,
+                      status: dbProj.status as any,
+                      path: `/projects/${dbProj.name.toLowerCase()}`,
+                    });
+                  }
+                });
+                return updated;
               });
-              return updated;
-            });
+            }
+            return; // Success, exit retry loop
+          } else {
+            throw new Error(`HTTP ${res.status}`);
+          }
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return;
+          retries++;
+          if (retries < maxRetries) {
+            await new Promise(r => setTimeout(r, 1000 * retries));
           }
         }
-      } catch {
-        // API not running yet, keep mock data
       }
     };
     fetchProjects();
     const interval = setInterval(fetchProjects, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   // Fetch real system vitals every 5 seconds with error handling and retry

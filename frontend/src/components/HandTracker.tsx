@@ -20,6 +20,7 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
   const isUnmounted = useRef(false);
   const lastWave = useRef(0);
   const handDetectedRef = useRef(false);
+  const frameErrorLogged = useRef(false);
   const [handDetected, setHandDetected] = useState(false);
 
   useEffect(() => {
@@ -172,7 +173,11 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
               try {
                 await handsRef.current.send({ image: videoRef.current! });
               } catch (e) {
-                console.warn('[HandTracker] Dropped a frame processing hands segment', e);
+                // Only log first error to prevent console spam
+                if (!frameErrorLogged.current) {
+                  console.warn('[HandTracker] Frame processing error (suppressed after first)');
+                  frameErrorLogged.current = true;
+                }
               }
             },
             // MediaPipe Camera manages getUserMedia + play() internally;

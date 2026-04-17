@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
 memory.py - Obsidian vault integration for Jarvis second-brain memory.
-Vault location: E:\\JarvisVault
+Vault location: Loaded from OPERATOR_VAULT_PATH env var, defaults to E:/JarvisVault
 """
 
 import logging
+import os
 from pathlib import Path
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-VAULT_ROOT = Path("E:/JarvisVault")
+# Load from environment or use default
+VAULT_ROOT = Path(os.getenv("OPERATOR_VAULT_PATH", "E:/JarvisVault"))
 FOLDERS = {
     "raw_sources": VAULT_ROOT / "raw_sources",
     "wiki": VAULT_ROOT / "wiki",
@@ -170,3 +172,56 @@ def get_recent_files(n: int = 10) -> list:
     except Exception as e:
         logger.error(f"[Memory] Failed to list recent files: {e}")
         return []
+
+
+def save_voice_note(transcript: str, tags: list = None) -> bool:
+    r"""
+    Save a voice note (quick memo) to E:\JarvisVault\raw_sources\voice_notes\YYYY-MM-DD_HHMMSS.md
+    
+    Args:
+        transcript: The transcribed voice text
+        tags: Optional list of tags to include in frontmatter
+    
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    if not ensure_vault():
+        return False
+    
+    if not transcript or not transcript.strip():
+        logger.warning("[Memory] Empty voice note, skipping save")
+        return False
+    
+    try:
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H:%M:%S")
+        filename = f"{date_str}_{time_str.replace(':', '')}.md"
+        
+        notes_dir = FOLDERS["raw_sources"] / "voice_notes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = notes_dir / filename
+        
+        # Build frontmatter
+        tags_str = ""
+        if tags:
+            tags_str = f"tags: {tags}\n"
+        
+        frontmatter = f"""---
+date: {date_str}
+time: {time_str}
+type: voice_note
+source: speech-to-text
+{tags_str}---
+
+# Voice Note — {time_str}
+
+{transcript}
+"""
+        file_path.write_text(frontmatter, encoding="utf-8")
+        logger.info(f"[Memory] Saved voice note: {file_path.name}")
+        return True
+    except Exception as e:
+        logger.error(f"[Memory] Failed to save voice note: {e}")
+        return False
