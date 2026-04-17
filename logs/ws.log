@@ -402,3 +402,40 @@ INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
 INFO:websockets.server:server listening on 127.0.0.1:8765
 INFO:websockets.server:server listening on [::1]:8765
 INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client disconnected normally
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client disconnected normally
+INFO:__main__:[WebSocket] Client removed. Total: 0
