@@ -439,3 +439,17 @@ INFO:__main__:[WebSocket] Client disconnected normally
 INFO:__main__:[WebSocket] Client removed. Total: 1
 INFO:__main__:[WebSocket] Client disconnected normally
 INFO:__main__:[WebSocket] Client removed. Total: 0
+
+============================================================
+[2026-04-17 20:18:56] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on [::1]:8765
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections

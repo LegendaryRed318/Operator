@@ -724,3 +724,46 @@ Starting services...
 [2026-04-17 19:05:48] Press Ctrl+C to stop all services gracefully.
 [2026-04-17 19:05:48] Waiting 12s for frontend to initialise before opening browser...
 [2026-04-17 19:06:01] Browser opened → http://localhost:8081
+[2026-04-17 20:18:54] ============================================================
+[2026-04-17 20:18:54] Operator (Jarvis) Silent Launcher
+[2026-04-17 20:18:54] Root Directory: C:\Projects\Operator
+[2026-04-17 20:18:54] Logs Directory: C:\Projects\Operator\logs
+[2026-04-17 20:18:54] ============================================================
+[2026-04-17 20:18:54] Using virtual environment Python
+[2026-04-17 20:18:54] 
+Starting services...
+[2026-04-17 20:18:54] ✓ Started HTTP API Server (PID: 21680)
+[2026-04-17 20:18:54] Waiting 2s before starting WebSocket Server...
+[2026-04-17 20:18:56] ✓ Started WebSocket Server (PID: 21468)
+[2026-04-17 20:18:56] Waiting 2s before starting File Watcher...
+[2026-04-17 20:18:58] ✓ Started File Watcher (PID: 8756)
+[2026-04-17 20:18:58] Waiting 2s before starting Project Launcher...
+[2026-04-17 20:19:00] ✓ Started Project Launcher (PID: 11788)
+[2026-04-17 20:19:00] Waiting 3s before starting Sleep Manager...
+[2026-04-17 20:19:03] ✓ Started Sleep Manager (PID: 15312)
+[2026-04-17 20:19:03] Waiting 8s before starting Frontend (Vite)...
+[2026-04-17 20:19:11] ✓ Started Frontend (Vite) (PID: 6044)
+[2026-04-17 20:19:11] 
+╔══════════════════════════════════════╗
+[2026-04-17 20:19:11] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-17 20:19:11] ║          OPERATOR ONLINE             ║
+[2026-04-17 20:19:11] ╠══════════════════════════════════════╣
+[2026-04-17 20:19:11] ║  Dashboard: http://localhost:8081    ║
+[2026-04-17 20:19:11] ║  API:       http://localhost:5050    ║
+[2026-04-17 20:19:11] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-17 20:19:11] ╚══════════════════════════════════════╝
+
+[2026-04-17 20:19:11] Press Ctrl+C to stop all services gracefully.
+[2026-04-17 20:19:11] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-17 20:19:23] Browser opened → http://localhost:8081
+[2026-04-17 20:19:28] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-17 20:19:28] ↻ Restarting Frontend (Vite) in 5s (attempt 1/3)...
+[2026-04-17 20:19:33] ✓ Started Frontend (Vite) (PID: 19528)
+[2026-04-17 20:19:43] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-17 20:19:43] ↻ Restarting Frontend (Vite) in 15s (attempt 2/3)...
+[2026-04-17 20:19:58] ✓ Started Frontend (Vite) (PID: 672)
+[2026-04-17 20:20:08] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-17 20:20:08] ↻ Restarting Frontend (Vite) in 30s (attempt 3/3)...
+[2026-04-17 20:20:38] ✓ Started Frontend (Vite) (PID: 22244)
+[2026-04-17 20:20:48] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-17 20:20:48] ✗ Frontend (Vite) has crashed 3 times — giving up.

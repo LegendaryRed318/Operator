@@ -22,7 +22,8 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
     inputRef.current?.focus();
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     // If the env var is missing, fail closed — never accidentally unlock
     if (!SECRET_PASSWORD) {
       setError(true);
@@ -43,9 +44,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
     }
   };
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSubmit();
-  };
+  // handleKey removed since form submission handles Enter natively
 
   return (
     <div style={{
@@ -91,7 +90,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
       </div>
 
       {/* Input */}
-      <div style={{
+      <form onSubmit={handleSubmit} style={{
         zIndex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', gap: '0.75rem',
         animation: shake ? 'shake 0.5s ease' : 'none',
@@ -101,7 +100,6 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
           type="password"
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKey}
           placeholder="Enter access code"
           style={{
             background: 'rgba(0,255,255,0.05)',
@@ -138,7 +136,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
         >
           AUTHENTICATE
         </button>
-      </div>
+      </form>
 
       <div style={{
         position: 'absolute', bottom: '2rem',

@@ -17,28 +17,42 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
   const handsRef = useRef<any>(null);
   const cameraRef = useRef<any>(null);
   const isInitialized = useRef(false);
+  const isUnmounted = useRef(false);
   const lastWave = useRef(0);
   const handDetectedRef = useRef(false);
   const [handDetected, setHandDetected] = useState(false);
 
   useEffect(() => {
+    isUnmounted.current = false;
     if (isInitialized.current) return;
 
-    const loadScripts = async () => {
+        const loadScripts = async () => {
       return new Promise((resolve) => {
         if (window.Hands && window.Camera) {
           resolve(true);
           return;
         }
-        const script1 = document.createElement('script');
-        script1.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
-        script1.onload = () => {
-          const script2 = document.createElement('script');
-          script2.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
-          script2.onload = () => resolve(true);
-          document.body.appendChild(script2);
+
+        const checkReady = () => {
+          if (window.Hands && window.Camera) resolve(true);
+          else setTimeout(checkReady, 100);
         };
-        document.body.appendChild(script1);
+
+        let script1 = document.querySelector('script[src*="hands.js"]') as HTMLScriptElement;
+        if (!script1) {
+          script1 = document.createElement('script');
+          script1.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+          document.head.appendChild(script1);
+        }
+
+        let script2 = document.querySelector('script[src*="camera_utils.js"]') as HTMLScriptElement;
+        if (!script2) {
+          script2 = document.createElement('script');
+          script2.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+          document.head.appendChild(script2);
+        }
+
+        checkReady();
       });
     };
 
@@ -154,7 +168,12 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
         if (videoRef.current) {
           const camera = new window.Camera(videoRef.current, {
             onFrame: async () => {
-              await hands.send({ image: videoRef.current! });
+              if (isUnmounted.current || !handsRef.current) return;
+              try {
+                await handsRef.current.send({ image: videoRef.current! });
+              } catch (e) {
+                console.warn('[HandTracker] Dropped a frame processing hands segment', e);
+              }
             },
             // MediaPipe Camera manages getUserMedia + play() internally;
             // do NOT call videoRef.current.play() manually — that races
@@ -191,12 +210,14 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
     initHands();
 
     return () => {
+      isUnmounted.current = true;
       // Cleanup MediaPipe tracks to prevent memory leaks and zombie webcam
       if (cameraRef.current) {
         try { cameraRef.current.stop(); } catch (e) { console.error('Camera stop error:', e); }
       }
       if (handsRef.current) {
         try { handsRef.current.close(); } catch (e) { console.error('Hands close error:', e); }
+        handsRef.current = null;
       }
       isInitialized.current = false;
     };

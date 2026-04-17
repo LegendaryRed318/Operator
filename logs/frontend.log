@@ -450,3 +450,67 @@ Error: Port 8081 is already in use
 [2m19:27:34[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
 [2m19:27:34[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
 [2m19:27:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/HandTracker.tsx[22m
+[2m20:15:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/HandTracker.tsx[22m
+[2m20:15:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/HandTracker.tsx[22m
+[2m20:15:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/LockScreen.tsx[22m
+[2m20:16:04[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mindex.html[22m
+
+============================================================
+[2026-04-17 20:19:11] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 20:19:33] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 20:19:58] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 20:20:38] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
