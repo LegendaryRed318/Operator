@@ -1,0 +1,232 @@
+{
+  "main": {
+    "id": "7393c1eca2b0d5d2",
+    "type": "split",
+    "children": [
+      {
+        "id": "784bf759e92db751",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b2bf415eefed1c29",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
+            }
+          }
+        ],
+        "stacked": true
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b8c3eb14bd3dea6c",
+    "type": "split",
+    "children": [
+      {
+        "id": "5f6f9e671dca2118",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3aac7fe2dc61b59e",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "345bcbc681493335",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "4ce7e2f97e146e36",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "0e90848881370177",
+    "type": "split",
+    "children": [
+      {
+        "id": "20d632c914d0d123",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "30276d03e4ef7c7b",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "939b9c2a35a4421f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "logs/temp_audio.wav",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from temp_audio"
+            }
+          },
+          {
+            "id": "97ef1ad03fb6bc83",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "ccacf31a4417c441",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "9251b7be8081d224",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "logs/temp_audio.wav",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of temp_audio"
+            }
+          },
+          {
+            "id": "9e9cb54ad9763bf5",
+            "type": "leaf",
+            "state": {
+              "type": "copilot-chat-view",
+              "state": {},
+              "icon": "message-square",
+              "title": "Copilot"
+            }
+          }
+        ],
+        "currentTab": 5
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "copilot:Open Copilot Chat": false
+    }
+  },
+  "active": "3aac7fe2dc61b59e",
+  "lastOpenFiles": [
+    "copilot/copilot-conversations/Hello@20260415_183821.md",
+    "copilot/copilot-conversations",
+    "copilot/copilot-custom-prompts/Clip Web Page.md",
+    "copilot/copilot-custom-prompts/Clip YouTube Transcript.md",
+    "copilot/copilot-custom-prompts/Rewrite as tweet thread.md",
+    "copilot/copilot-custom-prompts/Rewrite as tweet.md",
+    "copilot/copilot-custom-prompts/Remove URLs.md",
+    "copilot/copilot-custom-prompts/Generate glossary.md",
+    "copilot/copilot-custom-prompts/Generate table of contents.md",
+    "copilot/copilot-custom-prompts/Make longer.md",
+    "copilot/copilot-custom-prompts/Make shorter.md",
+    "copilot/copilot-custom-prompts/Emojify.md",
+    "copilot/copilot-custom-prompts/Explain like I am 5.md",
+    "copilot/copilot-custom-prompts/Simplify.md",
+    "copilot/copilot-custom-prompts/Summarize.md",
+    "copilot/copilot-custom-prompts/Translate to Chinese.md",
+    "copilot/copilot-custom-prompts/Fix grammar and spelling.md",
+    "copilot/copilot-custom-prompts",
+    "copilot",
+    "logs/temp_audio.webm",
+    "2026-04-14.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "PHASE4_README.md",
+    "README.md",
+    "backend/__pycache__/setup_vault.cpython-314.pyc",
+    "frontend/dist/assets/index-D7sVAGz_.js",
+    "backend/setup_vault.py",
+    "frontend/node_modules/loglevel/lib/loglevel.js",
+    "frontend/node_modules/loglevel/dist/loglevel.min.js",
+    "frontend/node_modules/loglevel/dist/loglevel.js",
+    "frontend/node_modules/loglevel/CONTRIBUTING.md",
+    "frontend/node_modules/loglevel/README.md",
+    "frontend/node_modules/@bufbuild/protobuf/README.md",
+    "frontend/node_modules/@livekit/mutex/README.md",
+    "frontend/node_modules/rxjs/README.md"
+  ]
+}

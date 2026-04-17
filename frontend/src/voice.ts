@@ -1,6 +1,22 @@
 // voice.ts - Jarvis voice interface
 // WebSocket with max 3 retries, MediaRecorder for audio, NO SpeechRecognition API
 
+// Dynamic WebSocket URL: supports local development and ngrok remote access
+// - Local: ws://localhost:8765
+// - Ngrok: wss://*.ngrok-free.app (secure WebSocket for remote access)
+function getWebSocketUrl(): string {
+  const host = window.location.host;
+  
+  // Check if accessed via ngrok
+  if (host.includes('.ngrok-free.app')) {
+    // Use secure WebSocket with same ngrok host
+    return `wss://${host}/ws`;
+  }
+  
+  // Local development fallback
+  return 'ws://localhost:8765';
+}
+
 export class VoiceController {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
@@ -33,14 +49,21 @@ export class VoiceController {
         this.reconnectAttempts = 0;
       }
 
-      const wsUrl = 'ws://localhost:8765';
-      console.log(`[Voice] WebSocket attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts}`);
+      const wsUrl = getWebSocketUrl();
+      const isRemote = wsUrl.startsWith('wss://');
+      
+      console.log(`[Voice] WebSocket attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts} to ${wsUrl}`);
 
       this.ws = new WebSocket(wsUrl);
       let connected = false;
 
       this.ws.onopen = () => {
-        console.log('[Voice] WebSocket connected');
+        // Log connection type for debugging
+        if (isRemote) {
+          console.log('[Voice] Connected to JARVIS via remote ngrok (wss)');
+        } else {
+          console.log('[Voice] Connected to JARVIS locally (ws)');
+        }
         this.reconnectAttempts = 0;
         this.isOffline = false;
         connected = true;

@@ -9,7 +9,19 @@
       "Bash(python -m py_compile backend/server.py)",
       "Bash(python -m py_compile backend/watcher.py)",
       "Bash(python -m py_compile backend/ws_server.py)",
-      "Bash(python -m py_compile launcher.py)"
+      "Bash(python -m py_compile launcher.py)",
+      "Bash(python -m py_compile backend/server.py backend/ws_server.py backend/decision_engine.py backend/memory.py)",
+      "Bash(npm run:*)",
+      "Bash(python -c \"import sqlite3; conn = sqlite3.connect\\('database/errors.db'\\); conn.row_factory = sqlite3.Row; c = conn.cursor\\(\\); c.execute\\(\\\\\"SELECT name FROM sqlite_master WHERE type='table'\\\\\"\\); print\\([r[0] for r in c.fetchall\\(\\)]\\); c.execute\\('PRAGMA table_info\\(errors\\)'\\); print\\([dict\\(r\\) for r in c.fetchall\\(\\)]\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"import faster_whisper; print\\('faster-whisper OK'\\)\")",
+      "Bash(venv/Scripts/pip.exe install:*)",
+      "Bash(ffmpeg -version)",
+      "Bash(where.exe ffmpeg:*)",
+      "Read(//c/Windows/System32/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(python -m py_compile backend/server.py backend/ws_server.py backend/memory.py)",
+      "Bash(venv/Scripts/python.exe -c \"import pyttsx3; print\\('pyttsx3 OK'\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"from faster_whisper import WhisperModel; print\\('Whisper OK'\\)\")"
     ]
   }
 }

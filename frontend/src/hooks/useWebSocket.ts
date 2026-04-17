@@ -1,10 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { WebSocketMessage } from '../types';
 
-const WS_URL = 'ws://localhost:8765';
+// Dynamic WebSocket URL: supports local development and ngrok remote access
+// - Local: ws://localhost:8765
+// - Ngrok: wss://*.ngrok-free.app (secure WebSocket for remote access)
+function getWebSocketUrl(): string {
+  const host = window.location.host;
+  
+  // Check if accessed via ngrok
+  if (host.includes('.ngrok-free.app')) {
+    // Use secure WebSocket with same ngrok host
+    return `wss://${host}/ws`;
+  }
+  
+  // Local development fallback
+  return 'ws://localhost:8765';
+}
+
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY = 5000;
 const INITIAL_DELAY = 10000; // 10 seconds delay before first connection
+
+let _initLogFired = false;
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
@@ -38,14 +55,22 @@ export function useWebSocket() {
       reconnectAttemptsRef.current = 0;
     }
 
-    console.log(`[WebSocket] Connection attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+    const wsUrl = getWebSocketUrl();
+    const isRemote = wsUrl.startsWith('wss://');
+    
+    console.log(`[WebSocket] Connection attempt ${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS} to ${wsUrl}`);
 
     try {
-      const ws = new WebSocket(WS_URL);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[WebSocket] Connected');
+        // Log connection type for debugging
+        if (isRemote) {
+          console.log('[WebSocket] Connected to JARVIS via remote ngrok (wss)');
+        } else {
+          console.log('[WebSocket] Connected to JARVIS locally (ws)');
+        }
         setConnected(true);
         setConnecting(false);
         setOffline(false);
@@ -117,7 +142,10 @@ export function useWebSocket() {
 
   // Initial 10 second delay before first connection
   useEffect(() => {
-    console.log(`[WebSocket] Waiting ${INITIAL_DELAY / 1000}s before first connection...`);
+    if (!_initLogFired) {
+      _initLogFired = true;
+      console.log(`[WebSocket] Waiting ${INITIAL_DELAY / 1000}s before first connection...`);
+    }
     setConnecting(true);
 
     const timer = setTimeout(() => {

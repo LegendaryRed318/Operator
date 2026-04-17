@@ -14,6 +14,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+notification_lock = threading.Lock()
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -39,7 +41,8 @@ ALERT_FLAG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def init_database():
     """Initialize the SQLite database with the errors table."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS errors (
@@ -172,27 +175,29 @@ def should_notify(project_name):
     
     now = time.time()
     
-    # Get timestamps for this project
-    timestamps = notification_timestamps.get(project_name, [])
-    
-    # Remove timestamps older than the window
-    timestamps = [ts for ts in timestamps if now - ts < NOTIFICATION_WINDOW_SECONDS]
-    
-    # Check if under limit
-    if len(timestamps) < MAX_NOTIFICATIONS_PER_MINUTE:
-        timestamps.append(now)
-        notification_timestamps[project_name] = timestamps
-        return True
-    else:
-        notification_timestamps[project_name] = timestamps
-        return False
+    with notification_lock:
+        # Get timestamps for this project
+        timestamps = notification_timestamps.get(project_name, [])
+        
+        # Remove timestamps older than the window
+        timestamps = [ts for ts in timestamps if now - ts < NOTIFICATION_WINDOW_SECONDS]
+        
+        # Check if under limit
+        if len(timestamps) < MAX_NOTIFICATIONS_PER_MINUTE:
+            timestamps.append(now)
+            notification_timestamps[project_name] = timestamps
+            return True
+        else:
+            notification_timestamps[project_name] = timestamps
+            return False
 
 
 def store_error(project_name, file_path, error_text):
     """Store error in database and query Ollama for fix."""
     error_id = None
     try:
-        conn = sqlite3.connect(str(DB_PATH))
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
         cursor = conn.cursor()
         
         # Insert error without fix first
@@ -236,7 +241,8 @@ def store_error(project_name, file_path, error_text):
     
     # Update database with fix
     try:
-        conn = sqlite3.connect(str(DB_PATH))
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE errors SET suggested_fix = ? WHERE id = ?

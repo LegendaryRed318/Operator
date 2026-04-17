@@ -11,7 +11,7 @@ from datetime import datetime
 
 # Config paths
 TELEGRAM_CONFIG_PATH = Path(__file__).parent / "telegram_config.json"
-DASHBOARD_URL = "http://localhost:1420"
+DASHBOARD_URL = "http://localhost:8080"
 
 
 def send_windows_alert(project_name, error_summary, timestamp):

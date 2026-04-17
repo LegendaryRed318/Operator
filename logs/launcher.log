@@ -385,3 +385,342 @@ Press Ctrl+C to stop all services gracefully.
 [2026-04-13 19:27:15] ✓ Started Frontend (Vite) (PID: 12452)
 [2026-04-13 19:27:20] ⚠ Frontend (Vite) has exited (code: 2)
 [2026-04-13 19:27:20] ✗ Frontend (Vite) has crashed 3 times — giving up.
+[2026-04-14 18:13:47] ============================================================
+[2026-04-14 18:13:47] Operator (Jarvis) Silent Launcher
+[2026-04-14 18:13:47] Root Directory: C:\Projects\Operator
+[2026-04-14 18:13:47] Logs Directory: C:\Projects\Operator\logs
+[2026-04-14 18:13:47] ============================================================
+[2026-04-14 18:13:47] Using virtual environment Python
+[2026-04-14 18:13:47] 
+Starting services...
+[2026-04-14 18:13:47] ✓ Started HTTP API Server (PID: 3828)
+[2026-04-14 18:13:47] Waiting 2s before starting WebSocket Server...
+[2026-04-14 18:13:49] ✓ Started WebSocket Server (PID: 4800)
+[2026-04-14 18:13:49] Waiting 2s before starting File Watcher...
+[2026-04-14 18:13:51] ✓ Started File Watcher (PID: 7720)
+[2026-04-14 18:13:51] Waiting 2s before starting Project Launcher...
+[2026-04-14 18:13:53] ✓ Started Project Launcher (PID: 13884)
+[2026-04-14 18:13:53] Waiting 3s before starting Sleep Manager...
+[2026-04-14 18:13:56] ✓ Started Sleep Manager (PID: 19128)
+[2026-04-14 18:13:56] Waiting 8s before starting Frontend (Vite)...
+[2026-04-14 18:14:04] ✓ Started Frontend (Vite) (PID: 980)
+[2026-04-14 18:14:04] 
+╔══════════════════════════════════════╗
+[2026-04-14 18:14:04] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-14 18:14:04] ║          OPERATOR ONLINE             ║
+[2026-04-14 18:14:04] ╠══════════════════════════════════════╣
+[2026-04-14 18:14:04] ║  Dashboard: http://localhost:8081    ║
+[2026-04-14 18:14:04] ║  API:       http://localhost:5050    ║
+[2026-04-14 18:14:04] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-14 18:14:04] ╚══════════════════════════════════════╝
+
+[2026-04-14 18:14:04] Press Ctrl+C to stop all services gracefully.
+[2026-04-14 18:14:04] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-14 18:14:16] Browser opened → http://localhost:8081
+[2026-04-14 21:12:48] ============================================================
+[2026-04-14 21:12:48] Operator (Jarvis) Silent Launcher
+[2026-04-14 21:12:48] Root Directory: C:\Projects\Operator
+[2026-04-14 21:12:48] Logs Directory: C:\Projects\Operator\logs
+[2026-04-14 21:12:48] ============================================================
+[2026-04-14 21:12:48] Using virtual environment Python
+[2026-04-14 21:12:48] 
+Starting services...
+[2026-04-14 21:12:48] ✓ Started HTTP API Server (PID: 17204)
+[2026-04-14 21:12:48] Waiting 2s before starting WebSocket Server...
+[2026-04-14 21:12:50] ✓ Started WebSocket Server (PID: 21124)
+[2026-04-14 21:12:50] Waiting 2s before starting File Watcher...
+[2026-04-14 21:12:52] ✓ Started File Watcher (PID: 3440)
+[2026-04-14 21:12:52] Waiting 2s before starting Project Launcher...
+[2026-04-14 21:12:54] ✓ Started Project Launcher (PID: 2148)
+[2026-04-14 21:12:54] Waiting 3s before starting Sleep Manager...
+[2026-04-14 21:12:57] ✓ Started Sleep Manager (PID: 13292)
+[2026-04-14 21:12:57] Waiting 8s before starting Frontend (Vite)...
+[2026-04-14 21:13:05] ✓ Started Frontend (Vite) (PID: 20668)
+[2026-04-14 21:13:05] 
+╔══════════════════════════════════════╗
+[2026-04-14 21:13:05] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-14 21:13:05] ║          OPERATOR ONLINE             ║
+[2026-04-14 21:13:05] ╠══════════════════════════════════════╣
+[2026-04-14 21:13:05] ║  Dashboard: http://localhost:8081    ║
+[2026-04-14 21:13:05] ║  API:       http://localhost:5050    ║
+[2026-04-14 21:13:05] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-14 21:13:05] ╚══════════════════════════════════════╝
+
+[2026-04-14 21:13:05] Press Ctrl+C to stop all services gracefully.
+[2026-04-14 21:13:05] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-14 21:13:18] Browser opened → http://localhost:8081
+[2026-04-15 07:17:33] ============================================================
+[2026-04-15 07:17:33] Operator (Jarvis) Silent Launcher
+[2026-04-15 07:17:33] Root Directory: C:\Projects\Operator
+[2026-04-15 07:17:33] Logs Directory: C:\Projects\Operator\logs
+[2026-04-15 07:17:33] ============================================================
+[2026-04-15 07:17:33] Using virtual environment Python
+[2026-04-15 07:17:33] 
+Starting services...
+[2026-04-15 07:17:33] ✓ Started HTTP API Server (PID: 21856)
+[2026-04-15 07:17:33] Waiting 2s before starting WebSocket Server...
+[2026-04-15 07:17:35] ✓ Started WebSocket Server (PID: 6736)
+[2026-04-15 07:17:35] Waiting 2s before starting File Watcher...
+[2026-04-15 07:17:37] ✓ Started File Watcher (PID: 10980)
+[2026-04-15 07:17:37] Waiting 2s before starting Project Launcher...
+[2026-04-15 07:17:39] ✓ Started Project Launcher (PID: 18472)
+[2026-04-15 07:17:39] Waiting 3s before starting Sleep Manager...
+[2026-04-15 07:17:42] ✓ Started Sleep Manager (PID: 19608)
+[2026-04-15 07:17:42] Waiting 8s before starting Frontend (Vite)...
+[2026-04-15 07:17:50] ✓ Started Frontend (Vite) (PID: 10632)
+[2026-04-15 07:17:50] 
+╔══════════════════════════════════════╗
+[2026-04-15 07:17:50] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-15 07:17:50] ║          OPERATOR ONLINE             ║
+[2026-04-15 07:17:50] ╠══════════════════════════════════════╣
+[2026-04-15 07:17:50] ║  Dashboard: http://localhost:8081    ║
+[2026-04-15 07:17:50] ║  API:       http://localhost:5050    ║
+[2026-04-15 07:17:50] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-15 07:17:50] ╚══════════════════════════════════════╝
+
+[2026-04-15 07:17:50] Press Ctrl+C to stop all services gracefully.
+[2026-04-15 07:17:50] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-15 07:18:02] Browser opened → http://localhost:8081
+[2026-04-15 07:27:02] ============================================================
+[2026-04-15 07:27:02] Operator (Jarvis) Silent Launcher
+[2026-04-15 07:27:02] Root Directory: C:\Projects\Operator
+[2026-04-15 07:27:02] Logs Directory: C:\Projects\Operator\logs
+[2026-04-15 07:27:02] ============================================================
+[2026-04-15 07:27:02] Using virtual environment Python
+[2026-04-15 07:27:02] 
+Starting services...
+[2026-04-15 07:27:02] ✓ Started HTTP API Server (PID: 12420)
+[2026-04-15 07:27:02] Waiting 2s before starting WebSocket Server...
+[2026-04-15 07:27:04] ✓ Started WebSocket Server (PID: 5920)
+[2026-04-15 07:27:04] Waiting 2s before starting File Watcher...
+[2026-04-15 07:27:06] ✓ Started File Watcher (PID: 11096)
+[2026-04-15 07:27:06] Waiting 2s before starting Project Launcher...
+[2026-04-15 07:27:08] ✓ Started Project Launcher (PID: 17588)
+[2026-04-15 07:27:08] Waiting 3s before starting Sleep Manager...
+[2026-04-15 07:27:11] ✓ Started Sleep Manager (PID: 5304)
+[2026-04-15 07:27:11] Waiting 8s before starting Frontend (Vite)...
+[2026-04-15 07:27:19] ✓ Started Frontend (Vite) (PID: 11452)
+[2026-04-15 07:27:19] 
+╔══════════════════════════════════════╗
+[2026-04-15 07:27:19] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-15 07:27:19] ║          OPERATOR ONLINE             ║
+[2026-04-15 07:27:19] ╠══════════════════════════════════════╣
+[2026-04-15 07:27:19] ║  Dashboard: http://localhost:8081    ║
+[2026-04-15 07:27:19] ║  API:       http://localhost:5050    ║
+[2026-04-15 07:27:19] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-15 07:27:19] ╚══════════════════════════════════════╝
+
+[2026-04-15 07:27:19] Press Ctrl+C to stop all services gracefully.
+[2026-04-15 07:27:19] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-15 07:27:31] Browser opened → http://localhost:8081
+[2026-04-15 07:43:46] ⚠ Project Launcher has exited (code: 0)
+[2026-04-15 07:43:46] ↻ Restarting Project Launcher in 5s (attempt 1/3)...
+[2026-04-15 07:43:56] ============================================================
+[2026-04-15 07:43:56] Operator (Jarvis) Silent Launcher
+[2026-04-15 07:43:56] Root Directory: C:\Projects\Operator
+[2026-04-15 07:43:56] Logs Directory: C:\Projects\Operator\logs
+[2026-04-15 07:43:56] ============================================================
+[2026-04-15 07:43:56] Using virtual environment Python
+[2026-04-15 07:43:56] 
+Starting services...
+[2026-04-15 07:43:56] ✓ Started HTTP API Server (PID: 10176)
+[2026-04-15 07:43:56] Waiting 2s before starting WebSocket Server...
+[2026-04-15 07:43:58] ✓ Started WebSocket Server (PID: 16272)
+[2026-04-15 07:43:58] Waiting 2s before starting File Watcher...
+[2026-04-15 07:44:00] ✓ Started File Watcher (PID: 11164)
+[2026-04-15 07:44:00] Waiting 2s before starting Project Launcher...
+[2026-04-15 07:44:02] ✓ Started Project Launcher (PID: 9240)
+[2026-04-15 07:44:02] Waiting 3s before starting Sleep Manager...
+[2026-04-15 07:44:05] ✓ Started Sleep Manager (PID: 17588)
+[2026-04-15 07:44:05] Waiting 8s before starting Frontend (Vite)...
+[2026-04-15 07:44:13] ✓ Started Frontend (Vite) (PID: 11936)
+[2026-04-15 07:44:13] 
+╔══════════════════════════════════════╗
+[2026-04-15 07:44:13] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-15 07:44:13] ║          OPERATOR ONLINE             ║
+[2026-04-15 07:44:13] ╠══════════════════════════════════════╣
+[2026-04-15 07:44:13] ║  Dashboard: http://localhost:8081    ║
+[2026-04-15 07:44:13] ║  API:       http://localhost:5050    ║
+[2026-04-15 07:44:13] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-15 07:44:13] ╚══════════════════════════════════════╝
+
+[2026-04-15 07:44:13] Press Ctrl+C to stop all services gracefully.
+[2026-04-15 07:44:13] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-15 07:44:25] Browser opened → http://localhost:8081
+[2026-04-15 07:44:30] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:44:30] ↻ Restarting Frontend (Vite) in 5s (attempt 1/3)...
+[2026-04-15 07:44:35] ✓ Started Frontend (Vite) (PID: 16876)
+[2026-04-15 07:44:45] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:44:45] ↻ Restarting Frontend (Vite) in 15s (attempt 2/3)...
+[2026-04-15 07:45:00] ✓ Started Frontend (Vite) (PID: 11520)
+[2026-04-15 07:45:10] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:45:10] ↻ Restarting Frontend (Vite) in 30s (attempt 3/3)...
+[2026-04-15 07:45:40] ✓ Started Frontend (Vite) (PID: 19416)
+[2026-04-15 07:45:45] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:45:45] ✗ Frontend (Vite) has crashed 3 times — giving up.
+[2026-04-15 07:48:52] ============================================================
+[2026-04-15 07:48:52] Operator (Jarvis) Silent Launcher
+[2026-04-15 07:48:52] Root Directory: C:\Projects\Operator
+[2026-04-15 07:48:52] Logs Directory: C:\Projects\Operator\logs
+[2026-04-15 07:48:52] ============================================================
+[2026-04-15 07:48:52] Using virtual environment Python
+[2026-04-15 07:48:52] 
+Starting services...
+[2026-04-15 07:48:52] ✓ Started HTTP API Server (PID: 21444)
+[2026-04-15 07:48:52] Waiting 2s before starting WebSocket Server...
+[2026-04-15 07:48:54] ✓ Started WebSocket Server (PID: 17896)
+[2026-04-15 07:48:54] Waiting 2s before starting File Watcher...
+[2026-04-15 07:48:56] ✓ Started File Watcher (PID: 16344)
+[2026-04-15 07:48:56] Waiting 2s before starting Project Launcher...
+[2026-04-15 07:48:58] ✓ Started Project Launcher (PID: 16404)
+[2026-04-15 07:48:58] Waiting 3s before starting Sleep Manager...
+[2026-04-15 07:49:01] ✓ Started Sleep Manager (PID: 21952)
+[2026-04-15 07:49:01] Waiting 8s before starting Frontend (Vite)...
+[2026-04-15 07:49:09] ✓ Started Frontend (Vite) (PID: 22500)
+[2026-04-15 07:49:09] 
+╔══════════════════════════════════════╗
+[2026-04-15 07:49:09] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-15 07:49:09] ║          OPERATOR ONLINE             ║
+[2026-04-15 07:49:09] ╠══════════════════════════════════════╣
+[2026-04-15 07:49:09] ║  Dashboard: http://localhost:8081    ║
+[2026-04-15 07:49:09] ║  API:       http://localhost:5050    ║
+[2026-04-15 07:49:09] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-15 07:49:09] ╚══════════════════════════════════════╝
+
+[2026-04-15 07:49:09] Press Ctrl+C to stop all services gracefully.
+[2026-04-15 07:49:09] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-15 07:49:21] Browser opened → http://localhost:8081
+[2026-04-15 07:49:26] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:49:26] ↻ Restarting Frontend (Vite) in 5s (attempt 1/3)...
+[2026-04-15 07:49:31] ✓ Started Frontend (Vite) (PID: 21132)
+[2026-04-15 07:49:41] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:49:41] ↻ Restarting Frontend (Vite) in 15s (attempt 2/3)...
+[2026-04-15 07:49:56] ✓ Started Frontend (Vite) (PID: 1596)
+[2026-04-15 07:50:06] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:50:06] ↻ Restarting Frontend (Vite) in 30s (attempt 3/3)...
+[2026-04-15 07:50:36] ✓ Started Frontend (Vite) (PID: 2328)
+[2026-04-15 07:50:46] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-15 07:50:46] ✗ Frontend (Vite) has crashed 3 times — giving up.
+[2026-04-15 15:06:44] ⚠ Project Launcher has exited (code: 0)
+[2026-04-15 15:06:44] ↻ Restarting Project Launcher in 5s (attempt 1/3)...
+[2026-04-15 15:06:49] ✓ Started Project Launcher (PID: 18116)
+[2026-04-15 15:06:49] 
+Received signal 2, initiating shutdown...
+[2026-04-15 15:06:49] 
+Shutting down all services...
+[2026-04-15 15:06:49] Stopping Project Launcher (PID: 18116)...
+[2026-04-15 15:06:49]   ✓ Project Launcher stopped gracefully
+[2026-04-15 15:06:49] Stopping Sleep Manager (PID: 21952)...
+[2026-04-15 15:06:49]   ✓ Sleep Manager stopped gracefully
+[2026-04-15 15:06:49] Stopping File Watcher (PID: 16344)...
+[2026-04-15 15:06:49]   ✓ File Watcher stopped gracefully
+[2026-04-15 15:06:49] Stopping WebSocket Server (PID: 17896)...
+[2026-04-15 15:06:49]   ✓ WebSocket Server stopped gracefully
+[2026-04-15 15:06:49] Stopping HTTP API Server (PID: 21444)...
+[2026-04-15 15:06:49]   ✓ HTTP API Server stopped gracefully
+[2026-04-15 15:06:49] All services stopped.
+[2026-04-16 21:48:16] ============================================================
+[2026-04-16 21:48:16] Operator (Jarvis) Silent Launcher
+[2026-04-16 21:48:16] Root Directory: C:\Projects\Operator
+[2026-04-16 21:48:16] Logs Directory: C:\Projects\Operator\logs
+[2026-04-16 21:48:16] ============================================================
+[2026-04-16 21:48:16] Using virtual environment Python
+[2026-04-16 21:48:16] 
+Starting services...
+[2026-04-16 21:48:16] ✓ Started HTTP API Server (PID: 23260)
+[2026-04-16 21:48:16] Waiting 2s before starting WebSocket Server...
+[2026-04-16 21:48:18] ✓ Started WebSocket Server (PID: 21568)
+[2026-04-16 21:48:18] Waiting 2s before starting File Watcher...
+[2026-04-16 21:48:20] ✓ Started File Watcher (PID: 576)
+[2026-04-16 21:48:20] Waiting 2s before starting Project Launcher...
+[2026-04-16 21:48:22] ✓ Started Project Launcher (PID: 14468)
+[2026-04-16 21:48:22] Waiting 3s before starting Sleep Manager...
+[2026-04-16 21:48:25] ✓ Started Sleep Manager (PID: 22892)
+[2026-04-16 21:48:25] Waiting 8s before starting Frontend (Vite)...
+[2026-04-16 21:48:33] ✓ Started Frontend (Vite) (PID: 20152)
+[2026-04-16 21:48:33] 
+╔══════════════════════════════════════╗
+[2026-04-16 21:48:33] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-16 21:48:33] ║          OPERATOR ONLINE             ║
+[2026-04-16 21:48:33] ╠══════════════════════════════════════╣
+[2026-04-16 21:48:33] ║  Dashboard: http://localhost:8081    ║
+[2026-04-16 21:48:33] ║  API:       http://localhost:5050    ║
+[2026-04-16 21:48:33] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-16 21:48:33] ╚══════════════════════════════════════╝
+
+[2026-04-16 21:48:33] Press Ctrl+C to stop all services gracefully.
+[2026-04-16 21:48:33] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-16 21:48:41] ============================================================
+[2026-04-16 21:48:41] Operator (Jarvis) Silent Launcher
+[2026-04-16 21:48:41] Root Directory: C:\Projects\Operator
+[2026-04-16 21:48:41] Logs Directory: C:\Projects\Operator\logs
+[2026-04-16 21:48:41] ============================================================
+[2026-04-16 21:48:41] Using virtual environment Python
+[2026-04-16 21:48:41] 
+Starting services...
+[2026-04-16 21:48:41] ✓ Started HTTP API Server (PID: 13652)
+[2026-04-16 21:48:41] Waiting 2s before starting WebSocket Server...
+[2026-04-16 21:48:43] ✓ Started WebSocket Server (PID: 1572)
+[2026-04-16 21:48:43] Waiting 2s before starting File Watcher...
+[2026-04-16 21:48:45] Browser opened → http://localhost:8081
+[2026-04-16 21:48:45] ✓ Started File Watcher (PID: 15168)
+[2026-04-16 21:48:45] Waiting 2s before starting Project Launcher...
+[2026-04-16 21:48:47] ✓ Started Project Launcher (PID: 14092)
+[2026-04-16 21:48:47] Waiting 3s before starting Sleep Manager...
+[2026-04-16 21:48:50] ✓ Started Sleep Manager (PID: 19504)
+[2026-04-16 21:48:50] Waiting 8s before starting Frontend (Vite)...
+[2026-04-16 21:48:58] ✓ Started Frontend (Vite) (PID: 11168)
+[2026-04-16 21:48:58] 
+╔══════════════════════════════════════╗
+[2026-04-16 21:48:58] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-16 21:48:58] ║          OPERATOR ONLINE             ║
+[2026-04-16 21:48:58] ╠══════════════════════════════════════╣
+[2026-04-16 21:48:58] ║  Dashboard: http://localhost:8081    ║
+[2026-04-16 21:48:58] ║  API:       http://localhost:5050    ║
+[2026-04-16 21:48:58] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-16 21:48:58] ╚══════════════════════════════════════╝
+
+[2026-04-16 21:48:58] Press Ctrl+C to stop all services gracefully.
+[2026-04-16 21:48:58] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-16 21:49:10] Browser opened → http://localhost:8081
+[2026-04-16 21:49:15] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-16 21:49:15] ↻ Restarting Frontend (Vite) in 5s (attempt 1/3)...
+[2026-04-16 21:49:20] ✓ Started Frontend (Vite) (PID: 21016)
+[2026-04-16 21:49:41] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-16 21:49:41] ↻ Restarting Frontend (Vite) in 15s (attempt 2/3)...
+[2026-04-16 21:49:56] ✓ Started Frontend (Vite) (PID: 14960)
+[2026-04-16 21:50:16] ⚠ Frontend (Vite) has exited (code: 1)
+[2026-04-16 21:50:16] ↻ Restarting Frontend (Vite) in 30s (attempt 3/3)...
+[2026-04-16 21:50:46] ✓ Started Frontend (Vite) (PID: 6544)
+[2026-04-17 19:05:31] ============================================================
+[2026-04-17 19:05:31] Operator (Jarvis) Silent Launcher
+[2026-04-17 19:05:31] Root Directory: C:\Projects\Operator
+[2026-04-17 19:05:31] Logs Directory: C:\Projects\Operator\logs
+[2026-04-17 19:05:31] ============================================================
+[2026-04-17 19:05:31] Using virtual environment Python
+[2026-04-17 19:05:31] 
+Starting services...
+[2026-04-17 19:05:31] ✓ Started HTTP API Server (PID: 2860)
+[2026-04-17 19:05:31] Waiting 2s before starting WebSocket Server...
+[2026-04-17 19:05:33] ✓ Started WebSocket Server (PID: 12568)
+[2026-04-17 19:05:33] Waiting 2s before starting File Watcher...
+[2026-04-17 19:05:35] ✓ Started File Watcher (PID: 20508)
+[2026-04-17 19:05:35] Waiting 2s before starting Project Launcher...
+[2026-04-17 19:05:37] ✓ Started Project Launcher (PID: 16912)
+[2026-04-17 19:05:37] Waiting 3s before starting Sleep Manager...
+[2026-04-17 19:05:40] ✓ Started Sleep Manager (PID: 6760)
+[2026-04-17 19:05:40] Waiting 8s before starting Frontend (Vite)...
+[2026-04-17 19:05:48] ✓ Started Frontend (Vite) (PID: 3300)
+[2026-04-17 19:05:48] 
+╔══════════════════════════════════════╗
+[2026-04-17 19:05:48] ║     JARVIS SYSTEM GUARDIAN v1.0      ║
+[2026-04-17 19:05:48] ║          OPERATOR ONLINE             ║
+[2026-04-17 19:05:48] ╠══════════════════════════════════════╣
+[2026-04-17 19:05:48] ║  Dashboard: http://localhost:8081    ║
+[2026-04-17 19:05:48] ║  API:       http://localhost:5050    ║
+[2026-04-17 19:05:48] ║  WebSocket: ws://localhost:8765      ║
+[2026-04-17 19:05:48] ╚══════════════════════════════════════╝
+
+[2026-04-17 19:05:48] Press Ctrl+C to stop all services gracefully.
+[2026-04-17 19:05:48] Waiting 12s for frontend to initialise before opening browser...
+[2026-04-17 19:06:01] Browser opened → http://localhost:8081

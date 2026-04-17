@@ -8,6 +8,7 @@ import os
 import json
 import logging
 import requests
+import psutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -107,6 +108,81 @@ Do not include any other text. Only output the JSON object."""
             return response.strip()
         except Exception as e:
             return f"I'm having trouble thinking, RED. Error: {e}"
+
+
+def get_installed_models() -> set:
+    """Fetch list of installed Ollama models."""
+    try:
+        import requests
+        resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            return {m["name"] for m in data.get("models", [])}
+    except Exception as e:
+        logger.warning(f"[AI] Failed to fetch installed models: {e}")
+    return set()
+
+
+def pull_model_in_background(model_name: str):
+    """Start a background process to pull a model."""
+    try:
+        import subprocess
+        # Extract base model name without tag for pull command
+        base_name = model_name.split(":")[0]
+        subprocess.Popen(
+            ["ollama", "pull", base_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+        )
+        logger.info(f"[AI] Started background pull for {base_name}")
+    except Exception as e:
+        logger.warning(f"[AI] Failed to start pull for {model_name}: {e}")
+
+
+def select_model_by_ram() -> str | None:
+    """
+    Select the best Ollama model based on available RAM.
+    Checks if model is installed, falls back to available models.
+    Returns None to skip Ollama entirely and use Gemini fallback.
+    """
+    try:
+        available_gb = psutil.virtual_memory().available / (1024 ** 3)
+        installed = get_installed_models()
+        
+        # Priority order based on RAM
+        if available_gb > 5:
+            preferred = "deepseek-r1:7b"
+            fallback = "qwen2.5-coder:7b"
+        elif available_gb > 3:
+            preferred = "qwen2.5-coder:7b"
+            fallback = "qwen2.5-coder:1.5b-base"
+        else:
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — skipping Ollama, using Gemini")
+            return None
+        
+        # Check if preferred model is installed
+        if preferred in installed:
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — using {preferred}")
+            # Try to pull deepseek in background if not installed and RAM is sufficient
+            if preferred == "deepseek-r1:7b" and "deepseek-r1:7b" not in installed:
+                pull_model_in_background("deepseek-r1:7b")
+            return preferred
+        elif fallback in installed:
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — {preferred} not installed, using {fallback}")
+            # Start background pull of preferred model
+            pull_model_in_background(preferred)
+            return fallback
+        elif "qwen2.5-coder:1.5b-base" in installed:
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — using qwen2.5-coder:1.5b-base (fallback)")
+            return "qwen2.5-coder:1.5b-base"
+        else:
+            logger.warning(f"[AI] No suitable models installed, using Gemini fallback")
+            return None
+            
+    except Exception as e:
+        logger.error(f"[AI] Error selecting model: {e}")
+        return "qwen2.5-coder:1.5b-base"
 
 
 # For quick testing

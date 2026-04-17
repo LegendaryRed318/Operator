@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode, useEffect } from 'react';
 
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'offline' | 'hotword';
 
@@ -10,6 +10,8 @@ interface VoiceContextType {
   stopListening: () => void;
   manualWake: () => Promise<void>;
   activateHotwordMode: () => void;
+  messages: any[];
+  wsConnected: boolean;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -21,10 +23,28 @@ interface VoiceProviderProps {
 const HOTWORD_TIMEOUT_MS = 3 * 60 * 60 * 1000; // 3 hours
 const WAKE_WORDS = ['jarvis', 'operator'];
 
+// Dynamic WebSocket URL: supports local development and ngrok remote access
+// - Local: ws://localhost:8765
+// - Ngrok: wss://*.ngrok-free.app (secure WebSocket for remote access)
+function getWebSocketUrl(): string {
+  const host = window.location.host;
+  
+  // Check if accessed via ngrok
+  if (host.includes('.ngrok-free.app')) {
+    // Use secure WebSocket with same ngrok host
+    return `wss://${host}/ws`;
+  }
+  
+  // Local development fallback
+  return 'ws://localhost:8765';
+}
+
 export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const [state, setState] = useState<VoiceState>('idle');
   const [isOffline, setIsOffline] = useState(false);
   const [lastResponse, setLastResponse] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -33,15 +53,21 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const maxReconnectAttempts = 3;
   const reconnectDelay = 5000;
   const isRecording = useRef(false);
-  const isSpeaking = useRef(false);
-  const speakCooldown = useRef(false);
 
   // Hotword refs
   const hotwordRecognition = useRef<any>(null);
   const hotwordActive = useRef(false);
   const hotwordTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Prevents the "no network" fallback warning from spamming the console
   const networkFallbackLogged = useRef(false);
+  
+  // Wave gesture debounce (2 seconds)
+  const lastWaveTime = useRef(0);
+  const WAVE_DEBOUNCE_MS = 2000;
+  
+  // Voice feedback loop prevention
+  const isSpeakingRef = useRef(false);
+
+  // (Removed ElevenLabs mapped state logic)
 
   const setVoiceState = useCallback((newState: VoiceState, offline = false) => {
     setState(newState);
@@ -54,31 +80,49 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         resolve(true);
         return;
       }
+      if (ws.current?.readyState === WebSocket.CONNECTING) {
+        resolve(false); // Already connecting, wait
+        return;
+      }
 
       if (isOffline) {
         setIsOffline(false);
         reconnectAttempts.current = 0;
       }
 
-      const wsUrl = 'ws://localhost:8765';
+      const wsUrl = getWebSocketUrl();
+      const isRemote = wsUrl.startsWith('wss://');
+      
       ws.current = new WebSocket(wsUrl);
       let connected = false;
 
       ws.current.onopen = () => {
-        console.log('[Voice] WebSocket connected');
+        // Log connection type for debugging
+        if (isRemote) {
+          console.log('[Voice] Connected to JARVIS via remote ngrok (wss)');
+        } else {
+          console.log('[Voice] Connected to JARVIS locally (ws)');
+        }
         reconnectAttempts.current = 0;
         setIsOffline(false);
         connected = true;
+        setWsConnected(true);
         resolve(true);
       };
 
       ws.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          setMessages(prev => [...prev.slice(-49), data]);
+          
           if (data.type === 'response') {
             setLastResponse(data.text);
             setVoiceState('speaking');
-            speak(data.text, () => {
+            
+            // ALWAYS speak the response - every transcribed message gets a reply
+            const responseText = data.text || "I'm sorry sir, I didn't catch that.";
+            
+            speak(responseText, () => {
               // After speaking, go straight back to hotword listening
               if (hotwordActive.current) {
                 setVoiceState('hotword');
@@ -104,6 +148,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
       ws.current.onclose = () => {
         reconnectAttempts.current++;
+        setWsConnected(false);
         if (reconnectAttempts.current >= maxReconnectAttempts) {
           setIsOffline(true);
           setVoiceState('idle', true);
@@ -123,51 +168,52 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     });
   }, [isOffline, setVoiceState]);
 
-  const speak = useCallback((text: string, onDone?: () => void) => {
-    isSpeaking.current = true;
-    speakCooldown.current = true;
+  // Browser TTS fallback - British male voice like JARVIS
+  const speakWithBrowserTTS = useCallback((text: string, onDone?: () => void) => {
+    console.log('🗣️ Speaking with browser TTS:', text.substring(0, 60) + (text.length > 60 ? '...' : ''));
+    
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.9;
-    utterance.pitch = 1.1;
-
+    utterance.pitch = 1.0;
+    
+    // Try to find British male voice
     const voices = window.speechSynthesis.getVoices();
-    const britishVoice = voices.find(v => v.lang === 'en-GB' || v.name.includes('British'));
-    if (britishVoice) utterance.voice = britishVoice;
-
-    // Watchdog: Chrome sometimes never fires utterance.onend for long responses.
-    // If that happens, speakCooldown stays true forever and Jarvis goes deaf.
-    // Estimate duration (avg ~130 WPM) + 3s cooldown + 5s buffer.
-    const wordCount = text.split(/\s+/).length;
-    const estimatedMs = (wordCount / 130) * 60_000 + 3000 + 5000;
-    const watchdog = setTimeout(() => {
-      if (speakCooldown.current) {
-        console.warn('[Voice] speechSynthesis onend never fired — forcing cooldown reset');
-        isSpeaking.current = false;
-        speakCooldown.current = false;
-        onDone?.();
-      }
-    }, estimatedMs);
-
+    const britishVoice = voices.find(v => 
+      v.lang === 'en-GB' || 
+      v.name.includes('British') ||
+      v.name.includes('Daniel') ||
+      v.name.includes('Male') && v.lang.startsWith('en')
+    );
+    if (britishVoice) {
+      utterance.voice = britishVoice;
+      console.log('[Voice] Using British voice:', britishVoice.name);
+    } else {
+      // Fallback to any English voice
+      const englishVoice = voices.find(v => v.lang.startsWith('en'));
+      if (englishVoice) utterance.voice = englishVoice;
+    }
+    
     utterance.onend = () => {
-      clearTimeout(watchdog);
-      console.log('[Voice] Finished speaking');
-      isSpeaking.current = false;
-      // 3 second cooldown so the mic doesn't pick up Jarvis's own voice
-      setTimeout(() => {
-        speakCooldown.current = false;
-        onDone?.();
-      }, 3000);
-    };
-    utterance.onerror = () => {
-      clearTimeout(watchdog);
-      isSpeaking.current = false;
-      speakCooldown.current = false;
+      console.log('[Voice] Browser TTS finished');
       onDone?.();
     };
-
+    
+    utterance.onerror = (e) => {
+      console.error('[Voice] Browser TTS error:', e);
+      onDone?.();
+    };
+    
     window.speechSynthesis.speak(utterance);
   }, []);
+
+  const speak = useCallback((text: string, onDone?: () => void) => {
+    isSpeakingRef.current = true;
+    speakWithBrowserTTS(text, () => {
+      isSpeakingRef.current = false;
+      onDone?.();
+    });
+  }, [speakWithBrowserTTS]);
 
   const sendAudioForTranscription = useCallback(async (stream?: MediaStream) => {
     try {
@@ -196,9 +242,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       if (data.text && data.text.toLowerCase().includes('stop')) {
         console.log('[Voice] Stop command received');
         hotwordActive.current = false;
-        speakCooldown.current = false;
-        window.speechSynthesis.cancel();
         setVoiceState('idle');
+        // Stop any running TTS
+        window.speechSynthesis.cancel();
         return;
       }
 
@@ -217,7 +263,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   }, [setVoiceState]);
 
   const startListening = useCallback(async () => {
-    if (isRecording.current) return;
+    if (isRecording.current || isSpeakingRef.current) return;
 
     const connected = await initWebSocket();
     if (!connected) return;
@@ -257,7 +303,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // Fallback local hotword loop (Python-based)
   const pythonHotwordLoop = useCallback(async () => {
-    if (!hotwordActive.current || isRecording.current || isSpeaking.current || speakCooldown.current) return;
+    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current) return;
 
     try {
       const connected = await initWebSocket();
@@ -309,7 +355,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // Fast browser-based hotword loop
   const hotwordListenLoop = useCallback(() => {
-    if (!hotwordActive.current || isRecording.current || isSpeaking.current || speakCooldown.current) return;
+    if (!hotwordActive.current || isRecording.current || isSpeakingRef.current) return;
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -366,14 +412,14 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     try { recognition.start(); } catch {}
   }, [setVoiceState, startListening, pythonHotwordLoop]);
 
-  // Activate hotword mode — triggered by wave gesture
+  // Activate hotword mode — triggered by wave gesture or orb click
   const activateHotwordMode = useCallback(() => {
     if (hotwordActive.current) {
       console.log('[Voice] Hotword mode already active, resetting timer');
     } else {
-      console.log('[Voice] Hotword mode activated — say "Jarvis" to command');
+      console.log('[Voice] Hotword mode activated');
       hotwordActive.current = true;
-      networkFallbackLogged.current = false; // reset per-session log gate
+      networkFallbackLogged.current = false;
       setVoiceState('hotword');
     }
 
@@ -388,48 +434,50 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       setVoiceState('idle');
     }, HOTWORD_TIMEOUT_MS);
 
-    // Start the hotword listen loop
     if (!isRecording.current) {
       hotwordListenLoop();
     }
   }, [setVoiceState, hotwordListenLoop]);
 
-  const stopListening = useCallback(() => {
-    if (mediaRecorder.current && isRecording.current) mediaRecorder.current.stop();
-    hotwordActive.current = false;
-    if (hotwordRecognition.current) {
-      try { hotwordRecognition.current.stop(); } catch {}
-    }
-    if (hotwordTimeout.current) clearTimeout(hotwordTimeout.current);
-    if (ws.current) ws.current.close();
-  }, []);
-
   const manualWake = useCallback(async () => {
     await startListening();
   }, [startListening]);
 
-  // Listen for wave gesture → activate hotword mode
+  // Listen for wave gesture → activate hotword mode (with 2s debounce)
   React.useEffect(() => {
     const handleWake = () => {
-      console.log('[Voice] Wake event received');
+      const now = Date.now();
+      if (now - lastWaveTime.current < WAVE_DEBOUNCE_MS) {
+        console.log('[Voice] Wave debounced — too soon since last wave');
+        return;
+      }
+      lastWaveTime.current = now;
+      console.log('[Voice] Wake event received (wave)');
       activateHotwordMode();
     };
     window.addEventListener('jarvis:wake', handleWake);
     return () => window.removeEventListener('jarvis:wake', handleWake);
   }, [activateHotwordMode]);
 
-  const value: VoiceContextType = {
-    state,
-    isOffline,
-    lastResponse,
-    startListening,
-    stopListening,
-    manualWake,
-    activateHotwordMode,
-  };
+  useEffect(() => {
+    // Autoconnect on mount so proactive messages and dashboard metrics flow
+    initWebSocket();
+    // Cleanup handled by destructor
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <VoiceContext.Provider value={value}>
+    <VoiceContext.Provider value={{
+      state,
+      isOffline,
+      lastResponse,
+      startListening,
+      stopListening: () => setVoiceState('idle'),
+      manualWake,
+      activateHotwordMode,
+      messages,
+      wsConnected
+    }}>
       {children}
     </VoiceContext.Provider>
   );

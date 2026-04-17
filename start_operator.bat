@@ -6,7 +6,6 @@ cd /d C:\Projects\Operator
 REM Check for help flag
 if "%~1"=="--help" goto :show_help
 
-REM Default: Launch via launcher.py (silent background mode)
 goto :launch
 
 :show_help
@@ -15,37 +14,42 @@ echo Usage: start_operator.bat [option]
 echo.
 echo Options:
 echo   --help       Show this help message
-echo   (none)       Launch all services silently in background (default)
+echo   (none)       Launch all services + remote access
 echo.
-echo Features:
-echo   - No visible console windows for services
-echo   - All output logged to C:\Projects\Operator\logs\
-echo   - Graceful shutdown on Ctrl+C
+echo Your permanent JARVIS URL:
+echo   https://dry-handcraft-dusk.ngrok-free.dev
 echo.
-echo Dashboard URLs:
-echo   - http://localhost:8081 (Frontend)
-echo   - http://localhost:5050 (API)
-echo   - ws://localhost:8765 (WebSocket)
-echo.
+echo Username: olami
+echo Password: Red2026 
 pause
 exit /b
 
 :launch
-echo Starting Operator (Jarvis) in silent mode...
-echo All services will run in the background.
-echo Logs: C:\Projects\Operator\logs\
-echo.
-echo Press Ctrl+C to stop all services gracefully.
+echo Starting Operator (JARVIS) + Remote Access...
 echo.
 
-REM Create required directories
+REM Create folders
 if not exist "database" mkdir database
 if not exist "logs" mkdir logs
 if not exist "test_logs" mkdir test_logs
 if not exist "models" mkdir models
 if not exist "skills" mkdir skills
 
-REM Run the launcher (this will show output but services are hidden)
+REM Start all normal services
 python launcher.py
 
+echo.
+echo ========================================
+echo Starting ngrok remote access...
+echo ========================================
+echo Permanent URL: https://dry-handcraft-dusk.ngrok-free.dev
+echo.
+
+REM Start ngrok with your permanent easy URL
+start "" cmd /k "ngrok http 8081 --basic-auth olami:Red2026 --url dry-handcraft-dusk.ngrok-free.dev"
+
+echo.
+echo ✅ JARVIS is now running locally AND remotely!
+echo Open https://dry-handcraft-dusk.ngrok-free.dev on your phone or at school.
+pause
 exit /b
