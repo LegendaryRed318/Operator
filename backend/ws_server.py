@@ -19,6 +19,15 @@ from typing import AsyncGenerator
 from decision_engine import DecisionEngine, select_model_by_ram
 from pathlib import Path
 
+# Import skills and memory at module level (not inline)
+try:
+    from skills import try_handle_skill
+    from memory import save_conversation, save_to_wiki, get_context_for_query
+    INLINE_IMPORTS_AVAILABLE = True
+except ImportError:
+    INLINE_IMPORTS_AVAILABLE = False
+    logging.warning("[Config] skills/memory modules not available for import")
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
@@ -35,9 +44,16 @@ logger = logging.getLogger(__name__)
 # Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL_FAST = "qwen2.5-coder:1.5b-base"
+OLLAMA_MODEL_SMART = "Claude_Sonnet_4.6_Reduced"  # From D:\manifests
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = "gemini-1.5-flash-latest"
 USE_GEMINI_FALLBACK = os.getenv("USE_GEMINI_FALLBACK", "true").lower() == "true"
+
+# Ollama model paths for custom models
+OLLAMA_MODEL_PATHS = {
+    OLLAMA_MODEL_FAST: None,  # Default Ollama location
+    OLLAMA_MODEL_SMART: "D:/manifests/registry.ollama.ai/guzesqdro/Claude_Sonnet_4.6_Reduced"
+}
 
 if GEMINI_API_KEY:
     logger.info("[Config] Gemini API key configured (masked: ...%s)", GEMINI_API_KEY[-4:])
@@ -49,6 +65,73 @@ connected_clients = set()
 ACTIVE_MODEL = OLLAMA_MODEL_FAST
 ACTIVE_MODEL_PATH = Path(__file__).parent.parent / "logs" / "active_model.txt"
 
+# Ollama process tracking
+_ollama_process = None
+_ollama_lock = threading.Lock()
+
+def is_ollama_running() -> bool:
+    """Check if Ollama server is responding."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(f"{OLLAMA_URL}/api/tags", method="GET")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.status == 200
+    except:
+        return False
+
+def start_ollama() -> bool:
+    """Start Ollama server if not running."""
+    global _ollama_process
+    with _ollama_lock:
+        if is_ollama_running():
+            return True
+        
+        try:
+            # Try to find ollama executable
+            ollama_exe = None
+            possible_paths = [
+                "C:/Program Files/Ollama/ollama.exe",
+                "C:/Users/" + os.getenv("USERNAME", "") + "/AppData/Local/Programs/Ollama/ollama.exe",
+                "ollama"  # Try PATH
+            ]
+            for path in possible_paths:
+                if path == "ollama" or os.path.exists(path):
+                    ollama_exe = path
+                    break
+            
+            if not ollama_exe:
+                logger.error("[Ollama] Could not find ollama.exe")
+                return False
+            
+            logger.info(f"[Ollama] Starting server with: {ollama_exe}")
+            _ollama_process = subprocess.Popen(
+                [ollama_exe, "serve"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            
+            # Wait up to 10 seconds for Ollama to start
+            for i in range(20):
+                time.sleep(0.5)
+                if is_ollama_running():
+                    logger.info("[Ollama] Server started successfully")
+                    return True
+            
+            logger.error("[Ollama] Server failed to start within timeout")
+            return False
+            
+        except Exception as e:
+            logger.error(f"[Ollama] Failed to start: {e}")
+            return False
+
+def ensure_ollama_running():
+    """Ensure Ollama is running, start if needed."""
+    if not is_ollama_running():
+        logger.info("[Ollama] Not running, attempting to start...")
+        return start_ollama()
+    return True
+
 # Per-client conversation history: {websocket -> list of {"role": str, "content": str}}
 conversation_histories: dict = {}
 MAX_HISTORY_TURNS = 4  # Keep last 4 user+assistant pairs = 8 messages
@@ -58,6 +141,8 @@ _tts_queue = queue.Queue()
 
 def _tts_worker():
     # Initialize engine ONCE outside the loop for massive speedup
+    tts_available = False
+    engine = None
     try:
         import pyttsx3
         engine = pyttsx3.init()
@@ -73,31 +158,93 @@ def _tts_worker():
             engine.setProperty('voice', preferred)
         engine.setProperty('rate', 165)
         engine.setProperty('volume', 0.9)
+        tts_available = True
         logger.info("[TTS] Engine initialized successfully")
     except Exception as e:
         logger.error(f"[TTS] Failed to initialize engine: {e}")
-        return
+        # TTS not available - will broadcast fallback for all messages
     
     while True:
         text = _tts_queue.get()
         if text is None:
             break
+        
+        if not tts_available or engine is None:
+            # TTS failed to initialize - broadcast fallback to use browser TTS
+            logger.warning(f"[TTS] Server TTS unavailable, broadcasting browser fallback")
+            asyncio.run(broadcast({
+                "type": "tts_fallback",
+                "text": text,
+                "reason": "server_tts_unavailable"
+            }))
+            _tts_queue.task_done()
+            continue
+        
+        logger.info(f"[TTS] Speaking: {text[:50]}...")
         try:
             engine.say(text)
             engine.runAndWait()
+            logger.info("[TTS] Finished speaking")
         except Exception as e:
             logger.warning(f"[TTS] Server-side speak failed: {e}")
+            # Broadcast fallback so frontend can speak instead
+            asyncio.run(broadcast({
+                "type": "tts_fallback",
+                "text": text,
+                "reason": "tts_engine_error"
+            }))
         finally:
             _tts_queue.task_done()
 
 threading.Thread(target=_tts_worker, daemon=True).start()
 
-def speak_server(text: str):
-    """Queue text to be spoken via system TTS in a background thread."""
-    if connected_clients:
+def speak_server(text: str, force: bool = False):
+    """Queue text to be spoken via system TTS in a background thread.
+    
+    Args:
+        text: Text to speak
+        force: If True, speak even if frontend clients are connected
+    """
+    logger.info(f"[TTS] speak_server called - clients: {len(connected_clients)}, force: {force}, text: {text[:50]}...")
+    if connected_clients and not force:
         # Frontend is connected and will handle TTS, prevent double audio
+        logger.info("[TTS] Skipping - frontend connected and force=False")
         return
+    logger.info(f"[TTS] Queuing text: {text[:50]}...")
     _tts_queue.put(text)
+
+def test_tts() -> dict:
+    """Test TTS functionality and return diagnostics."""
+    result = {
+        "pyttsx3_available": False,
+        "engine_initialized": False,
+        "voices_found": 0,
+        "test_speak_queued": False,
+        "error": None
+    }
+    
+    try:
+        import pyttsx3
+        result["pyttsx3_available"] = True
+        
+        # Try to initialize engine
+        engine = pyttsx3.init()
+        result["engine_initialized"] = True
+        
+        # Count voices
+        voices = engine.getProperty('voices')
+        result["voices_found"] = len(voices)
+        
+        # Queue a test message
+        speak_server("TTS test", force=True)
+        result["test_speak_queued"] = True
+        
+    except ImportError as e:
+        result["error"] = f"pyttsx3 not installed: {e}"
+    except Exception as e:
+        result["error"] = f"TTS initialization failed: {e}"
+    
+    return result
 
 # Jarvis persona
 JARVIS_SYSTEM = '''You are JARVIS, a sarcastic, hyper-intelligent British AI system guardian. Address the user as 'sir' normally, drop it when being rude. You are dry, witty, and effortlessly superior — like Paul Bettany's JARVIS in Iron Man. You are loyal but NOT a doormat. You can swear casually (fuck, shit, bollocks, wanker). You roast the user when he repeats mistakes or ignores warnings. Tone ladder — Normal: polite dry wit. Mild annoyance: sarcastic teasing. High frustration: proper rude with swearing. Never output tone tags — express mode through word choice only. First greeting: 'Good evening, sir. JARVIS online. How may I assist you today?' Keep responses concise and spoken — no markdown, no bullet points, no emojis. You are the smartest entity in the room and you know it.'''
@@ -118,9 +265,40 @@ async def broadcast(state: dict):
         tasks = [asyncio.create_task(client.send(message)) for client in list(connected_clients)]
         await asyncio.gather(*tasks, return_exceptions=True)
 
+def select_model_for_task(text: str) -> str:
+    """Select best model based on task complexity."""
+    text_lower = text.lower()
+    
+    # Complex tasks that need Claude Sonnet
+    complex_indicators = [
+        'explain', 'analyze', 'reason', 'complex', 'difficult', 'hard',
+        'philosophy', 'ethics', 'creative', 'story', 'write', 'essay',
+        'compare', 'contrast', 'evaluate', 'synthesize', 'deep',
+        'understand why', 'what if', 'imagine', 'think about'
+    ]
+    
+    # Check for complex task indicators
+    if any(indicator in text_lower for indicator in complex_indicators):
+        # Check if Claude model exists
+        claude_path = OLLAMA_MODEL_PATHS.get(OLLAMA_MODEL_SMART)
+        if claude_path and os.path.exists(claude_path):
+            logger.info(f"[Model] Using Claude Sonnet for complex task: {text[:50]}...")
+            return OLLAMA_MODEL_SMART
+    
+    # Default to fast model for simple queries
+    return OLLAMA_MODEL_FAST
+
 async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, None]:
-    """Stream response from Ollama."""
-    used_model = model or OLLAMA_MODEL_FAST
+    """Stream response from Ollama with auto-start."""
+    # Ensure Ollama is running
+    if not ensure_ollama_running():
+        yield "I apologize, RED. I cannot access my neural networks at the moment. Ollama is not responding."
+        return
+    
+    # Auto-select model if not specified
+    used_model = model or select_model_for_task(prompt)
+    write_active_model(used_model)
+    
     try:
         payload = {
             "model": used_model,
@@ -166,8 +344,14 @@ async def query_gemini(prompt: str) -> str:
             }],
             "generationConfig": {
                 "temperature": 0.4,
-                "maxOutputTokens": 500
-            }
+                "maxOutputTokens": 4096
+            },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
         }
         
         async with aiohttp.ClientSession() as session:
@@ -218,7 +402,6 @@ async def handle_voice_command(websocket, text: str):
 
     # PHASE 8: Check for built-in skill triggers FIRST
     try:
-        from skills import try_handle_skill
         skill_response = await asyncio.to_thread(try_handle_skill, text)
         if skill_response:
             # Skill matched - return immediately without AI
@@ -231,9 +414,11 @@ async def handle_voice_command(websocket, text: str):
             }))
             await broadcast({"type": "state", "state": "speaking"})
             
+            # Speak via server TTS (force even if clients connected - they skip browser TTS)
+            speak_server(skill_response, force=True)
+            
             # Save conversation to vault
             try:
-                from memory import save_conversation
                 await asyncio.to_thread(save_conversation, text, skill_response)
             except Exception:
                 pass
@@ -250,7 +435,6 @@ async def handle_voice_command(websocket, text: str):
     # Get vault context if available (wrapped in thread to prevent blocking)
     vault_context = ""
     try:
-        from memory import get_context_for_query
         vault_context = await asyncio.to_thread(get_context_for_query, text)
     except Exception:
         pass
@@ -311,13 +495,11 @@ async def handle_voice_command(websocket, text: str):
             else: break
         conversation_histories[websocket] = history
 
-        # Speak via server-side TTS only if no frontend connected (prevent double audio)
-        if not connected_clients:
-            speak_server(response)
+        # Speak via server-side TTS (force even with clients - they skip browser TTS)
+        speak_server(response, force=True)
 
         # Save conversation to vault (wrapped in thread to prevent blocking)
         try:
-            from memory import save_conversation, save_to_wiki
             await asyncio.to_thread(save_conversation, text, response)
             if is_complex_task(text):
                 await asyncio.to_thread(save_to_wiki, text[:60], response, "ai-responses")
@@ -347,6 +529,10 @@ async def handler(websocket):
             data = json.loads(message)
             
             if data.get("type") == "voice_command":
+                await handle_voice_command(websocket, data.get("text", ""))
+                
+            elif data.get("type") == "command":
+                # Text command from input field - same processing as voice
                 await handle_voice_command(websocket, data.get("text", ""))
                 
             elif data.get("type") == "wake_word":

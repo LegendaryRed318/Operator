@@ -409,3 +409,93 @@ All projects launched. Press Ctrl+C to stop all.
 [Brainnify-Ai] ^C^C
 [Brainnify-Ai] Process exited with code 3221225786
 All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-17 23:05:26] Starting Project Launcher
+============================================================
+
+============================================================
+[2026-04-17 23:10:52] Starting Project Launcher
+============================================================
+Launching 2 project(s)...
+[brainify] Started (PID: 12204) in new window
+[brainify] 
+[brainify] > react-example@0.0.0 dev
+[brainify] > tsx server.ts
+[brainify] 
+[ERROR] Failed to launch brainify: 'charmap' codec can't decode byte 0x90 in position 56: character maps to <undefined>
+[Brainnify-Ai] Started (PID: 8640) in new window
+[Brainnify-Ai] 
+[Brainnify-Ai] > vite_react_shadcn_ts@0.0.0 dev
+[Brainnify-Ai] > vite
+[Brainnify-Ai] 
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m885[22m[2m[0m ms[22m
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.206:[1m8080[22m/[39m
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-17 23:24:54] Starting Project Launcher
+============================================================
+
+============================================================
+[2026-04-18 00:31:23] Starting Project Launcher
+============================================================
+Launching 2 project(s)...
+[brainify] Started (PID: 4440) in new window
+[brainify] 
+[brainify] > react-example@0.0.0 dev
+[brainify] > tsx server.ts
+[brainify] 
+[ERROR] Failed to launch brainify: 'charmap' codec can't decode byte 0x8f in position 59: character maps to <undefined>
+[Brainnify-Ai] Started (PID: 25160) in new window
+[Brainnify-Ai] 
+[Brainnify-Ai] > vite_react_shadcn_ts@0.0.0 dev
+[Brainnify-Ai] > vite
+[Brainnify-Ai] 
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m615[22m[2m[0m ms[22m
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.206:[1m8080[22m/[39m
+[Brainnify-Ai] ^C^C
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-18 08:06:44] Starting Project Launcher
+============================================================
+
+============================================================
+[2026-04-18 13:24:37] Starting Project Launcher
+============================================================
+
+============================================================
+[2026-04-18 13:46:22] Starting Project Launcher
+============================================================
+Launching 2 project(s)...
+[brainify] Started (PID: 16512) in new window
+[brainify] 
+[brainify] > react-example@0.0.0 dev
+[brainify] > tsx server.ts
+[brainify] 
+[ERROR] Failed to launch brainify: 'charmap' codec can't decode byte 0x8f in position 58: character maps to <undefined>
+[Brainnify-Ai] Started (PID: 20416) in new window
+[Brainnify-Ai] 
+[Brainnify-Ai] > vite_react_shadcn_ts@0.0.0 dev
+[Brainnify-Ai] > vite
+[Brainnify-Ai] 
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m1338[22m[2m[0m ms[22m
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.206:[1m8080[22m/[39m
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-18 16:16:04] Starting Project Launcher
+============================================================

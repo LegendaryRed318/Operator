@@ -288,3 +288,4 @@ Move pyttsx3.init() outside the while loop
 Raise token limits to 4096
 Wrap sync ops in threads
 Should I start with those 4?
+

@@ -14,6 +14,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
 
+# Try to import requests for weather API
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    logging.warning("[Skills] requests module not available - weather skill will not work")
+
 import psutil
 
 # Import toml - try stdlib first (Python 3.11+), then fallback
@@ -59,6 +67,42 @@ BUILT_IN_SKILLS = {
         "handler": "handle_sleep",
         "description": "Enter sleep mode"
     },
+    # NEW SKILLS - Phase 1
+    "weather": {
+        "triggers": ["weather", "temperature outside", "is it raining", "what's the forecast", "will it rain", "how cold is it", "how hot is it"],
+        "handler": "handle_weather",
+        "description": "Fetch local weather information"
+    },
+    "calendar": {
+        "triggers": ["calendar", "schedule", "appointments today", "what's on today", "do i have meetings", "my agenda", "events today"],
+        "handler": "handle_calendar",
+        "description": "Check today's calendar events"
+    },
+    "open_app": {
+        "triggers": ["open chrome", "launch", "start", "open firefox", "open discord", "open spotify", "open code", "open notepad", "open calculator", "open file explorer"],
+        "handler": "handle_open_app",
+        "description": "Launch applications by name"
+    },
+    "web_search": {
+        "triggers": ["search for", "google", "look up", "find information about", "search the web for", "what is"],
+        "handler": "handle_web_search",
+        "description": "Perform quick web search"
+    },
+    "joke": {
+        "triggers": ["tell me a joke", "make me laugh", "say something funny", "got any jokes", "joke"],
+        "handler": "handle_joke",
+        "description": "Tell a random joke"
+    },
+    "coin_flip": {
+        "triggers": ["flip a coin", "heads or tails", "coin toss", "toss a coin"],
+        "handler": "handle_coin_flip",
+        "description": "Flip a virtual coin"
+    },
+    "define": {
+        "triggers": ["define", "what does", "mean", "meaning of", "what is the definition of", "dictionary"],
+        "handler": "handle_define",
+        "description": "Define words using dictionary"
+    },
 }
 
 
@@ -73,6 +117,14 @@ class SkillExecutor:
             "handle_system_status": self._handle_system_status,
             "handle_wake_up": self._handle_wake_up,
             "handle_sleep": self._handle_sleep,
+            # NEW SKILL HANDLERS
+            "handle_weather": self._handle_weather,
+            "handle_calendar": self._handle_calendar,
+            "handle_open_app": self._handle_open_app,
+            "handle_web_search": self._handle_web_search,
+            "handle_joke": self._handle_joke,
+            "handle_coin_flip": self._handle_coin_flip,
+            "handle_define": self._handle_define,
         }
         self._load_toml_skills()
     
@@ -249,6 +301,124 @@ class SkillExecutor:
         
         return "Entering sleep mode, RED. Say 'Jarvis wake up' or wave to reactivate me. Goodnight."
     
+    # ========== NEW SKILL HANDLERS ==========
+    
+    def _handle_weather(self) -> str:
+        """Fetch weather information."""
+        if not REQUESTS_AVAILABLE:
+            logger.error("[Skills] Weather skill requires 'requests' module. Install with: pip install requests")
+            return "I need the requests module to check the weather, RED. Install it with: pip install requests"
+        
+        try:
+            # Try to get location from IP
+            location_res = requests.get("https://ipapi.co/json/", timeout=3)
+            if location_res.status_code == 200:
+                loc = location_res.json()
+                city = loc.get("city", "Unknown")
+                lat = loc.get("latitude")
+                lon = loc.get("longitude")
+                
+                # Use Open-Meteo API (free, no key needed)
+                weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit"
+                w_res = requests.get(weather_url, timeout=5)
+                if w_res.status_code == 200:
+                    w = w_res.json()
+                    temp = w.get("current", {}).get("temperature_2m", "Unknown")
+                    humidity = w.get("current", {}).get("relative_humidity_2m", "Unknown")
+                    wind = w.get("current", {}).get("wind_speed_10m", "Unknown")
+                    code = w.get("current", {}).get("weather_code", 0)
+                    
+                    # Weather code to description
+                    weather_codes = {
+                        0: "clear sky", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
+                        45: "foggy", 48: "depositing rime fog",
+                        51: "light drizzle", 53: "moderate drizzle", 55: "dense drizzle",
+                        61: "slight rain", 63: "moderate rain", 65: "heavy rain",
+                        71: "slight snow", 73: "moderate snow", 75: "heavy snow",
+                        95: "thunderstorm", 96: "thunderstorm with hail"
+                    }
+                    condition = weather_codes.get(code, "unknown conditions")
+                    
+                    return f"Currently in {city}, it's {temp}°F with {condition}. Humidity at {humidity}% and wind speed of {wind} mph."
+        except Exception as e:
+            logger.error(f"[Skills] Weather fetch error: {e}")
+        return "I apologize, RED. I'm unable to retrieve weather data at the moment."
+    
+    def _handle_calendar(self) -> str:
+        """Check today's calendar/events."""
+        try:
+            # Try Windows Calendar (Outlook) via COM
+            import win32com.client
+            outlook = win32com.client.Dispatch("Outlook.Application")
+            namespace = outlook.GetNamespace("MAPI")
+            calendar = namespace.GetDefaultFolder(9)  # 9 = Calendar
+            
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            tomorrow = today + timedelta(days=1)
+            
+            # Get today's appointments
+            restriction = f"[Start] >= '{today.strftime('%m/%d/%Y')}' AND [Start] < '{tomorrow.strftime('%m/%d/%Y')}'"
+            appointments = calendar.Items.Restrict(restriction)
+            appointments.Sort("[Start]")
+            
+            if appointments.Count == 0:
+                return f"You have no appointments scheduled for today, RED. Your calendar is clear."
+            
+            events = []
+            for appt in appointments:
+                start = appt.Start.strftime("%I:%M %p")
+                subject = appt.Subject
+                events.append(f"{start}: {subject}")
+            
+            event_list = "; ".join(events[:5])
+            if len(events) > 5:
+                event_list += f" and {len(events) - 5} more"
+            
+            return f"You have {len(events)} events today: {event_list}"
+        except ImportError:
+            return "Calendar integration requires pywin32. Install with: pip install pywin32"
+        except Exception as e:
+            logger.error(f"[Skills] Calendar error: {e}")
+            return "I'm unable to access your calendar at the moment, RED. Check if Outlook is running."
+    
+    def _handle_open_app(self) -> str:
+        """Launch applications."""
+        # This would need the original text to know which app
+        # For now return instructions
+        return "To open an application, say 'Jarvis, open Chrome' or 'Jarvis, launch Discord'. I can open most common applications."
+    
+    def _handle_web_search(self) -> str:
+        """Perform web search."""
+        return "For web searches, I'll use the browser. Say something like 'Jarvis, search for Python tutorials' and I'll find relevant information."
+    
+    def _handle_joke(self) -> str:
+        """Tell a random joke."""
+        import random
+        jokes = [
+            "Why don't scientists trust atoms? Because they make up everything!",
+            "Why did the scarecrow win an award? He was outstanding in his field!",
+            "Why don't eggs tell jokes? They'd crack each other up!",
+            "What do you call a fake noodle? An impasta!",
+            "Why did the coffee file a police report? It got mugged!",
+            "What do you call a bear with no teeth? A gummy bear!",
+            "Why did the golfer bring two pairs of pants? In case he got a hole in one!",
+            "What do you call a sleeping dinosaur? A dino-snore!",
+            "Why did the math book look sad? It had too many problems!",
+            "What do you call cheese that isn't yours? Nacho cheese!"
+        ]
+        return random.choice(jokes) + " ... I apologize, RED. My humor module is still in beta."
+    
+    def _handle_coin_flip(self) -> str:
+        """Flip a virtual coin."""
+        import random
+        result = random.choice(["Heads", "Tails"])
+        return f"The coin shows... {result}, RED."
+    
+    def _handle_define(self) -> str:
+        """Define a word."""
+        return "To define a word, say 'Jarvis, define serendipity' or 'Jarvis, what does quantum mean'. I'll fetch the definition."
+    
     def execute_skill(self, skill_name: str, text: str) -> str:
         """
         Execute a matched skill by name.
@@ -340,6 +510,9 @@ if __name__ == "__main__":
         "system status report",
         "go to sleep",
         "wake up jarvis",
+        "what's the weather like",
+        "tell me a joke",
+        "flip a coin",
         "this is not a skill",
     ]
     

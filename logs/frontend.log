@@ -599,3 +599,320 @@ Error: Port 8081 is already in use
     at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
     at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
     at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 23:05:37] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+
+  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m2964[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8081[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.206:[1m8081[22m/[39m
+[2m23:09:30[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m23:16:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:16:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:16:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:16:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:16:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:16:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:17:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:17:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:17:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:17:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:17:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:17:49[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:20:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:20:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:20:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:20:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/dashboard/OperatorHUD.tsx, /src/index.css[22m
+[2m23:20:59[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/dashboard/OperatorHUD.tsx, /src/index.css[22m
+[2m23:22:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:22:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:22:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:22:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m23:22:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m23:22:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m23:23:00[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/dashboard/OperatorHUD.tsx, /src/index.css[22m
+[2m23:23:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/dashboard/OperatorHUD.tsx, /src/index.css[22m
+[2m23:31:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m23:32:08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m23:32:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m23:32:54[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 23:25:33] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 23:26:13] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-17 23:27:18] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-18 00:31:34] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-18 00:31:56] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-18 00:32:21] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-18 00:32:56] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+[31merror when starting dev server:
+Error: Port 8081 is already in use
+    at httpServerStart (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:10660:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async startServer (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26304:30)
+    at async Object.listen (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:26125:4)
+    at async CAC.<anonymous> (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/cli.js:722:3)[39m
+
+============================================================
+[2026-04-18 08:06:55] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+
+  [32m[1mVITE[22m v8.0.8[39m  [2mready in [0m[1m590[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8081[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.11.247:[1m8081[22m/[39m
+[2m12:10:57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m12:10:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m12:10:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m12:11:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m12:11:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m12:11:18[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m12:11:39[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m12:11:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m12:11:40[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+[2m13:22:25[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m13:36:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m13:44:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m13:44:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m13:44:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/contexts/VoiceContext.tsx[22m
+=====================================================
+[2026-04-18 13:25:10] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:25:35] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:26:15] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:46:33] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:46:55] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:47:15] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 13:47:55] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 16:16:15] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 16:16:42] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 16:17:17] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-18 16:18:22] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.

@@ -500,3 +500,417 @@ INFO:__main__:[WebSocket] Client removed. Total: 3
 INFO:__main__:[WebSocket] Client removed. Total: 2
 INFO:__main__:[WebSocket] Client removed. Total: 1
 INFO:__main__:[WebSocket] Client removed. Total: 0
+
+============================================================
+[2026-04-17 23:05:22] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:websockets.server:server listening on [::1]:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+
+============================================================
+[2026-04-17 23:10:48] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on [::1]:8765
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Matched 'Jarvis, what's the time?' to skill: time
+INFO:__main__:[Voice] Skill triggered for: Jarvis, what's the time?...
+INFO:httpx:HTTP Request: GET https://chroma-onnx-models.s3.amazonaws.com/all-MiniLM-L6-v2/onnx.tar.gz "HTTP/1.1 200 OK"
+C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   0%|          | 0.00/79.3M [00:00<?, ?iB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   0%|          | 79.0k/79.3M [00:00<02:50, 486kiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   0%|          | 265k/79.3M [00:00<01:12, 1.14MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   1%|          | 521k/79.3M [00:00<00:47, 1.72MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   1%|1         | 962k/79.3M [00:00<00:30, 2.73MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   2%|1         | 1.46M/79.3M [00:00<00:22, 3.62MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   3%|2         | 2.05M/79.3M [00:00<00:18, 4.43MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   4%|3         | 2.83M/79.3M [00:00<00:14, 5.58MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   5%|4         | 3.78M/79.3M [00:00<00:11, 6.88MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   6%|5         | 4.73M/79.3M [00:00<00:10, 7.73MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   7%|7         | 5.61M/79.3M [00:01<00:09, 8.14MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:   8%|8         | 6.72M/79.3M [00:01<00:08, 9.12MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  10%|9         | 7.89M/79.3M [00:01<00:07, 9.99MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  11%|#1        | 9.03M/79.3M [00:01<00:06, 10.6MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  13%|#2        | 10.1M/79.3M [00:01<00:06, 10.7MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  14%|#4        | 11.2M/79.3M [00:01<00:06, 11.0MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  15%|#5        | 12.2M/79.3M [00:01<00:06, 10.8MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  17%|#6        | 13.3M/79.3M [00:01<00:06, 10.2MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  18%|#7        | 14.3M/79.3M [00:01<00:06, 9.77MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  19%|#9        | 15.2M/79.3M [00:02<00:07, 9.38MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  20%|##        | 16.1M/79.3M [00:02<00:07, 9.25MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  21%|##1       | 17.0M/79.3M [00:02<00:08, 7.71MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  22%|##2       | 17.8M/79.3M [00:02<00:08, 7.38MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  24%|##3       | 18.7M/79.3M [00:02<00:08, 7.88MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  25%|##4       | 19.5M/79.3M [00:02<00:08, 7.64MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  26%|##5       | 20.4M/79.3M [00:02<00:07, 8.09MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  27%|##6       | 21.3M/79.3M [00:02<00:07, 8.64MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  28%|##7       | 22.2M/79.3M [00:02<00:07, 8.28MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  29%|##8       | 23.0M/79.3M [00:03<00:07, 7.68MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  30%|##9       | 23.7M/79.3M [00:03<00:08, 6.72MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  31%|###       | 24.6M/79.3M [00:03<00:08, 6.51MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  32%|###1      | 25.2M/79.3M [00:03<00:08, 6.55MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  33%|###2      | 26.0M/79.3M [00:03<00:08, 6.93MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  34%|###3      | 26.7M/79.3M [00:03<00:07, 7.19MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  35%|###5      | 27.8M/79.3M [00:03<00:06, 8.12MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  36%|###6      | 28.9M/79.3M [00:03<00:05, 9.06MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  38%|###7      | 29.9M/79.3M [00:04<00:05, 9.44MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  39%|###8      | 30.9M/79.3M [00:04<00:05, 9.75MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  40%|####      | 32.0M/79.3M [00:04<00:04, 10.4MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  42%|####1     | 33.0M/79.3M [00:04<00:04, 10.3MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  43%|####2     | 34.0M/79.3M [00:04<00:04, 10.3MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  44%|####4     | 35.0M/79.3M [00:04<00:04, 9.92MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  45%|####5     | 36.0M/79.3M [00:04<00:04, 9.53MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  47%|####6     | 36.9M/79.3M [00:05<00:11, 4.02MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  50%|####9     | 39.4M/79.3M [00:05<00:06, 6.83MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  52%|#####1    | 41.0M/79.3M [00:05<00:04, 8.43MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  53%|#####3    | 42.2M/79.3M [00:05<00:04, 8.89MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  55%|#####4    | 43.3M/79.3M [00:05<00:04, 8.86MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  56%|#####5    | 44.4M/79.3M [00:05<00:03, 9.25MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  57%|#####7    | 45.4M/79.3M [00:05<00:03, 9.61MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  59%|#####8    | 46.5M/79.3M [00:06<00:03, 10.0MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  60%|#####9    | 47.5M/79.3M [00:06<00:03, 9.88MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  61%|######1   | 48.5M/79.3M [00:06<00:03, 9.32MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  62%|######2   | 49.4M/79.3M [00:06<00:03, 9.10MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  64%|######3   | 50.4M/79.3M [00:06<00:03, 9.26MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  65%|######4   | 51.5M/79.3M [00:06<00:02, 9.83MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  66%|######6   | 52.6M/79.3M [00:06<00:02, 10.1MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  67%|######7   | 53.5M/79.3M [00:06<00:02, 10.1MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  69%|######8   | 54.5M/79.3M [00:06<00:02, 10.1MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  70%|#######   | 55.5M/79.3M [00:07<00:02, 10.2MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  71%|#######1  | 56.5M/79.3M [00:07<00:03, 7.62MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  72%|#######2  | 57.4M/79.3M [00:07<00:02, 8.09MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  74%|#######3  | 58.4M/79.3M [00:07<00:02, 8.69MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  75%|#######4  | 59.3M/79.3M [00:07<00:04, 4.79MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  79%|#######9  | 63.0M/79.3M [00:07<00:01, 10.4MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  81%|########1 | 64.5M/79.3M [00:08<00:01, 10.5MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  83%|########3 | 65.9M/79.3M [00:08<00:01, 10.4MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  85%|########4 | 67.2M/79.3M [00:08<00:01, 10.4MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  86%|########6 | 68.3M/79.3M [00:08<00:01, 10.2MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  88%|########7 | 69.5M/79.3M [00:08<00:01, 10.3MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  89%|########8 | 70.5M/79.3M [00:08<00:00, 10.5MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  90%|######### | 71.6M/79.3M [00:08<00:00, 10.7MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  92%|#########1| 72.7M/79.3M [00:08<00:00, 10.6MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  93%|#########3| 73.8M/79.3M [00:09<00:00, 10.8MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  94%|#########4| 74.9M/79.3M [00:09<00:00, 8.74MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  96%|#########5| 75.8M/79.3M [00:09<00:00, 8.81MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  97%|#########6| 76.7M/79.3M [00:09<00:00, 8.84MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  98%|#########7| 77.7M/79.3M [00:09<00:00, 9.37MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz:  99%|#########9| 78.9M/79.3M [00:09<00:00, 10.1MiB/s]C:\Users\olami\.cache\chroma\onnx_models\all-MiniLM-L6-v2\onnx.tar.gz: 100%|##########| 79.3M/79.3M [00:09<00:00, 8.60MiB/s]
+INFO:decision_engine:[AI] RAM: 1.0GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Do this.  Do this.  Do this.  Do this.  Do this....
+INFO:decision_engine:[AI] RAM: 0.8GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: I'm nervous I act...
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:skills:[Skills] Matched 'Good morning, Jarvis.  What's-' to skill: good_morning
+INFO:__main__:[Voice] Skill triggered for: Good morning, Jarvis.  What's-...
+INFO:skills:[Skills] Matched 'What's the best time for me to go to sleep, Jarvis?' to skill: sleep
+INFO:__main__:[Voice] Skill triggered for: What's the best time for me to go to sleep, Jarvis...
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 5
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 6
+INFO:__main__:[WebSocket] Client removed. Total: 5
+INFO:__main__:[WebSocket] Client removed. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Matched 'Jarvis, what's the time?' to skill: time
+INFO:__main__:[Voice] Skill triggered for: Jarvis, what's the time?...
+INFO:decision_engine:[AI] RAM: 0.7GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis, what's the best time for me to go to bed?...
+INFO:decision_engine:[AI] RAM: 0.8GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis, is the system going okay?...
+INFO:decision_engine:[AI] RAM: 0.7GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Why do you think your name job?...
+
+============================================================
+[2026-04-18 00:31:19] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on [::1]:8765
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Matched 'Jarvis, what's the best time to go to sleep?' to skill: sleep
+INFO:__main__:[Voice] Skill triggered for: Jarvis, what's the best time to go to sleep?...
+INFO:skills:[Skills] Matched 'Good night, Starvers.' to skill: sleep
+INFO:__main__:[Voice] Skill triggered for: Good night, Starvers....
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+ERROR:__main__:[Alert] Loop error: disk I/O error
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+
+============================================================
+[2026-04-18 08:06:40] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:websockets.server:server listening on [::1]:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Matched 'Jarvis, can you please tell me what's the time?' to skill: time
+INFO:__main__:[Voice] Skill triggered for: Jarvis, can you please tell me what's the time?...
+INFO:skills:[Skills] Matched 'Good morning, Jarvis. What task should I do this morning?' to skill: good_morning
+INFO:__main__:[Voice] Skill triggered for: Good morning, Jarvis. What task should I do this m...
+INFO:skills:[Skills] Matched 'Uh, Jarvis, what project do we have to do this morning?' to skill: good_morning
+INFO:__main__:[Voice] Skill triggered for: Uh, Jarvis, what project do we have to do this mor...
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Matched 'Jarvis, give me time mute, what's the time?' to skill: time
+INFO:__main__:[Voice] Skill triggered for: Jarvis, give me time mute, what's the time?...
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.4GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Oh, Jarvis, tell me what's the system temperature?...
+ERROR:__main__:[Gemini] API error: Cannot connect to host generativelanguage.googleapis.com:443 ssl:default [getaddrinfo failed]
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.1GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis, what's the system temperature?...
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.3GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis, why can't you speak to me?...
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+
+============================================================
+[2026-04-18 13:24:33] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:websockets.server:server listening on [::1]:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Loaded: calculator
+INFO:skills:[Skills] Loaded: notes
+INFO:skills:[Skills] Loaded: systemcontrol
+INFO:skills:[Skills] Loaded: websearch
+INFO:skills:[Skills] Loaded: youtube
+INFO:skills:[Skills] Matched 'The job is what's with the weather.' to skill: weather
+INFO:__main__:[Voice] Skill triggered for: The job is what's with the weather....
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I apologize, RED. I'm unable to retrieve weather d...
+INFO:__main__:[TTS] Queuing text: I apologize, RED. I'm unable to retrieve weather d...
+INFO:__main__:[TTS] Speaking: I apologize, RED. I'm unable to retrieve weather d...
+INFO:__main__:[TTS] Finished speaking
+INFO:decision_engine:[AI] RAM: 0.4GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis can you tell me what's the best time for me...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Queuing text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Speaking: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Davas, tell me a joke.' to skill: joke
+INFO:__main__:[Voice] Skill triggered for: Davas, tell me a joke....
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: What do you call a fake noodle? An impasta! ... I ...
+INFO:__main__:[TTS] Queuing text: What do you call a fake noodle? An impasta! ... I ...
+INFO:__main__:[TTS] Speaking: What do you call a fake noodle? An impasta! ... I ...
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Jarvis, flip a coin.' to skill: coin_flip
+INFO:__main__:[Voice] Skill triggered for: Jarvis, flip a coin....
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: The coin shows... Heads, RED....
+INFO:__main__:[TTS] Queuing text: The coin shows... Heads, RED....
+INFO:__main__:[TTS] Speaking: The coin shows... Heads, RED....
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Jarvis, today what is today's calendar?' to skill: calendar
+ERROR:skills:[Skills] Calendar error: (-2147221005, 'Invalid class string', None, None)
+INFO:__main__:[Voice] Skill triggered for: Jarvis, today what is today's calendar?...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I'm unable to access your calendar at the moment, ...
+INFO:__main__:[TTS] Queuing text: I'm unable to access your calendar at the moment, ...
+INFO:__main__:[TTS] Speaking: I'm unable to access your calendar at the moment, ...
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Jarvis, can you open YouTube?' to skill: youtube
+INFO:__main__:[Voice] Skill triggered for: Jarvis, can you open YouTube?...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: Executing skill: youtube...
+INFO:__main__:[TTS] Queuing text: Executing skill: youtube...
+INFO:__main__:[TTS] Speaking: Executing skill: youtube...
+INFO:__main__:[TTS] Finished speaking
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.1GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Jarvis fuck you...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Queuing text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Speaking: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Finished speaking
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+
+============================================================
+[2026-04-18 13:46:18] Starting WebSocket Server
+============================================================
+INFO:root:[Config] Loaded environment from .env file
+INFO:__main__:[Config] Gemini API key configured (masked: ...l51o)
+INFO:decision_engine:Initializing DecisionEngine with model qwen2.5-coder:1.5b-base
+INFO:decision_engine:DecisionEngine ready (using direct HTTP API)
+INFO:__main__:[WebSocket] Starting server on ws://localhost:8765
+INFO:__main__:[WebSocket] Waiting 3 seconds for services to initialize...
+INFO:comtypes.client._code_cache:Imported existing <module 'comtypes.gen' from 'C:\\Projects\\Operator\\backend\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+INFO:comtypes.client._code_cache:Using writeable comtypes cache directory: 'C:\Projects\Operator\backend\venv\Lib\site-packages\comtypes\gen'
+INFO:__main__:[TTS] Engine initialized successfully
+INFO:__main__:[Alert] Proactive alert loop started (last_id=65)
+INFO:websockets.server:server listening on [::1]:8765
+INFO:websockets.server:server listening on 127.0.0.1:8765
+INFO:__main__:[WebSocket] Server ready and accepting connections
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:skills:[Skills] Loaded: calculator
+INFO:skills:[Skills] Loaded: notes
+INFO:skills:[Skills] Loaded: systemcontrol
+INFO:skills:[Skills] Loaded: websearch
+INFO:skills:[Skills] Loaded: youtube
+INFO:skills:[Skills] Matched 'Do this, tell me a joke.' to skill: joke
+INFO:__main__:[Voice] Skill triggered for: Do this, tell me a joke....
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: Why did the scarecrow win an award? He was outstan...
+INFO:__main__:[TTS] Queuing text: Why did the scarecrow win an award? He was outstan...
+INFO:__main__:[TTS] Speaking: Why did the scarecrow win an award? He was outstan...
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Now it's really good continue, also I can open YouTube for me.' to skill: youtube
+INFO:__main__:[Voice] Skill triggered for: Now it's really good continue, also I can open You...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: Executing skill: youtube...
+INFO:__main__:[TTS] Queuing text: Executing skill: youtube...
+INFO:__main__:[TTS] Speaking: Executing skill: youtube...
+INFO:__main__:[TTS] Finished speaking
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.1GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Javik's Explaining Quantum Physics...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Queuing text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Speaking: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Finished speaking
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:__main__:[WebSocket] Client removed. Total: 1
+INFO:__main__:[WebSocket] Client removed. Total: 0
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 1
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 2
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 3
+INFO:websockets.server:connection open
+INFO:__main__:[WebSocket] Client connected. Total: 4
+INFO:__main__:[WebSocket] Client removed. Total: 3
+INFO:__main__:[WebSocket] Client removed. Total: 2
+WARNING:decision_engine:[AI] Failed to fetch installed models: HTTPConnectionPool(host='localhost', port=11434): Max retries exceeded with url: /api/tags (Caused by NewConnectionError("HTTPConnection(host='localhost', port=11434): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+INFO:decision_engine:[AI] RAM: 1.0GB available — skipping Ollama, using Gemini
+INFO:__main__:[Voice] Using Gemini for: Uh, Jarvis, can you please tell me what the time i...
+INFO:__main__:[TTS] speak_server called - clients: 2, force: True, text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Queuing text: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Speaking: I'm afraid I couldn't process that, RED....
+INFO:__main__:[TTS] Finished speaking
+INFO:skills:[Skills] Matched 'Don't you accent me when I 

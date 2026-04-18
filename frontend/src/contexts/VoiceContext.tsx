@@ -6,10 +6,12 @@ interface VoiceContextType {
   state: VoiceState;
   isOffline: boolean;
   lastResponse: string;
+  interimText: string;
   startListening: () => Promise<void>;
   stopListening: () => void;
   manualWake: () => Promise<void>;
   activateHotwordMode: () => void;
+  sendTextCommand: (text: string) => Promise<void>;
   messages: any[];
   wsConnected: boolean;
 }
@@ -22,6 +24,8 @@ interface VoiceProviderProps {
 
 const HOTWORD_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const WAKE_WORDS = ['jarvis', 'operator'];
+// Common misheard variations of wake words (fuzzy matching)
+const WAKE_WORD_FUZZY = ['jarvis', 'operator', 'davas', 'gervais', 'service', 'gervas', 'jarvas', 'jervis'];
 
 // Dynamic WebSocket URL: supports local development and ngrok remote access
 // - Local: ws://localhost:8765
@@ -68,6 +72,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   // Voice feedback loop prevention
   const isSpeakingRef = useRef(false);
   const speakCooldown = useRef(false);
+  
+  // WebSocket initialization guard
+  const isConnecting = useRef(false);
 
   // (Removed ElevenLabs mapped state logic)
 
@@ -82,10 +89,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         resolve(true);
         return;
       }
-      if (ws.current?.readyState === WebSocket.CONNECTING) {
+      if (ws.current?.readyState === WebSocket.CONNECTING || isConnecting.current) {
         resolve(false); // Already connecting, wait
         return;
       }
+      
+      isConnecting.current = true;
 
       if (isOffline) {
         setIsOffline(false);
@@ -99,6 +108,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       let connected = false;
 
       ws.current.onopen = () => {
+        isConnecting.current = false;
         // Log connection type for debugging
         if (isRemote) {
           console.log('[Voice] Connected to JARVIS via remote ngrok (wss)');
@@ -121,14 +131,39 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             setLastResponse(data.text);
             setVoiceState('speaking');
             
-            // ALWAYS speak the response - every transcribed message gets a reply
             const responseText = data.text || "I'm sorry sir, I didn't catch that.";
             
-            speak(responseText, () => {
-              // After speaking, go straight back to hotword listening
+            // If server is handling TTS, don't speak in browser
+            if (data.server_tts) {
+              console.log('[Voice] Server handling TTS, skipping browser speech');
+              // Wait for server TTS to finish (approximate) then go back to listening
+              setTimeout(() => {
+                if (hotwordActive.current) {
+                  setVoiceState('hotword');
+                  hotwordListenLoop();
+                } else {
+                  setVoiceState('idle');
+                }
+              }, 2000);
+            } else {
+              // Browser TTS fallback
+              speak(responseText, () => {
+                if (hotwordActive.current) {
+                  setVoiceState('hotword');
+                  hotwordListenLoop();
+                } else {
+                  setVoiceState('idle');
+                }
+              });
+            }
+          } else if (data.type === 'tts_fallback') {
+            // Server TTS failed - use browser TTS as fallback
+            console.log('[Voice] Server TTS failed, using browser fallback:', data.reason);
+            const fallbackText = data.text || "I'm sorry sir, I didn't catch that.";
+            speak(fallbackText, () => {
               if (hotwordActive.current) {
                 setVoiceState('hotword');
-                hotwordListenLoop();  // straight back to listening
+                hotwordListenLoop();
               } else {
                 setVoiceState('idle');
               }
@@ -149,6 +184,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       };
 
       ws.current.onclose = () => {
+        isConnecting.current = false;
         reconnectAttempts.current++;
         setWsConnected(false);
         if (reconnectAttempts.current >= maxReconnectAttempts) {
@@ -352,8 +388,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           const transcript = (data.text || '').toLowerCase().trim();
           console.log('[Hotword-Python] Heard:', transcript);
 
-          if (WAKE_WORDS.some(w => transcript.includes(w)) && hotwordActive.current) {
-            console.log('[Hotword] Wake word detected! Recording command...');
+          // Check for wake words using fuzzy matching
+          const wakeDetected = WAKE_WORD_FUZZY.some(w => transcript.includes(w));
+          if (wakeDetected && hotwordActive.current) {
+            console.log('[Hotword] Wake word detected in:', transcript);
             setVoiceState('listening');
             await startListening();
           } else {
@@ -373,6 +411,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     }
   }, [initWebSocket, setVoiceState, startListening]);
 
+  // Track interim speech results for visual feedback
+  const [interimText, setInterimText] = useState('');
+
   // Fast browser-based hotword loop
   const hotwordListenLoop = useCallback(() => {
     if (!hotwordActive.current || isRecording.current || isSpeakingRef.current || speakCooldown.current) return;
@@ -386,26 +427,64 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;      // short burst, not continuous
-    recognition.interimResults = false;
+    recognition.interimResults = true;     // SHOW what we're hearing in real-time
     recognition.lang = 'en-GB';
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3;     // Get multiple interpretations for better matching
+
+    let finalTranscript = '';
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase().trim();
-      console.log('[Hotword] Heard:', transcript);
+      let interim = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      
+      // Show interim results to user
+      if (interim) {
+        setInterimText(interim);
+        console.log('[Hotword] Hearing:', interim);
+      }
 
-      const wakeDetected = WAKE_WORDS.some(w => transcript.includes(w));
-      if (wakeDetected && hotwordActive.current) {
-        console.log('[Hotword] Wake word detected! Recording command...');
-        setVoiceState('listening');
-        startListening();
-      } else {
-        // Not a wake word, loop again immediately
-        if (hotwordActive.current) hotwordListenLoop();
+      // Process final result
+      if (finalTranscript) {
+        const transcript = finalTranscript.toLowerCase().trim();
+        setInterimText(''); // Clear interim
+        console.log('[Hotword] Final heard:', transcript);
+
+        // Check all alternatives for wake word using fuzzy matching
+        let wakeDetected = WAKE_WORD_FUZZY.some(w => transcript.includes(w));
+        
+        // Also check alternative interpretations
+        if (!wakeDetected && event.results[0].length > 1) {
+          for (let i = 1; i < event.results[0].length; i++) {
+            const alt = event.results[0][i].transcript.toLowerCase().trim();
+            if (WAKE_WORD_FUZZY.some(w => alt.includes(w))) {
+              wakeDetected = true;
+              console.log('[Hotword] Wake word found in alternative:', alt);
+              break;
+            }
+          }
+        }
+
+        if (wakeDetected && hotwordActive.current) {
+          console.log('[Hotword] Wake word detected! Recording command...');
+          setVoiceState('listening');
+          startListening();
+        } else {
+          // Not a wake word, loop again immediately
+          if (hotwordActive.current) hotwordListenLoop();
+        }
       }
     };
 
     recognition.onerror = (e: any) => {
+      setInterimText(''); // Clear on error
       // network error = no internet for Google speech, fall back to python loop
       if (e.error === 'network') {
         if (!hasLoggedNoNetwork.current) {
@@ -422,6 +501,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     };
 
     recognition.onend = () => {
+      setInterimText(''); // Clear on end
       // If no result fired and still active, loop again
       if (hotwordActive.current && !isRecording.current) {
         setTimeout(() => hotwordListenLoop(), 100);
@@ -487,15 +567,38 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Send text command via WebSocket
+  const sendTextCommand = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    
+    const connected = await initWebSocket();
+    if (!connected) {
+      console.error('[Voice] Cannot send text - WebSocket not connected');
+      return;
+    }
+    
+    setVoiceState('thinking');
+    
+    // Send text as command
+    ws.current?.send(JSON.stringify({
+      type: 'command',
+      text: text.trim()
+    }));
+    
+    console.log('[Voice] Text command sent:', text);
+  }, [initWebSocket, setVoiceState]);
+
   return (
     <VoiceContext.Provider value={{
       state,
       isOffline,
       lastResponse,
+      interimText,
       startListening,
       stopListening: () => setVoiceState('idle'),
       manualWake,
       activateHotwordMode,
+      sendTextCommand,
       messages,
       wsConnected
     }}>

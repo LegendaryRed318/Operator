@@ -46,12 +46,13 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 };
 
-export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel = 'qwen2.5-coder' }) => {
-  const { state: voiceState, lastResponse, manualWake } = useVoice();
-  const [aiText, setAiText] = useState('Good evening, sir. JARVIS online. How may I assist you today?');
+export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel }) => {
+  const { state: voiceState, lastResponse, interimText, manualWake, sendTextCommand } = useVoice();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [aiText, setAiText] = useState('Operator Online');
   const [clock, setClock] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const sleeping = false; // TODO: wire to sleep manager
-  const inputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString('en-GB', { hour12: false }));
@@ -113,7 +114,13 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel = 
           <div style={{ transform: 'scale(1.8)', transition: 'transform 0.5s ease' }}>
             <Orb />
           </div>
-          <div style={{ marginTop: 120, fontSize: 16, color: 'rgba(200,220,240,0.9)', maxWidth: 600, textAlign: 'center', lineHeight: 1.5 }}>
+          {/* Interim speech recognition feedback */}
+          {interimText && (
+            <div style={{ marginTop: 100, fontSize: 14, color: 'rgba(0,180,255,0.7)', fontStyle: 'italic', maxWidth: 600, textAlign: 'center' }}>
+              Hearing: "{interimText}..."
+            </div>
+          )}
+          <div style={{ marginTop: interimText ? 10 : 120, fontSize: 16, color: 'rgba(200,220,240,0.9)', maxWidth: 600, textAlign: 'center', lineHeight: 1.5 }}>
             {aiText}
           </div>
           {(voiceState === 'speaking' || voiceState === 'listening') && (
@@ -126,12 +133,20 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel = 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,180,255,0.3)', borderRadius: 24, padding: '12px 20px', backdropFilter: 'blur(10px)' }}>
             <input
               ref={inputRef} type="text" placeholder="Speak or type to JARVIS..."
-              onKeyDown={(e) => {
+              disabled={isSending}
+              onKeyDown={async (e) => {
                 if (e.key === 'Enter' && inputRef.current && inputRef.current.value.trim()) {
+                  const text = inputRef.current.value.trim();
                   inputRef.current.value = '';
+                  setIsSending(true);
+                  try {
+                    await sendTextCommand(text);
+                  } finally {
+                    setIsSending(false);
+                  }
                 }
               }}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 14, fontFamily: "'Share Tech Mono', monospace" }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 14, fontFamily: "'Share Tech Mono', monospace", opacity: isSending ? 0.5 : 1 }}
             />
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,180,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#00b4ff' }} onClick={manualWake}> microphone</div>
           </div>
