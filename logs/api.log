@@ -40604,3 +40604,287 @@ INFO:     127.0.0.1:60835 - "POST /transcribe HTTP/1.1" 200 OK
 2026-04-18 16:26:06,490 - __main__ - INFO - [Whisper] Transcribed: ...
 INFO:     127.0.0.1:60835 - "GET /system HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55567 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60835 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:26:09,251 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:26:10,730 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:26:11,397 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:55567 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:26:16,351 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:61779 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:26:22,267 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:55567 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:26,300 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:26:27,166 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:26:28,287 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:31,164 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:26:32,185 - __main__ - INFO - [Whisper] Transcribed: Let's go!  Let's go!...
+INFO:     127.0.0.1:61779 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:26:33,192 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:26:34,620 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61779 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:37,181 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:26:38,302 - __main__ - INFO - [Whisper] Transcribed: I don't know what you'll think in this info...
+INFO:     127.0.0.1:61779 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61779 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:26:39,213 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:62243 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:42,723 - __main__ - INFO - [Whisper] Transcribed: You have to have a seat, good to know and good....
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:26:43,203 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:26:44,323 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:48,684 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:26:49,301 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:26:50,675 - __main__ - INFO - [Whisper] Transcribed: Oh, shit....
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:26:51,275 - __main__ - INFO - [Whisper] Transcribed: Oh shit.  Oh shit....
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:26:56,194 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:26:56,302 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:51091 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61751 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61751 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:27:03,012 - __main__ - INFO - [Whisper] Transcribed: If you don't mind, I'll see you in the next video....
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:03,507 - __main__ - INFO - [Whisper] Transcribed: If you don't mind, I'll see you in the next video....
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:27:08,189 - faster_whisper - INFO - Processing audio with duration 00:03.840
+2026-04-18 16:27:08,311 - faster_whisper - INFO - Processing audio with duration 00:03.840
+INFO:     127.0.0.1:51784 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60128 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:27:10,091 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:10,278 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:27:15,204 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:27:15,344 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:27:18,155 - __main__ - INFO - [Whisper] Transcribed: I'm not going to miss you.  I'm going to miss you.  I'm going to miss you....
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62680 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:27:20,945 - __main__ - INFO - [Whisper] Transcribed: You know what I'm supposed to say, right?  Yeah....
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:23,219 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:62680 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:27:24,649 - __main__ - INFO - [Whisper] Transcribed: Like I said, right?  The last thing to do is just to set me down and I don't eve...
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:26,188 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:27:27,678 - __main__ - INFO - [Whisper] Transcribed: I'm like, you're right. She sent you to me and sent you to her. But we'll need t...
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:27:29,328 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:27:31,042 - __main__ - INFO - [Whisper] Transcribed: That's someone who loves to make sure that the real reason you've been getting c...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:33,168 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:27:34,285 - __main__ - INFO - [Whisper] Transcribed: He's everything you know, but he said smiling like he's doing you a big fun, let...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:27:36,694 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:27:38,849 - __main__ - INFO - [Whisper] Transcribed: Make them fun, and this is the only way to keep all the comfortable games you've...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:27:39,220 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:27:40,633 - __main__ - INFO - [Whisper] Transcribed: I'm gonna hide my shoulder when I was a kid.  She was really much shorter when s...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:27:44,187 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:27:45,331 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:27:45,370 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:64453 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:27:50,313 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:64453 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:27:54,667 - __main__ - INFO - [Whisper] Transcribed: Everyone's also including our children's issues  to help improve our future and ...
+INFO:     127.0.0.1:64453 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:27:55,019 - __main__ - INFO - [Whisper] Transcribed: which would look strong if we wanted it to move into power couple of pieces and ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:00,750 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:28:00,889 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:28:11,954 - __main__ - INFO - [Whisper] Transcribed: I'm sorry, I can't see....
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:12,548 - __main__ - INFO - [Whisper] Transcribed: I'm sorry, I can't see....
+INFO:     127.0.0.1:55242 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:28:17,226 - faster_whisper - INFO - Processing audio with duration 00:03.840
+2026-04-18 16:28:17,355 - faster_whisper - INFO - Processing audio with duration 00:03.840
+INFO:     127.0.0.1:60452 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:28:19,125 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:55242 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:19,343 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:24,635 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:24,755 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:26,625 - __main__ - INFO - [Whisper] Transcribed: What is wrong with you guys?  You're right....
+INFO:     127.0.0.1:55242 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:26,875 - __main__ - INFO - [Whisper] Transcribed: What's wrong with you guys?  What's wrong?...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:31,173 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:32,267 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:60463 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60463 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:37,121 - __main__ - INFO - [Whisper] Transcribed: I'll see you next time.  Peace....
+INFO:     127.0.0.1:55242 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:38,581 - __main__ - INFO - [Whisper] Transcribed: Okay....
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:42,690 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:43,307 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:54386 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:28:44,508 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:44,683 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:55242 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:28:49,207 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:50,225 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:28:50,226 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:54386 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:51,185 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:28:55,180 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:28:56,154 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:28:56,336 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:28:58,954 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:01,203 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:29:02,250 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:29:04,143 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:05,067 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:07,208 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:08,267 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:29:10,176 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:29:11,312 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:13,176 - faster_whisper - INFO - Processing audio with duration 00:03.900
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:29:14,161 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:16,169 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:29:17,141 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:29:19,179 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:20,192 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:22,176 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:29:23,628 - __main__ - INFO - [Whisper] Transcribed: There's a motion sent to give out names to eat and send my girlfriend five years...
+INFO:     127.0.0.1:63683 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63683 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:25,220 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:26,550 - __main__ - INFO - [Whisper] Transcribed: I don't run for five years so I'm not attracted to it anymore.  I need an help. ...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:28,265 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:63683 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58946 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:29:29,705 - __main__ - INFO - [Whisper] Transcribed: I just said I understand the last two, so I'm just going to step you down and I'...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:31,161 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:32,360 - __main__ - INFO - [Whisper] Transcribed: He said he needed a man to take charge, but really he's not someone who knows th...
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:29:35,200 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:37,157 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:59338 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:37,510 - faster_whisper - INFO - Processing audio with duration 00:03.840
+INFO:     127.0.0.1:59338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:29:39,155 - __main__ - INFO - [Whisper] Transcribed: He said, finally what he was doing in there....
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:41,189 - faster_whisper - INFO - Processing audio with duration 00:03.240
+INFO:     127.0.0.1:50075 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:29:44,372 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:46,739 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:50075 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:29:47,522 - __main__ - INFO - [Whisper] Transcribed: It's going to take a little bit of time for the video to get back up....
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61338 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:29:52,217 - faster_whisper - INFO - Processing audio with duration 00:03.960
+2026-04-18 16:29:52,347 - faster_whisper - INFO - Processing audio with duration 00:03.960
+INFO:     127.0.0.1:55755 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50986 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50986 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55755 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:30:10,114 - __main__ - INFO - [Whisper] Transcribed: I just want you to feel happy....
+INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
+2026-04-18 16:30:10,725 - __main__ - INFO - [Whisper] Transcribed: I just want you to fill out....
+INFO:     127.0.0.1:50075 - "POST /transcribe HTTP/1.1" 200 OK
