@@ -40888,3 +40888,14 @@ INFO:     127.0.0.1:55755 - "GET /projects HTTP/1.1" 200 OK
 INFO:     127.0.0.1:61338 - "POST /transcribe HTTP/1.1" 200 OK
 2026-04-18 16:30:10,725 - __main__ - INFO - [Whisper] Transcribed: I just want you to fill out....
 INFO:     127.0.0.1:50075 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /errors HTTP/1.1" 200 OK
+2026-04-18 16:30:15,241 - faster_whisper - INFO - Processing audio with duration 00:03.780
+2026-04-18 16:30:16,675 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:30:17,029 - __main__ - INFO - [Whisper] Transcribed: So did you fill out that?...
+INFO:     127.0.0.1:50075 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:30:18,671 - __main__ - INFO - [Whisper] Transcribed: What did you feel like?  So cool!...
+INFO:     127.0.0.1:57490 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57490 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50075 - "GET /projects HTTP/1.1" 200 OK
