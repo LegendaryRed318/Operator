@@ -40566,3 +40566,13 @@ INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
 2026-04-18 16:25:35,892 - __main__ - INFO - [Whisper] Transcribed: ...
 INFO:     127.0.0.1:55567 - "POST /transcribe HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55567 - "GET /system HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /errors HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /projects HTTP/1.1" 200 OK
+2026-04-18 16:25:40,155 - faster_whisper - INFO - Processing audio with duration 00:03.900
+2026-04-18 16:25:41,338 - faster_whisper - INFO - Processing audio with duration 00:03.840
+2026-04-18 16:25:41,456 - __main__ - INFO - [Whisper] Transcribed: So I never thought I would tell you the title and nobody would tell you about it...
+INFO:     127.0.0.1:62243 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62243 - "GET /system HTTP/1.1" 200 OK
+2026-04-18 16:25:42,570 - __main__ - INFO - [Whisper] Transcribed: ...
+INFO:     127.0.0.1:55567 - "POST /transcribe HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55567 - "GET /errors HTTP/1.1" 200 OK
