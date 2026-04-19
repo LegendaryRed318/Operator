@@ -169,6 +169,7 @@ const AppContent: React.FC = () => {
                       name: dbProj.name,
                       status: dbProj.status as any,
                       path: `/projects/${dbProj.name.toLowerCase()}`,
+                      type: 'other',
                     });
                   }
                 });

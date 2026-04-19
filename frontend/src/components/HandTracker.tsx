@@ -92,8 +92,6 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
 
         hands.onResults((results: any) => {
           if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-            // Only log on first detection (not every frame)
-            const wasDetected = handDetectedRef.current;
             setHandDetected(true);
             handDetectedRef.current = true;
             const landmarks = results.multiHandLandmarks[0];

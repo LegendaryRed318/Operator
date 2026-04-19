@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Optional
+from paths import DB_PATH, LOGS_PATH, SKILLS_PATH
 
 # Try to import requests for weather API
 try:
@@ -36,9 +37,6 @@ except ImportError:
         TOML_LOADER = None
 
 logger = logging.getLogger(__name__)
-
-# Skills directory
-SKILLS_PATH = Path(os.getenv("OPERATOR_SKILLS_PATH", "E:/JarvisVault/skills"))
 
 # Built-in skill handlers (voice triggers that don't need TOML files)
 # App registry for the open_app skill — maps spoken names to executables
@@ -208,13 +206,11 @@ class SkillExecutor:
             ram_total = round(mem.total / (1024**3), 1)
             
             # Check for errors
-            from pathlib import Path as P
-            db_path = P(os.getenv("OPERATOR_DB_PATH", "C:/Projects/Operator/database/errors.db"))
             error_count = 0
-            if db_path.exists():
+            if DB_PATH.exists():
                 import sqlite3
                 try:
-                    conn = sqlite3.connect(str(db_path), timeout=2.0)
+                    conn = sqlite3.connect(str(DB_PATH), timeout=2.0)
                     cursor = conn.cursor()
                     cursor.execute("SELECT COUNT(*) FROM errors WHERE fixed = 0 OR fixed IS NULL")
                     error_count = cursor.fetchone()[0]
@@ -280,9 +276,8 @@ class SkillExecutor:
         """Handle wake from sleep."""
         # Touch heartbeat to reset sleep timer
         try:
-            logs_path = Path(os.getenv("OPERATOR_LOGS_PATH", "C:/Projects/Operator/logs"))
-            heartbeat_path = logs_path / "heartbeat.flag"
-            sleep_flag_path = logs_path / "sleep.flag"
+            heartbeat_path = LOGS_PATH / "heartbeat.flag"
+            sleep_flag_path = LOGS_PATH / "sleep.flag"
             
             heartbeat_path.touch()
             if sleep_flag_path.exists():
@@ -303,8 +298,7 @@ class SkillExecutor:
     def _handle_sleep(self, text: str = "") -> str:
         """Enter sleep mode."""
         try:
-            logs_path = Path(os.getenv("OPERATOR_LOGS_PATH", "C:/Projects/Operator/logs"))
-            sleep_flag_path = logs_path / "sleep.flag"
+            sleep_flag_path = LOGS_PATH / "sleep.flag"
             sleep_flag_path.write_text("SLEEP")
         except:
             pass
@@ -483,19 +477,9 @@ def try_handle_skill(text: str) -> Optional[str]:
     Try to handle a voice command as a skill.
     Returns response text if handled, None if not a skill command.
     """
-    executor = get_skill_executor()
-    match = executor.match_trigger(text)
-    
-    if match:
-        skill_name, handler = match
-        logger.info(f"[Skills] Matched '{text}' to skill: {skill_name}")
-        try:
-            if callable(handler):
-                return handler(text)
-        except Exception as e:
-            logger.error(f"[Skills] Execution error: {e}")
-            return f"I'm sorry RED, I couldn't complete that action."
-    
+    result = dispatch_skill_command(command_text=text)
+    if result.get("success"):
+        return result.get("response")
     return None
 
 
@@ -505,25 +489,45 @@ def trigger_skill_by_name(name: str, params: dict = None) -> dict:
     Trigger a skill by name (for API calls).
     Returns result dictionary.
     """
-    executor = get_skill_executor()
     text = params.get("text", "") if params else ""
-    
-    # Check if it's a built-in skill
-    if name in BUILT_IN_SKILLS:
-        handler_name = BUILT_IN_SKILLS[name]["handler"]
+    return dispatch_skill_command(skill_name=name, command_text=text)
+
+
+def dispatch_skill_command(skill_name: str | None = None, command_text: str = "") -> dict:
+    """
+    Canonical skill dispatch used by both WebSocket and HTTP paths.
+    If skill_name is omitted, this attempts trigger matching from command_text.
+    """
+    executor = get_skill_executor()
+
+    resolved_name = skill_name
+    handler = None
+    if not resolved_name:
+        match = executor.match_trigger(command_text)
+        if not match:
+            return {"success": False, "error": "No skill matched", "skill": None}
+        resolved_name, handler = match
+    elif resolved_name in BUILT_IN_SKILLS:
+        handler_name = BUILT_IN_SKILLS[resolved_name]["handler"]
         handler = executor.skill_handlers.get(handler_name)
-        if handler:
-            try:
-                result = handler(text)
-                return {"success": True, "response": result, "skill": name}
-            except Exception as e:
-                return {"success": False, "error": str(e), "skill": name}
-    
-    # Check TOML skills
-    if name in executor.loaded_skills:
-        return {"success": True, "response": f"Skill '{name}' triggered", "skill": name}
-    
-    return {"success": False, "error": f"Unknown skill: {name}"}
+
+    if handler and callable(handler):
+        try:
+            response = handler(command_text)
+            return {"success": True, "response": response, "skill": resolved_name, "implemented": True}
+        except Exception as e:
+            logger.error(f"[Skills] Execution error for {resolved_name}: {e}")
+            return {"success": False, "error": str(e), "skill": resolved_name}
+
+    if resolved_name in executor.loaded_skills:
+        return {
+            "success": True,
+            "response": f"Skill '{resolved_name}' is recognized but not yet executable.",
+            "skill": resolved_name,
+            "implemented": False,
+        }
+
+    return {"success": False, "error": f"Unknown skill: {resolved_name}", "skill": resolved_name}
 
 
 if __name__ == "__main__":

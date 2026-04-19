@@ -522,3 +522,58 @@ All projects launched. Press Ctrl+C to stop all.
 ============================================================
 [2026-04-19 09:34:28] Starting Project Launcher
 ============================================================
+Launching 2 project(s)...
+[brainify] Started (PID: 30932) in new window
+[brainify] 
+[brainify] > react-example@0.0.0 dev
+[brainify] > tsx server.ts
+[brainify] 
+[ERROR] Failed to launch brainify: 'charmap' codec can't decode byte 0x8f in position 58: character maps to <undefined>
+[Brainnify-Ai] Started (PID: 17724) in new window
+[Brainnify-Ai] 
+[Brainnify-Ai] > vite_react_shadcn_ts@0.0.0 dev
+[Brainnify-Ai] > vite
+[Brainnify-Ai] 
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m575[22m[2m[0m ms[22m
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.11.247:[1m8080[22m/[39m
+[Brainnify-Ai] ^C^C
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.11.247:[1m8081[22m/[39m
+[Brainnify-Ai] Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+[Brainnify-Ai]   npx update-browserslist-db@latest
+[Brainnify-Ai]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-19 15:46:22] Starting Project Launcher
+============================================================
+Launching 2 project(s)...
+[brainify] Started (PID: 28584) in new window
+[brainify] 
+[brainify] > react-example@0.0.0 dev
+[brainify] > tsx server.ts
+[brainify] 
+[ERROR] Failed to launch brainify: 'charmap' codec can't decode byte 0x90 in position 56: character maps to <undefined>
+[Brainnify-Ai] Started (PID: 16560) in new window
+[Brainnify-Ai] 
+[Brainnify-Ai] > vite_react_shadcn_ts@0.0.0 dev
+[Brainnify-Ai] > vite
+[Brainnify-Ai] 
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m[1mVITE[22m v7.3.2[39m  [2mready in [0m[1m758[22m[2m[0m ms[22m
+[Brainnify-Ai] 
+[Brainnify-Ai]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m8080[22m/[39m
+[Brainnify-Ai]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.11.247:[1m8080[22m/[39m
+[Brainnify-Ai] ^C
+[Brainnify-Ai] Process exited with code 3221225786
+All projects launched. Press Ctrl+C to stop all.
+
+============================================================
+[2026-04-19 17:47:33] Starting Project Launcher
+============================================================

@@ -45,7 +45,7 @@ export interface Project {
   name: string;
   path: string;
   type: 'web' | 'mobile' | 'desktop' | 'api' | 'other';
-  status: 'active' | 'inactive' | 'error';
+  status: 'active' | 'inactive' | 'error' | 'fixing';
   lastAccessed?: Date;
 }
 
@@ -58,4 +58,16 @@ export interface ErrorEntry {
   message: string;
   timestamp: string;
   fixed: boolean;
+}
+
+// API error shape used in the dashboard flow.
+export interface ErrorItem {
+  id: number;
+  timestamp: string;
+  project_name: string;
+  file_path?: string;
+  error_text: string;
+  suggested_fix?: string;
+  severity?: 'low' | 'medium' | 'high';
+  fixed?: boolean;
 }

@@ -289,3 +289,4 @@ Raise token limits to 4096
 Wrap sync ops in threads
 Should I start with those 4?
 
+yes continue and also what do you think of the skills system its stored in E:\JarvisVault is there any way to impove and make it better

@@ -26,6 +26,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from paths import DB_PATH, LOGS_PATH, SKILLS_PATH, VAULT_PATH
 
 # Configure logging
 logging.basicConfig(
@@ -34,11 +35,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Paths from environment or defaults
-DB_PATH = Path(os.getenv("OPERATOR_DB_PATH", "C:/Projects/Operator/database/errors.db"))
-SKILLS_PATH = Path(os.getenv("OPERATOR_SKILLS_PATH", "E:/JarvisVault/skills"))
-LOGS_PATH = Path(os.getenv("OPERATOR_LOGS_PATH", "C:/Projects/Operator/logs"))
-VAULT_PATH = Path(os.getenv("OPERATOR_VAULT_PATH", "E:/JarvisVault"))
+# Paths from centralized resolver
 TEMP_AUDIO_PATH = LOGS_PATH / "temp_audio.wav"
 HEARTBEAT_PATH = LOGS_PATH / "heartbeat.flag"
 SLEEP_FLAG_PATH = LOGS_PATH / "sleep.flag"
@@ -145,9 +142,95 @@ class SystemVitals(BaseModel):
     has_temperatures: bool
 
 
-# Temperature cache for Windows WMI
+# System vitals sampler cache
+_system_snapshot: dict[str, Any] = {}
+_snapshot_lock = threading.Lock()
+_metrics_stop_event = threading.Event()
 _last_temp: Optional[float] = None
 _last_temp_time: float = 0
+
+
+def _collect_system_snapshot() -> dict[str, Any]:
+    """Collect system vitals once and return a snapshot."""
+    global _last_temp, _last_temp_time
+    cpu_percent = psutil.cpu_percent(interval=0.2)
+    mem = psutil.virtual_memory()
+
+    disks = []
+    if platform.system() == "Windows":
+        for letter in ("C", "D", "E"):
+            drive = f"{letter}:\\"
+            try:
+                usage = psutil.disk_usage(drive)
+                disks.append({
+                    "mount": drive,
+                    "total": usage.total,
+                    "used": usage.used,
+                    "free": usage.free,
+                    "percent": usage.percent
+                })
+            except Exception:
+                continue
+    else:
+        for part in psutil.disk_partitions():
+            try:
+                usage = psutil.disk_usage(part.mountpoint)
+                disks.append({
+                    "mount": part.mountpoint,
+                    "total": usage.total,
+                    "used": usage.used,
+                    "free": usage.free,
+                    "percent": usage.percent
+                })
+            except Exception:
+                continue
+
+    cpu_temp = None
+    if platform.system() == "Windows":
+        now = time.time()
+        if now - _last_temp_time > 90:
+            try:
+                result = subprocess.run(
+                    ['wmic', r'/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],
+                    capture_output=True, text=True, timeout=5, creationflags=0x08000000
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split('\n'):
+                        if 'CurrentTemperature=' in line:
+                            temp_val = line.split('=')[1].strip()
+                            if temp_val and temp_val.isdigit():
+                                temp_c = (int(temp_val) / 10) - 273.15
+                                if 0 < temp_c < 120:
+                                    _last_temp = round(temp_c, 1)
+                                    break
+            except Exception as e:
+                logger.debug(f"[System] WMI temperature query failed: {e}")
+            _last_temp_time = now
+        cpu_temp = _last_temp
+
+    return {
+        "cpu_percent": cpu_percent,
+        "ram_percent": mem.percent,
+        "ram_used_gb": round(mem.used / (1024**3), 1),
+        "ram_total_gb": round(mem.total / (1024**3), 1),
+        "disks": disks,
+        "cpu_temp": cpu_temp,
+        "gpu_temp": None,
+        "timestamp": time.time(),
+    }
+
+
+def _metrics_sampler():
+    """Background sampler to avoid expensive per-request system calls."""
+    while not _metrics_stop_event.is_set():
+        try:
+            snapshot = _collect_system_snapshot()
+            with _snapshot_lock:
+                _system_snapshot.clear()
+                _system_snapshot.update(snapshot)
+        except Exception as e:
+            logger.debug(f"[System] Sampler iteration failed: {e}")
+        _metrics_stop_event.wait(10)
 
 
 @asynccontextmanager
@@ -167,8 +250,13 @@ async def lifespan(app: FastAPI):
             logger.warning(f"[FastAPI] Vault not accessible at {VAULT_PATH}")
     except Exception as e:
         logger.error(f"[FastAPI] Vault initialization error: {e}")
-    
+
+    _metrics_stop_event.clear()
+    sampler = threading.Thread(target=_metrics_sampler, daemon=True)
+    sampler.start()
+
     yield
+    _metrics_stop_event.set()
     logger.info("[FastAPI] Server shutting down...")
 
 
@@ -187,6 +275,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _require_admin(request: Request):
+    """Protect sensitive endpoints with optional admin token."""
+    configured = os.getenv("OPERATOR_ADMIN_TOKEN", "").strip()
+    if not configured:
+        return
+    supplied = request.headers.get("x-operator-admin-token", "").strip()
+    import hmac
+    if not hmac.compare_digest(supplied.encode(), configured.encode()):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @app.middleware("http")
@@ -249,77 +348,38 @@ async def get_config():
     )
 
 
+@app.get("/voice/diagnostics")
+async def voice_diagnostics():
+    """Return wake-word telemetry and active voice runtime diagnostics."""
+    telemetry = {
+        "wake_detected": 0,
+        "wake_fallback": 0,
+        "wake_mode_switches": 0,
+        "last_event": None,
+        "last_mode": None,
+    }
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from ws_server import WAKE_TELEMETRY
+        telemetry.update(WAKE_TELEMETRY)
+    except Exception:
+        pass
+    return telemetry
+
+
 @app.get("/system", response_model=SystemVitals)
 async def get_system_vitals():
     """Return real hardware system vitals as JSON."""
     try:
-        # CPU
-        cpu_percent = psutil.cpu_percent(interval=0.5)
+        with _snapshot_lock:
+            snapshot = dict(_system_snapshot)
+        if not snapshot:
+            snapshot = _collect_system_snapshot()
 
-        # RAM
-        mem = psutil.virtual_memory()
-        ram_percent = mem.percent
-        ram_used_gb = round(mem.used / (1024**3), 1)
-        ram_total_gb = round(mem.total / (1024**3), 1)
-
-        # Disk usage - dynamically discover all drives
-        disks = []
-        if platform.system() == "Windows":
-            import string
-            from ctypes import windll
-            for letter in string.ascii_uppercase:
-                drive = f"{letter}:\\"
-                try:
-                    usage = psutil.disk_usage(drive)
-                    disks.append({
-                        "mount": drive,
-                        "total": usage.total,
-                        "used": usage.used,
-                        "free": usage.free,
-                        "percent": usage.percent
-                    })
-                except:
-                    pass
-        else:
-            for part in psutil.disk_partitions():
-                try:
-                    usage = psutil.disk_usage(part.mountpoint)
-                    disks.append({
-                        "mount": part.mountpoint,
-                        "total": usage.total,
-                        "used": usage.used,
-                        "free": usage.free,
-                        "percent": usage.percent
-                    })
-                except:
-                    pass
-
-        # Temperatures - Cache WMI on Windows to prevent CPU spikes
-        cpu_temp = None
-        gpu_temp = None
-        global _last_temp, _last_temp_time
-
-        if platform.system() == "Windows":
-            now = time.time()
-            if now - _last_temp_time > 30:
-                try:
-                    result = subprocess.run(
-                        ['wmic', r'/namespace:\\root\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature', '/value'],
-                        capture_output=True, text=True, timeout=5, creationflags=0x08000000
-                    )
-                    if result.returncode == 0:
-                        for line in result.stdout.strip().split('\n'):
-                            if 'CurrentTemperature=' in line:
-                                temp_val = line.split('=')[1].strip()
-                                if temp_val and temp_val.isdigit():
-                                    temp_c = (int(temp_val) / 10) - 273.15
-                                    if temp_c > 0 and temp_c < 120:
-                                        _last_temp = round(temp_c, 1)
-                                        break
-                except Exception as e:
-                    logger.debug(f"[System] WMI temperature query failed: {e}")
-                _last_temp_time = now
-            cpu_temp = _last_temp
+        disks = snapshot.get("disks", [])
+        cpu_temp = snapshot.get("cpu_temp")
+        gpu_temp = snapshot.get("gpu_temp")
 
         # Legacy drive fields
         disk_c = next((d for d in disks if d['mount'] == 'C:\\'), None)
@@ -327,10 +387,10 @@ async def get_system_vitals():
         disk_e = next((d for d in disks if d['mount'] == 'E:\\'), None)
 
         return SystemVitals(
-            cpu_percent=cpu_percent,
-            ram_percent=ram_percent,
-            ram_used_gb=ram_used_gb,
-            ram_total_gb=ram_total_gb,
+            cpu_percent=float(snapshot.get("cpu_percent", 0.0)),
+            ram_percent=float(snapshot.get("ram_percent", 0.0)),
+            ram_used_gb=float(snapshot.get("ram_used_gb", 0.0)),
+            ram_total_gb=float(snapshot.get("ram_total_gb", 0.0)),
             disks=disks,
             disk_c_label="Windows (C:)",
             disk_c_percent=disk_c['percent'] if disk_c else None,
@@ -450,9 +510,10 @@ async def transcribe(audio: UploadFile = File(...)):
 
 
 @app.post("/clear-errors")
-async def clear_errors():
+async def clear_errors(request: Request):
     """DELETE all rows from the errors table (test-data wipe)."""
     try:
+        _require_admin(request)
         conn = sqlite3.connect(str(DB_PATH), timeout=5.0)
         cursor = conn.cursor()
         cursor.execute("DELETE FROM errors")
@@ -597,9 +658,10 @@ async def sleep_status():
 
 
 @app.post("/sleep/wake")
-async def sleep_wake():
+async def sleep_wake(request: Request):
     """Manually wake Jarvis by resetting the heartbeat."""
     try:
+        _require_admin(request)
         HEARTBEAT_PATH.touch()
         try:
             SLEEP_FLAG_PATH.write_text("AWAKE")
@@ -611,9 +673,10 @@ async def sleep_wake():
 
 
 @app.post("/sleep/sleep")
-async def sleep_sleep():
+async def sleep_sleep(request: Request):
     """Manually put Jarvis to sleep."""
     try:
+        _require_admin(request)
         try:
             SLEEP_FLAG_PATH.write_text("SLEEP")
         except Exception:
@@ -624,9 +687,9 @@ async def sleep_sleep():
 
 
 @app.post("/errors/clear-test")
-async def clear_test_errors():
+async def clear_test_errors(request: Request):
     """Clear test error entries."""
-    return await clear_errors()
+    return await clear_errors(request)
 
 
 class SkillTriggerRequest(BaseModel):
@@ -643,8 +706,8 @@ async def trigger_skill(request: SkillTriggerRequest):
     try:
         import sys
         sys.path.insert(0, str(Path(__file__).parent))
-        from skills import trigger_skill_by_name
-        result = trigger_skill_by_name(request.skill, request.params)
+        from skills import dispatch_skill_command
+        result = dispatch_skill_command(skill_name=request.skill, command_text=request.params.get("text", ""))
         return result
     except Exception as e:
         logger.error(f"[Skills] Trigger error: {e}")
@@ -701,9 +764,10 @@ async def get_skill_file(name: str):
 
 
 @app.post("/skills/import-zip")
-async def import_skills_zip(file: UploadFile = File(...)):
+async def import_skills_zip(request: Request, file: UploadFile = File(...)):
     """Import skills from uploaded ZIP file (from GitHub or local)."""
     try:
+        _require_admin(request)
         # Validate file
         if not file.content_type or "zip" not in file.content_type:
             # Check filename as fallback
@@ -789,9 +853,10 @@ async def get_projects():
 
 
 @app.get("/screenshot")
-async def take_screenshot():
+async def take_screenshot(request: Request):
     """Capture and return a screenshot."""
     try:
+        _require_admin(request)
         screenshot_path = LOGS_PATH / "screenshot.png"
 
         if platform.system() == "Windows":

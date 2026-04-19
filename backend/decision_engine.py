@@ -126,16 +126,35 @@ Do not include any other text. Only output the JSON object."""
             return f"I'm having trouble thinking, RED. Error: {e}"
 
 
+# Model cache: avoid hammering Ollama API on every query
+_installed_models_cache: set = set()
+_installed_models_cache_time: float = 0
+_MODELS_CACHE_TTL: float = 60.0  # Refresh every 60 seconds
+
+
 def get_installed_models() -> set:
-    """Fetch list of installed Ollama models."""
+    """Fetch list of installed Ollama models, cached for 60 seconds."""
+    global _installed_models_cache, _installed_models_cache_time
+    import time as _time
+
+    now = _time.time()
+    if _installed_models_cache and (now - _installed_models_cache_time) < _MODELS_CACHE_TTL:
+        return _installed_models_cache
+
     try:
         import requests
         resp = requests.get("http://localhost:11434/api/tags", timeout=3)
         if resp.status_code == 200:
             data = resp.json()
-            return {m["name"] for m in data.get("models", [])}
+            _installed_models_cache = {m["name"] for m in data.get("models", [])}
+            _installed_models_cache_time = now
+            return _installed_models_cache
     except Exception as e:
         logger.warning(f"[AI] Failed to fetch installed models: {e}")
+        # Return stale cache if available rather than empty set
+        if _installed_models_cache:
+            logger.info("[AI] Using stale model cache")
+            return _installed_models_cache
     return set()
 
 
@@ -161,6 +180,12 @@ def select_model_by_ram() -> str | None:
     Select the best Ollama model based on available RAM.
     Checks if model is installed, falls back to available models.
     Returns None to skip Ollama entirely and use Gemini fallback.
+
+    RAM thresholds (tuned for 8GB machine):
+      >5GB free → try 7b models
+      >2GB free → try 7b, fall back to 1.5b
+      >1.5GB free → 1.5b model only
+      <1.5GB free → Gemini fallback
     """
     try:
         available_gb = psutil.virtual_memory().available / (1024 ** 3)
@@ -170,30 +195,30 @@ def select_model_by_ram() -> str | None:
         if available_gb > 5:
             preferred = "deepseek-r1:7b"
             fallback = "qwen2.5-coder:7b"
-        elif available_gb > 3:
+        elif available_gb > 2:
             preferred = "qwen2.5-coder:7b"
             fallback = "qwen2.5-coder:1.5b-base"
+        elif available_gb > 1.5:
+            # Low RAM — only the tiny model is safe
+            preferred = "qwen2.5-coder:1.5b-base"
+            fallback = None
         else:
-            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — skipping Ollama, using Gemini")
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — too low for Ollama, using Gemini")
             return None
         
         # Check if preferred model is installed
         if preferred in installed:
-            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — using {preferred}")
-            # Try to pull deepseek in background if not installed and RAM is sufficient
-            if preferred == "deepseek-r1:7b" and "deepseek-r1:7b" not in installed:
-                pull_model_in_background("deepseek-r1:7b")
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB — using {preferred}")
             return preferred
-        elif fallback in installed:
-            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — {preferred} not installed, using {fallback}")
-            # Start background pull of preferred model
+        elif fallback and fallback in installed:
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB — {preferred} not installed, using {fallback}")
             pull_model_in_background(preferred)
             return fallback
         elif "qwen2.5-coder:1.5b-base" in installed:
-            logger.info(f"[AI] RAM: {available_gb:.1f}GB available — using qwen2.5-coder:1.5b-base (fallback)")
+            logger.info(f"[AI] RAM: {available_gb:.1f}GB — using qwen2.5-coder:1.5b-base (final fallback)")
             return "qwen2.5-coder:1.5b-base"
         else:
-            logger.warning(f"[AI] No suitable models installed, using Gemini fallback")
+            logger.warning(f"[AI] No Ollama models installed (checked: {installed or 'none'}), using Gemini")
             return None
             
     except Exception as e:

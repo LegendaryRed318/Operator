@@ -6,12 +6,11 @@ project_launcher.py - Launches React/Vite projects and captures their terminal o
 import subprocess
 import json
 import os
-import sys
 import time
 from datetime import datetime
+from paths import CONFIG_PATH, LOGS_PATH
 
-CONFIG_PATH = r"C:\Projects\Operator\backend\config.json"
-LOGS_DIR = r"C:\Projects\Operator\logs"
+LOGS_DIR = str(LOGS_PATH)
 
 
 def load_config():
@@ -19,7 +18,7 @@ def load_config():
     if not os.path.exists(CONFIG_PATH):
         print("[ERROR] config.json not found")
         return []
-    with open(CONFIG_PATH, "r") as f:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         config = json.load(f)
         return config.get("projects", [])
 

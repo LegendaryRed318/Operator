@@ -23,7 +23,21 @@ interface VoiceProviderProps {
 }
 
 const HOTWORD_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-const WAKE_WORD_FUZZY = ['jarvis', 'operator', 'davas', 'gervais', 'service', 'gervas', 'jarvas', 'jervis'];
+const WAKE_WORD_PATTERNS = [
+  /\bjarvis\b/,
+  /\bhey jarvis\b/,
+  /\bokay jarvis\b/,
+  /\boperator\b/,
+  /\bjervis\b/,
+  /\bjarvas\b/,
+  /\bjavis\b/,
+  /\bjalvis\b/,
+  /\bdovis\b/
+];
+const MAX_RECORDING_MS = 12000;
+const SILENCE_CHECK_MS = 200;
+const SILENCE_RMS_THRESHOLD = 0.012;
+const SILENCE_STOP_MS = 900;
 
 function getWebSocketUrl(): string {
   const host = window.location.host;
@@ -51,6 +65,11 @@ function cleanTextForSpeech(text: string): string {
     .replace(/\n{2,}/g, '. ')
     .replace(/\n/g, ' ')
     .trim();
+}
+
+function hasWakeWord(text: string): boolean {
+  const normalized = text.toLowerCase().trim();
+  return WAKE_WORD_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
@@ -83,11 +102,34 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
   // FIX: Track ongoing TTS timeout so we can cancel it if tts_fallback arrives
   const ttsDurationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recordingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeEngineMode = useRef<'browser' | 'backend'>('browser');
+  const lastWakeTriggerAt = useRef(0);
+  const WAKE_DEBOUNCE_MS = 2500;
 
   const setVoiceState = useCallback((newState: VoiceState, offline = false) => {
     setState(newState);
     setIsOffline(offline);
   }, []);
+
+  const reportWakeTelemetry = useCallback((event: string, detail?: string) => {
+    ws.current?.send(JSON.stringify({
+      type: 'wake_telemetry',
+      event,
+      detail: detail || null,
+      mode: wakeEngineMode.current,
+      ts: Date.now(),
+    }));
+  }, []);
+
+  const canTriggerWake = useCallback(() => {
+    const now = Date.now();
+    if (now - lastWakeTriggerAt.current < WAKE_DEBOUNCE_MS) return false;
+    lastWakeTriggerAt.current = now;
+    return true;
+  }, []);
+
 
   const initWebSocket = useCallback(async (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -391,21 +433,69 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
       mediaRecorder.current.onstop = async () => {
         isRecording.current = false;
+        if (recordingTimeout.current) {
+          clearTimeout(recordingTimeout.current);
+          recordingTimeout.current = null;
+        }
+        if (silenceInterval.current) {
+          clearInterval(silenceInterval.current);
+          silenceInterval.current = null;
+        }
         setVoiceState('thinking');
         stream.getTracks().forEach(track => track.stop());
+        try { await audioContext.close(); } catch { /* ignore */ }
         await sendAudioForTranscription(stream);
       };
+
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+
+      const stopRecording = () => {
+        if (recordingTimeout.current) {
+          clearTimeout(recordingTimeout.current);
+          recordingTimeout.current = null;
+        }
+        if (silenceInterval.current) {
+          clearInterval(silenceInterval.current);
+          silenceInterval.current = null;
+        }
+        if (mediaRecorder.current && isRecording.current) {
+          mediaRecorder.current.stop();
+        }
+      };
+
+      let lastSpeechAt = Date.now();
+      silenceInterval.current = setInterval(() => {
+        if (!isRecording.current) return;
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const centered = (data[i] - 128) / 128;
+          sum += centered * centered;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const now = Date.now();
+        if (rms > SILENCE_RMS_THRESHOLD) {
+          lastSpeechAt = now;
+          return;
+        }
+        if (now - lastSpeechAt >= SILENCE_STOP_MS) {
+          stopRecording();
+        }
+      }, SILENCE_CHECK_MS);
 
       mediaRecorder.current.start();
       isRecording.current = true;
       setVoiceState('listening');
       console.log('[Voice] Recording started');
 
-      setTimeout(() => {
-        if (mediaRecorder.current && isRecording.current) {
-          mediaRecorder.current.stop();
-        }
-      }, 5000);
+      recordingTimeout.current = setTimeout(() => {
+        stopRecording();
+      }, MAX_RECORDING_MS);
 
     } catch (err) {
       console.error('[Voice] Failed to start recording:', err);
@@ -443,8 +533,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           const transcript = (data.text || '').toLowerCase().trim();
           console.log('[Hotword-Python] Heard:', transcript);
 
-          const wakeDetected = WAKE_WORD_FUZZY.some(w => transcript.includes(w));
+          const wakeDetected = hasWakeWord(transcript);
           if (wakeDetected && hotwordActive.current) {
+            if (!canTriggerWake()) return;
+            reportWakeTelemetry('wake_detected', 'backend_transcribe');
             setVoiceState('listening');
             await startListening();
           } else {
@@ -462,7 +554,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       console.error('[Hotword-Python] Loop error:', err);
       if (hotwordActive.current) setTimeout(() => pythonHotwordLoop(), 2000);
     }
-  }, [initWebSocket, setVoiceState, startListening]);
+  }, [canTriggerWake, initWebSocket, reportWakeTelemetry, setVoiceState, startListening]);
 
   const hotwordListenLoop = useCallback(() => {
     if (!hotwordActive.current || isRecording.current || isSpeakingRef.current || speakCooldown.current) return;
@@ -470,9 +562,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       console.warn('[Hotword] SpeechRecognition not available — using backend loop');
+      wakeEngineMode.current = 'backend';
+      reportWakeTelemetry('wake_fallback', 'browser_unavailable');
       pythonHotwordLoop();
       return;
     }
+    wakeEngineMode.current = 'browser';
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -500,12 +595,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         setInterimText('');
         console.log('[Hotword] Final heard:', transcript);
 
-        let wakeDetected = WAKE_WORD_FUZZY.some(w => transcript.includes(w));
+        let wakeDetected = hasWakeWord(transcript);
 
         if (!wakeDetected && event.results[0].length > 1) {
           for (let i = 1; i < event.results[0].length; i++) {
             const alt = event.results[0][i].transcript.toLowerCase().trim();
-            if (WAKE_WORD_FUZZY.some(w => alt.includes(w))) {
+            if (hasWakeWord(alt)) {
               wakeDetected = true;
               console.log('[Hotword] Wake word in alternative:', alt);
               break;
@@ -514,6 +609,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         }
 
         if (wakeDetected && hotwordActive.current) {
+          if (!canTriggerWake()) return;
+          reportWakeTelemetry('wake_detected', 'browser_speech');
           setVoiceState('listening');
           startListening();
         } else if (hotwordActive.current) {
@@ -529,6 +626,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           console.warn('[Hotword] No network for browser speech — switching to backend loop');
           hasLoggedNoNetwork.current = true;
         }
+        wakeEngineMode.current = 'backend';
+        reportWakeTelemetry('wake_fallback', 'network_error');
         if (hotwordActive.current) setTimeout(() => pythonHotwordLoop(), 300);
         return;
       }
@@ -546,7 +645,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
     hotwordRecognition.current = recognition;
     try { recognition.start(); } catch { /* ignore */ }
-  }, [setVoiceState, startListening, pythonHotwordLoop]);
+  }, [canTriggerWake, pythonHotwordLoop, reportWakeTelemetry, setVoiceState, startListening]);
 
   const activateHotwordMode = useCallback(() => {
     if (!hotwordActive.current) {
@@ -567,7 +666,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     }, HOTWORD_TIMEOUT_MS);
 
     if (!isRecording.current) hotwordListenLoop();
-  }, [setVoiceState, hotwordListenLoop]);
+  }, [hotwordListenLoop, setVoiceState]);
 
   const manualWake = useCallback(async () => {
     await startListening();
@@ -603,6 +702,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     initWebSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   return (
     <VoiceContext.Provider value={{

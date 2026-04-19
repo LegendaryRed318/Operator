@@ -789,137 +789,72 @@ Error: Port 8081 is already in use
 [2m15:21:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
 [2m15:21:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
 [2m15:21:56[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
-ntexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+[2m16:18:26[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:18:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:18:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m16:18:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:18:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:18:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m16:59:47[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:59:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:59:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m16:59:50[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m16:59:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m16:59:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m17:06:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css[22m
+[2m17:06:45[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/HandTracker.tsx, /src/index.css[22m
+[2m17:19:57[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m17:19:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m17:19:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m17:21:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m17:21:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m17:21:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m17:21:20[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31merror while updating dependencies:
+Error: ENOENT: no such file or directory, open 'C:\Projects\Operator\frontend\node_modules\@elevenlabs\react\dist\index.js'
+    at Object.readFileSync (node:fs:436:20)
+    at extractExportsData (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31753:26)
+    at async file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31520:23
+    at async Promise.all (index 0)
+    at async prepareRolldownOptimizerRun (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31518:2)[39m
+[2m17:21:21[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...
+[2m17:21:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m17:21:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m17:21:28[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m17:21:28[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31merror while updating dependencies:
+Error: ENOENT: no such file or directory, open 'C:\Projects\Operator\frontend\node_modules\@elevenlabs\react\dist\index.js'
+    at Object.readFileSync (node:fs:436:20)
+    at extractExportsData (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31753:26)
+    at async file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31520:23
+    at async Promise.all (index 0)
+    at async prepareRolldownOptimizerRun (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31518:2)[39m
+[2m17:21:29[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...
+[2m17:21:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+[2m17:21:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [33mhmr invalidate [39m[2m/src/contexts/VoiceContext.tsx[22m Could not Fast Refresh ("default" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m17:21:35[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/dashboard/OperatorHUD.tsx, /src/components/Orb.tsx[22m
+[2m17:21:35[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [31merror while updating dependencies:
+Error: ENOENT: no such file or directory, open 'C:\Projects\Operator\frontend\node_modules\@elevenlabs\react\dist\index.js'
+    at Object.readFileSync (node:fs:436:20)
+    at extractExportsData (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31753:26)
+    at async file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31520:23
+    at async Promise.all (index 0)
+    at async prepareRolldownOptimizerRun (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31518:2)[39m
+[2m17:21:36[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [optimizer] bundling dependencies...
+[2m17:40:19[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/contexts/VoiceContext.tsx, /src/index.css[22m
+node:fs:436
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
 
-============================================================
-[2026-04-18 13:46:33] Starting Frontend (Vite)
-============================================================
+Error: ENOENT: no such file or directory, open 'C:\Projects\Operator\frontend\node_modules\@picovoice\web-voice-processor\dist\esm\index.js'
+    at Object.readFileSync (node:fs:436:20)
+    at extractExportsData (file:///C:/Projects/Operator/frontend/node_modules/vite/dist/node/chunks/node.js:31753:26) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Projects\\Operator\\frontend\\node_modules\\@picovoice\\web-voice-processor\\dist\\esm\\index.js'
+}
 
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 13:46:55] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 13:47:15] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 13:47:55] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 16:16:15] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 16:16:42] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 16:17:17] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-18 16:18:22] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-19 09:34:39] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
-
-============================================================
-[2026-04-19 09:35:06] Starting Frontend (Vite)
-============================================================
-
-> jarvis-operator@1.0.0 dev
-> npx tsc && npx vite --host 0.0.0.0 --port 8081
-
-src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
-src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
-  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
-src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
-src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+Node.js v25.8.1
+is never read.
 
 ============================================================
 [2026-04-19 09:35:41] Starting Frontend (Vite)
@@ -946,3 +881,91 @@ src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string;
   Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
 src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
 src/contexts/VoiceContext.tsx(26,7): error TS6133: 'WAKE_WORDS' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:45:03] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:45:31] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:46:11] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:46:33] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:47:00] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:47:35] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 15:48:45] Starting Frontend (Vite)
+============================================================
+
+> jarvis-operator@1.0.0 dev
+> npx tsc && npx vite --host 0.0.0.0 --port 8081
+
+src/App.tsx(7,15): error TS2305: Module '"./types"' has no exported member 'ErrorItem'.
+src/App.tsx(167,34): error TS2345: Argument of type '{ id: string; name: string; status: any; path: string; }' is not assignable to parameter of type 'Project'.
+  Property 'type' is missing in type '{ id: string; name: string; status: any; path: string; }' but required in type 'Project'.
+src/components/HandTracker.tsx(96,19): error TS6133: 'wasDetected' is declared but its value is never read.
+
+============================================================
+[2026-04-19 17:47:44] Starting Frontend (Vite)
+============================================================

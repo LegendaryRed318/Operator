@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
 memory.py - Obsidian vault integration for Jarvis second-brain memory.
-Vault location: Loaded from OPERATOR_VAULT_PATH env var, defaults to E:/JarvisVault
+Vault location: Loaded from OPERATOR_VAULT_PATH env var, defaults to repo-local vault.
 """
 
 import logging
-import os
-from pathlib import Path
 from datetime import datetime
+from paths import VAULT_PATH
 
 logger = logging.getLogger(__name__)
 
-# Load from environment or use default
-VAULT_ROOT = Path(os.getenv("OPERATOR_VAULT_PATH", "E:/JarvisVault"))
+VAULT_ROOT = VAULT_PATH
 FOLDERS = {
     "raw_sources": VAULT_ROOT / "raw_sources",
     "wiki": VAULT_ROOT / "wiki",

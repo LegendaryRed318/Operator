@@ -24,11 +24,12 @@ import threading
 import queue
 import sqlite3 as _sqlite3
 from typing import AsyncGenerator
-from decision_engine import DecisionEngine, select_model_by_ram
 from pathlib import Path
+from decision_engine import select_model_by_ram
+from paths import DB_PATH, LOGS_PATH
 
 try:
-    from skills import try_handle_skill
+    from skills import dispatch_skill_command
     from memory import save_conversation, save_to_wiki, get_context_for_query
     INLINE_IMPORTS_AVAILABLE = True
 except ImportError:
@@ -62,10 +63,9 @@ if GEMINI_API_KEY:
 else:
     logger.warning("[Config] No Gemini API key found - complex tasks will use Ollama")
 
-engine = DecisionEngine()
 connected_clients = set()
 ACTIVE_MODEL = OLLAMA_MODEL_FAST
-ACTIVE_MODEL_PATH = Path(__file__).parent.parent / "logs" / "active_model.txt"
+ACTIVE_MODEL_PATH = LOGS_PATH / "active_model.txt"
 
 # FIX: Store the main event loop so the TTS thread can safely schedule coroutines
 _main_loop: asyncio.AbstractEventLoop | None = None
@@ -73,6 +73,13 @@ _main_loop: asyncio.AbstractEventLoop | None = None
 # Ollama process tracking
 _ollama_process = None
 _ollama_lock = threading.Lock()
+WAKE_TELEMETRY = {
+    "wake_detected": 0,
+    "wake_fallback": 0,
+    "wake_mode_switches": 0,
+    "last_event": None,
+    "last_mode": None,
+}
 
 
 def is_ollama_running() -> bool:
@@ -333,10 +340,35 @@ async def query_gemini(prompt: str) -> str:
         return f"The Gemini service is unavailable, sir. Error: {e}"
 
 
-def is_complex_task(text: str) -> bool:
-    """Route financial queries to Gemini, everything else to Ollama."""
-    financial_words = ['stock', 'crypto', 'bitcoin', 'invest', 'portfolio', 'revenue', 'profit', 'market']
-    return any(w in text.lower() for w in financial_words)
+def choose_route(text: str, selected_model: str | None) -> tuple[str, str]:
+    """
+    Score request complexity and choose backend route.
+    Returns (route, reason) where route is 'gemini' or 'ollama'.
+    """
+    lowered = text.lower()
+    score = 0
+    if len(text) > 120:
+        score += 1
+
+    coding_terms = {
+        "code", "python", "typescript", "refactor", "debug",
+        "architecture", "stack trace", "api", "database", "algorithm"
+    }
+    analysis_terms = {"compare", "analyze", "explain deeply", "tradeoff", "design"}
+    finance_terms = {"stock", "crypto", "bitcoin", "invest", "portfolio", "revenue", "profit", "market"}
+
+    if any(term in lowered for term in coding_terms):
+        score += 2
+    if any(term in lowered for term in analysis_terms):
+        score += 1
+    if any(term in lowered for term in finance_terms):
+        score += 2
+
+    if selected_model is None:
+        return ("gemini", "no_local_model")
+    if USE_GEMINI_FALLBACK and score >= 2:
+        return ("gemini", f"complexity_score_{score}")
+    return ("ollama", f"complexity_score_{score}")
 
 
 async def handle_voice_command(websocket, text: str):
@@ -346,13 +378,14 @@ async def handle_voice_command(websocket, text: str):
     # Check for built-in skill triggers FIRST (instant response, no AI needed)
     if INLINE_IMPORTS_AVAILABLE:
         try:
-            skill_response = await asyncio.to_thread(try_handle_skill, text)
-            if skill_response:
+            skill_result = await asyncio.to_thread(dispatch_skill_command, None, text)
+            if skill_result.get("success"):
+                skill_response = skill_result.get("response", "")
                 logger.info(f"[Voice] Skill triggered for: {text[:50]}...")
                 await websocket.send(json.dumps({
                     "type": "response",
                     "text": skill_response,
-                    "model": "skill",
+                    "model": f"skill:{skill_result.get('skill', 'unknown')}",
                     "server_tts": True
                 }))
                 await broadcast({"type": "state", "state": "speaking"})
@@ -395,14 +428,15 @@ async def handle_voice_command(websocket, text: str):
 
     try:
         selected_model = select_model_by_ram()
-        use_gemini = USE_GEMINI_FALLBACK and (selected_model is None or is_complex_task(text))
+        route, route_reason = choose_route(text, selected_model)
+        use_gemini = route == "gemini"
 
         if selected_model:
             write_active_model(selected_model)
 
         if use_gemini:
             write_active_model("gemini-flash")
-            logger.info(f"[Voice] Using Gemini for: {text[:50]}...")
+            logger.info(f"[Voice] Using Gemini ({route_reason}) for: {text[:50]}...")
             response = await query_gemini(prompt_text)
             await websocket.send(json.dumps({
                 "type": "response",
@@ -412,7 +446,7 @@ async def handle_voice_command(websocket, text: str):
             }))
         else:
             model_name = selected_model or OLLAMA_MODEL_FAST
-            logger.info(f"[Voice] Streaming from Ollama ({model_name}): {text[:50]}...")
+            logger.info(f"[Voice] Streaming from Ollama ({model_name}, {route_reason}): {text[:50]}...")
             full_response = ""
             async for chunk in stream_ollama(prompt_text, model=model_name):
                 full_response += chunk
@@ -448,7 +482,7 @@ async def handle_voice_command(websocket, text: str):
         if INLINE_IMPORTS_AVAILABLE:
             try:
                 await asyncio.to_thread(save_conversation, text, response)
-                if is_complex_task(text):
+                if use_gemini:
                     await asyncio.to_thread(save_to_wiki, text[:60], response, "ai-responses")
             except Exception:
                 pass
@@ -474,6 +508,23 @@ async def handler(websocket):
             elif data.get("type") == "wake_word":
                 await broadcast({"type": "state", "state": "listening"})
                 await websocket.send(json.dumps({"type": "ack", "message": "Listening..."}))
+            elif data.get("type") == "wake_telemetry":
+                event = data.get("event")
+                mode = data.get("mode")
+                detail = data.get("detail")
+                if event in ("wake_detected", "wake_fallback"):
+                    WAKE_TELEMETRY[event] = WAKE_TELEMETRY.get(event, 0) + 1
+                if mode and mode != WAKE_TELEMETRY.get("last_mode"):
+                    WAKE_TELEMETRY["wake_mode_switches"] = WAKE_TELEMETRY.get("wake_mode_switches", 0) + 1
+                WAKE_TELEMETRY["last_mode"] = mode
+                WAKE_TELEMETRY["last_event"] = {
+                    "event": event,
+                    "mode": mode,
+                    "detail": detail,
+                    "timestamp": int(time.time()),
+                }
+            elif data.get("type") == "wake_diagnostics":
+                await websocket.send(json.dumps({"type": "wake_diagnostics", "telemetry": WAKE_TELEMETRY}))
             elif data.get("type") == "tts_done":
                 await broadcast({"type": "state", "state": "idle"})
     except websockets.exceptions.ConnectionClosed:
@@ -488,7 +539,6 @@ async def handler(websocket):
 
 async def proactive_alert_loop():
     """Poll DB every 10s for new errors and broadcast voice alerts."""
-    DB_PATH = Path(__file__).parent.parent / "database" / "errors.db"
     last_known_id = 0
 
     try:
