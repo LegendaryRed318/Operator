@@ -47,6 +47,9 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Reference to the main asyncio event loop (set in main())
+_main_loop: asyncio.AbstractEventLoop = None
+
 # Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL_FAST = "qwen2.5-coder:1.5b-base"
@@ -142,21 +145,12 @@ MAX_HISTORY_TURNS = 4
 _tts_queue = queue.Queue()
 
 
-def _broadcast_sync(state: dict):
-    """
-    FIX: Thread-safe broadcast from sync (non-async) context.
-    Old code used asyncio.run() which creates a new event loop in the thread
-    — WebSocket objects from the main loop can't be used in a different loop.
-    Now uses run_coroutine_threadsafe() to schedule on the main loop safely.
-    """
-    if _main_loop and _main_loop.is_running() and not _main_loop.is_closed():
-        future = asyncio.run_coroutine_threadsafe(broadcast(state), _main_loop)
-        try:
-            future.result(timeout=3.0)  # Wait up to 3s for it to send
-        except Exception as e:
-            logger.warning(f"[TTS] Broadcast from thread failed: {e}")
-    else:
-        logger.warning("[TTS] Main event loop not available for broadcast")
+async def broadcast(state: dict):
+    """Send state to all connected clients."""
+    if connected_clients:
+        message = json.dumps(state)
+        tasks = [asyncio.create_task(client.send(message)) for client in list(connected_clients)]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def _tts_worker():
@@ -166,12 +160,12 @@ def _tts_worker():
     If pyttsx3 fails, sends tts_fallback to browser via thread-safe broadcast.
     """
     tts_available = False
-    tts_engine = None
+    engine = None
 
     try:
         import pyttsx3
-        tts_engine = pyttsx3.init()
-        voices = tts_engine.getProperty('voices')
+        engine = pyttsx3.init()
+        voices = engine.getProperty('voices')
 
         # Prefer British male voice for Jarvis
         preferred = None
@@ -189,13 +183,13 @@ def _tts_worker():
                     break
 
         if preferred:
-            tts_engine.setProperty('voice', preferred)
+            engine.setProperty('voice', preferred)
             logger.info(f"[TTS] Using voice: {preferred}")
         else:
             logger.warning("[TTS] No British voice found, using default")
 
-        tts_engine.setProperty('rate', 165)
-        tts_engine.setProperty('volume', 0.9)
+        engine.setProperty('rate', 165)
+        engine.setProperty('volume', 0.9)
         tts_available = True
         logger.info("[TTS] pyttsx3 engine initialized successfully")
 
@@ -204,14 +198,19 @@ def _tts_worker():
     except Exception as e:
         logger.error(f"[TTS] Engine initialization failed: {e}")
 
+    def _broadcast_from_thread(msg: dict):
+        """Schedule a broadcast on the main event loop from the TTS thread."""
+        if _main_loop and _main_loop.is_running():
+            asyncio.run_coroutine_threadsafe(broadcast(msg), _main_loop)
+
     while True:
         text = _tts_queue.get()
         if text is None:
             break
 
-        if not tts_available or tts_engine is None:
+        if not tts_available or engine is None:
             logger.warning("[TTS] Server TTS unavailable, sending tts_fallback to browser")
-            _broadcast_sync({
+            _broadcast_from_thread({
                 "type": "tts_fallback",
                 "text": text,
                 "reason": "server_tts_unavailable"
@@ -221,12 +220,13 @@ def _tts_worker():
 
         logger.info(f"[TTS] Speaking: {text[:60]}...")
         try:
-            tts_engine.say(text)
-            tts_engine.runAndWait()
+            engine.say(text)
+            engine.runAndWait()
             logger.info("[TTS] Finished speaking")
+            _broadcast_from_thread({"type": "tts_done"})
         except Exception as e:
             logger.warning(f"[TTS] Speak failed ({e}), sending tts_fallback to browser")
-            _broadcast_sync({
+            _broadcast_from_thread({
                 "type": "tts_fallback",
                 "text": text,
                 "reason": "tts_engine_error"
@@ -258,14 +258,6 @@ def write_active_model(model_name: str):
         ACTIVE_MODEL_PATH.write_text(model_name)
     except Exception:
         pass
-
-
-async def broadcast(state: dict):
-    """Send state to all connected clients."""
-    if connected_clients:
-        message = json.dumps(state)
-        tasks = [asyncio.create_task(client.send(message)) for client in list(connected_clients)]
-        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 # Jarvis persona
@@ -373,8 +365,6 @@ async def handle_voice_command(websocket, text: str):
                 except Exception:
                     pass
 
-                await asyncio.sleep(2)
-                await broadcast({"type": "state", "state": "idle"})
                 return
         except Exception as e:
             logger.warning(f"[Voice] Skill check error: {e}")
@@ -463,9 +453,6 @@ async def handle_voice_command(websocket, text: str):
             except Exception:
                 pass
 
-        await asyncio.sleep(2)
-        await broadcast({"type": "state", "state": "idle"})
-
     except Exception as e:
         logger.error(f"[Voice] Command error: {e}")
         await websocket.send(json.dumps({
@@ -487,6 +474,8 @@ async def handler(websocket):
             elif data.get("type") == "wake_word":
                 await broadcast({"type": "state", "state": "listening"})
                 await websocket.send(json.dumps({"type": "ack", "message": "Listening..."}))
+            elif data.get("type") == "tts_done":
+                await broadcast({"type": "state", "state": "idle"})
     except websockets.exceptions.ConnectionClosed:
         logger.info("[WebSocket] Client disconnected normally")
     except Exception as e:
@@ -550,8 +539,7 @@ async def proactive_alert_loop():
 
 async def main():
     global _main_loop
-    # FIX: Store the running event loop so _broadcast_sync() in the TTS thread can use it
-    _main_loop = asyncio.get_event_loop()
+    _main_loop = asyncio.get_running_loop()
 
     logger.info("[WebSocket] Waiting 3 seconds for other services...")
     await asyncio.sleep(3)

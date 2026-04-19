@@ -41,9 +41,32 @@ logger = logging.getLogger(__name__)
 SKILLS_PATH = Path(os.getenv("OPERATOR_SKILLS_PATH", "E:/JarvisVault/skills"))
 
 # Built-in skill handlers (voice triggers that don't need TOML files)
+# App registry for the open_app skill — maps spoken names to executables
+APP_REGISTRY = {
+    "chrome": "start chrome",
+    "google chrome": "start chrome",
+    "firefox": "start firefox",
+    "discord": "start discord:",
+    "spotify": "start spotify:",
+    "code": "code",
+    "vs code": "code",
+    "visual studio code": "code",
+    "notepad": "notepad",
+    "calculator": "calc",
+    "file explorer": "explorer",
+    "explorer": "explorer",
+    "terminal": "wt",
+    "cmd": "cmd",
+    "powershell": "powershell",
+    "task manager": "taskmgr",
+    "outlook": "start outlook:",
+    "word": "start winword",
+    "excel": "start excel",
+}
+
 BUILT_IN_SKILLS = {
     "good_morning": {
-        "triggers": ["good morning", "morning", "good day"],
+        "triggers": ["good morning", "good day"],
         "handler": "handle_good_morning",
         "description": "Wish RED good morning and give daily briefing"
     },
@@ -53,7 +76,7 @@ BUILT_IN_SKILLS = {
         "description": "Tell current time"
     },
     "system_status": {
-        "triggers": ["system status", "how's the system", "status report", "how are you doing", "how are you"],
+        "triggers": ["system status", "how's the system", "status report"],
         "handler": "handle_system_status",
         "description": "Report system vitals and health"
     },
@@ -67,7 +90,6 @@ BUILT_IN_SKILLS = {
         "handler": "handle_sleep",
         "description": "Enter sleep mode"
     },
-    # NEW SKILLS - Phase 1
     "weather": {
         "triggers": ["weather", "temperature outside", "is it raining", "what's the forecast", "will it rain", "how cold is it", "how hot is it"],
         "handler": "handle_weather",
@@ -79,17 +101,12 @@ BUILT_IN_SKILLS = {
         "description": "Check today's calendar events"
     },
     "open_app": {
-        "triggers": ["open chrome", "launch", "start", "open firefox", "open discord", "open spotify", "open code", "open notepad", "open calculator", "open file explorer"],
+        "triggers": ["open chrome", "open firefox", "open discord", "open spotify", "open code", "open vs code", "open notepad", "open calculator", "open file explorer", "open terminal", "open task manager", "open outlook", "open word", "open excel", "open powershell", "launch chrome", "launch discord", "launch spotify"],
         "handler": "handle_open_app",
         "description": "Launch applications by name"
     },
-    "web_search": {
-        "triggers": ["search for", "google", "look up", "find information about", "search the web for", "what is"],
-        "handler": "handle_web_search",
-        "description": "Perform quick web search"
-    },
     "joke": {
-        "triggers": ["tell me a joke", "make me laugh", "say something funny", "got any jokes", "joke"],
+        "triggers": ["tell me a joke", "make me laugh", "say something funny", "got any jokes"],
         "handler": "handle_joke",
         "description": "Tell a random joke"
     },
@@ -97,11 +114,6 @@ BUILT_IN_SKILLS = {
         "triggers": ["flip a coin", "heads or tails", "coin toss", "toss a coin"],
         "handler": "handle_coin_flip",
         "description": "Flip a virtual coin"
-    },
-    "define": {
-        "triggers": ["define", "what does", "mean", "meaning of", "what is the definition of", "dictionary"],
-        "handler": "handle_define",
-        "description": "Define words using dictionary"
     },
 }
 
@@ -117,14 +129,11 @@ class SkillExecutor:
             "handle_system_status": self._handle_system_status,
             "handle_wake_up": self._handle_wake_up,
             "handle_sleep": self._handle_sleep,
-            # NEW SKILL HANDLERS
             "handle_weather": self._handle_weather,
             "handle_calendar": self._handle_calendar,
             "handle_open_app": self._handle_open_app,
-            "handle_web_search": self._handle_web_search,
             "handle_joke": self._handle_joke,
             "handle_coin_flip": self._handle_coin_flip,
-            "handle_define": self._handle_define,
         }
         self._load_toml_skills()
     
@@ -160,6 +169,7 @@ class SkillExecutor:
         """
         Match voice text against skill triggers.
         Returns (skill_name, handler_function) or None if no match.
+        All handlers accept (text: str) as their argument.
         """
         text_lower = text.lower().strip()
         
@@ -168,19 +178,19 @@ class SkillExecutor:
             for trigger in skill_info["triggers"]:
                 if trigger in text_lower:
                     handler_name = skill_info["handler"]
-                    return (skill_id, self.skill_handlers.get(handler_name))
+                    handler = self.skill_handlers.get(handler_name)
+                    if handler:
+                        return (skill_id, handler)
         
         # Check TOML-loaded skills
         for skill_name, skill_data in self.loaded_skills.items():
             trigger = skill_data.get("trigger", "")
             if trigger and trigger in text_lower:
-                # For now, TOML skills return a placeholder handler
-                # Full execution engine can be built later
-                return (skill_name, lambda: f"Executing skill: {skill_name}")
+                return (skill_name, lambda t: f"Skill '{skill_name}' recognized but full execution not yet implemented.")
         
         return None
     
-    def _handle_good_morning(self) -> str:
+    def _handle_good_morning(self, text: str = "") -> str:
         """Good morning briefing for RED."""
         hour = datetime.now().hour
         if hour < 12:
@@ -223,14 +233,14 @@ class SkillExecutor:
         
         return f"{greeting}, RED. {status_msg} How can I assist you today?"
     
-    def _handle_time(self) -> str:
+    def _handle_time(self, text: str = "") -> str:
         """Tell current time."""
         now = datetime.now()
         time_str = now.strftime("%I:%M %p")
         date_str = now.strftime("%A, %B %d")
         return f"It's {time_str} on {date_str}, RED."
     
-    def _handle_system_status(self) -> str:
+    def _handle_system_status(self, text: str = "") -> str:
         """Report comprehensive system status."""
         try:
             cpu = psutil.cpu_percent(interval=0.5)
@@ -266,7 +276,7 @@ class SkillExecutor:
         except Exception as e:
             return f"I apologize, RED. I cannot retrieve system status at the moment. Error: {str(e)[:50]}"
     
-    def _handle_wake_up(self) -> str:
+    def _handle_wake_up(self, text: str = "") -> str:
         """Handle wake from sleep."""
         # Touch heartbeat to reset sleep timer
         try:
@@ -290,7 +300,7 @@ class SkillExecutor:
         
         return f"{greeting}, RED. I've resumed from sleep mode. Awaiting your commands."
     
-    def _handle_sleep(self) -> str:
+    def _handle_sleep(self, text: str = "") -> str:
         """Enter sleep mode."""
         try:
             logs_path = Path(os.getenv("OPERATOR_LOGS_PATH", "C:/Projects/Operator/logs"))
@@ -303,7 +313,7 @@ class SkillExecutor:
     
     # ========== NEW SKILL HANDLERS ==========
     
-    def _handle_weather(self) -> str:
+    def _handle_weather(self, text: str = "") -> str:
         """Fetch weather information."""
         if not REQUESTS_AVAILABLE:
             logger.error("[Skills] Weather skill requires 'requests' module. Install with: pip install requests")
@@ -344,7 +354,7 @@ class SkillExecutor:
             logger.error(f"[Skills] Weather fetch error: {e}")
         return "I apologize, RED. I'm unable to retrieve weather data at the moment."
     
-    def _handle_calendar(self) -> str:
+    def _handle_calendar(self, text: str = "") -> str:
         """Check today's calendar/events."""
         try:
             # Try Windows Calendar (Outlook) via COM
@@ -382,17 +392,38 @@ class SkillExecutor:
             logger.error(f"[Skills] Calendar error: {e}")
             return "I'm unable to access your calendar at the moment, RED. Check if Outlook is running."
     
-    def _handle_open_app(self) -> str:
-        """Launch applications."""
-        # This would need the original text to know which app
-        # For now return instructions
-        return "To open an application, say 'Jarvis, open Chrome' or 'Jarvis, launch Discord'. I can open most common applications."
+    def _handle_open_app(self, text: str = "") -> str:
+        """Launch applications by parsing the app name from the user's utterance."""
+        text_lower = text.lower().strip()
+        
+        # Try to find a matching app in our registry
+        matched_app = None
+        matched_cmd = None
+        for app_name, cmd in APP_REGISTRY.items():
+            if app_name in text_lower:
+                # Prefer longer matches ("visual studio code" over "code")
+                if matched_app is None or len(app_name) > len(matched_app):
+                    matched_app = app_name
+                    matched_cmd = cmd
+        
+        if matched_cmd:
+            try:
+                subprocess.Popen(
+                    matched_cmd,
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+                )
+                logger.info(f"[Skills] Launched: {matched_app} via '{matched_cmd}'")
+                return f"Opening {matched_app} for you, RED."
+            except Exception as e:
+                logger.error(f"[Skills] Failed to launch {matched_app}: {e}")
+                return f"I'm afraid I couldn't open {matched_app}, RED. Error: {str(e)[:60]}"
+        
+        return f"I don't have {text_lower.split('open')[-1].strip() if 'open' in text_lower else 'that application'} in my registry, RED. I can open Chrome, Firefox, Discord, Spotify, VS Code, Notepad, Calculator, and more."
     
-    def _handle_web_search(self) -> str:
-        """Perform web search."""
-        return "For web searches, I'll use the browser. Say something like 'Jarvis, search for Python tutorials' and I'll find relevant information."
-    
-    def _handle_joke(self) -> str:
+    def _handle_joke(self, text: str = "") -> str:
         """Tell a random joke."""
         import random
         jokes = [
@@ -409,32 +440,27 @@ class SkillExecutor:
         ]
         return random.choice(jokes) + " ... I apologize, RED. My humor module is still in beta."
     
-    def _handle_coin_flip(self) -> str:
+    def _handle_coin_flip(self, text: str = "") -> str:
         """Flip a virtual coin."""
         import random
         result = random.choice(["Heads", "Tails"])
         return f"The coin shows... {result}, RED."
     
-    def _handle_define(self) -> str:
-        """Define a word."""
-        return "To define a word, say 'Jarvis, define serendipity' or 'Jarvis, what does quantum mean'. I'll fetch the definition."
-    
     def execute_skill(self, skill_name: str, text: str) -> str:
         """
-        Execute a matched skill by name.
+        Execute a matched skill by name, passing the original user text.
         Returns the response text.
         """
         handler = self.skill_handlers.get(f"handle_{skill_name}")
         if handler:
             try:
-                return handler()
+                return handler(text)
             except Exception as e:
                 logger.error(f"[Skills] Error executing {skill_name}: {e}")
                 return f"I encountered an error executing that command, RED."
         
         # Check TOML skills
         if skill_name in self.loaded_skills:
-            # Placeholder for full skill execution engine
             return f"Skill '{skill_name}' recognized but full execution not yet implemented."
         
         return None
@@ -465,7 +491,7 @@ def try_handle_skill(text: str) -> Optional[str]:
         logger.info(f"[Skills] Matched '{text}' to skill: {skill_name}")
         try:
             if callable(handler):
-                return handler()
+                return handler(text)
         except Exception as e:
             logger.error(f"[Skills] Execution error: {e}")
             return f"I'm sorry RED, I couldn't complete that action."
@@ -480,6 +506,7 @@ def trigger_skill_by_name(name: str, params: dict = None) -> dict:
     Returns result dictionary.
     """
     executor = get_skill_executor()
+    text = params.get("text", "") if params else ""
     
     # Check if it's a built-in skill
     if name in BUILT_IN_SKILLS:
@@ -487,14 +514,13 @@ def trigger_skill_by_name(name: str, params: dict = None) -> dict:
         handler = executor.skill_handlers.get(handler_name)
         if handler:
             try:
-                result = handler()
+                result = handler(text)
                 return {"success": True, "response": result, "skill": name}
             except Exception as e:
                 return {"success": False, "error": str(e), "skill": name}
     
     # Check TOML skills
     if name in executor.loaded_skills:
-        # Placeholder
         return {"success": True, "response": f"Skill '{name}' triggered", "skill": name}
     
     return {"success": False, "error": f"Unknown skill: {name}"}

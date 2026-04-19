@@ -33,18 +33,8 @@ function getWebSocketUrl(): string {
   return 'ws://localhost:8765';
 }
 
-/**
- * FIX: Calculate how long server TTS will take to speak a response.
- * Old code: hardcoded 2000ms — cuts off mid-sentence for long responses.
- * New code: estimates based on word count at ~2.8 words/second, plus a 2s buffer.
- * Minimum is 3 seconds to handle short responses cleanly.
- */
-function estimateTTSDuration(text: string): number {
-  const wordCount = text.split(/\s+/).filter(Boolean).length;
-  const wordsPerSecond = 2.8; // Average pyttsx3 speed
-  const estimatedMs = (wordCount / wordsPerSecond) * 1000;
-  return Math.max(3000, estimatedMs + 2000);
-}
+// TTS duration estimation removed — now event-driven via `tts_done` WebSocket event
+
 
 /**
  * Clean markdown/formatting from text before speaking.
@@ -142,19 +132,23 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
 
             if (data.server_tts) {
               /**
-               * FIX: Was hardcoded 2000ms — now dynamically estimates
-               * how long pyttsx3 will take to finish speaking.
-               * We wait that long, UNLESS tts_fallback arrives and cancels this.
+               * Server TTS is active — the backend will send a `tts_done`
+               * event when pyttsx3 finishes speaking. We set a safety timeout
+               * (60s) in case the event is lost, but normally tts_done arrives
+               * and cancels this timeout, giving us precise synchronization.
                */
-              const duration = estimateTTSDuration(responseText);
-              console.log(`[Voice] Server TTS active — waiting ~${Math.round(duration / 1000)}s for ${responseText.split(' ').length} words`);
+              console.log(`[Voice] Server TTS active — waiting for tts_done event`);
+              isSpeakingRef.current = true;
+              speakCooldown.current = true;
 
               // Clear any previous timeout
               if (ttsDurationTimeout.current) {
                 clearTimeout(ttsDurationTimeout.current);
               }
 
+              // Safety fallback: if tts_done never arrives, recover after 60s
               ttsDurationTimeout.current = setTimeout(() => {
+                console.warn('[Voice] tts_done never arrived — recovering after safety timeout');
                 isSpeakingRef.current = false;
                 speakCooldown.current = false;
                 if (hotwordActive.current) {
@@ -163,7 +157,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
                 } else {
                   setVoiceState('idle');
                 }
-              }, duration);
+              }, 60000);
 
             } else {
               // Browser TTS (server didn't handle it)
@@ -178,15 +172,32 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
               });
             }
 
+          } else if (data.type === 'tts_done') {
+            /**
+             * Server TTS finished speaking — this is the real signal.
+             * Cancel the safety timeout and transition state immediately.
+             */
+            console.log('[Voice] Server TTS finished (tts_done received)');
+            if (ttsDurationTimeout.current) {
+              clearTimeout(ttsDurationTimeout.current);
+              ttsDurationTimeout.current = null;
+            }
+            isSpeakingRef.current = false;
+            speakCooldown.current = false;
+            if (hotwordActive.current) {
+              setVoiceState('hotword');
+              hotwordListenLoop();
+            } else {
+              setVoiceState('idle');
+            }
+
           } else if (data.type === 'tts_fallback') {
             /**
-             * FIX: Server TTS failed — cancel the duration timeout and
-             * use browser TTS instead. Old code had this handled after
-             * asyncio.run() crashed, so browser never got this message.
+             * Server TTS failed — cancel the safety timeout and
+             * use browser TTS instead.
              */
             console.log(`[Voice] Server TTS failed (${data.reason}) — using browser fallback`);
 
-            // Cancel the server TTS wait timer
             if (ttsDurationTimeout.current) {
               clearTimeout(ttsDurationTimeout.current);
               ttsDurationTimeout.current = null;
