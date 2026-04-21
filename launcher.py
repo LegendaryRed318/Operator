@@ -219,6 +219,19 @@ def check_service_health():
     return len(crashed) == 0
 
 
+def wait_for_port(port: int, timeout: int = 30) -> bool:
+    """Wait for a local port to become active."""
+    import socket
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            with socket.create_connection(("localhost", port), timeout=1):
+                return True
+        except (ConnectionRefusedError, socket.timeout):
+            time.sleep(1)
+    return False
+
+
 def main():
     """Main launcher function."""
     log_message("=" * 60)
@@ -277,10 +290,12 @@ def main():
         log_message("Press Ctrl+C to stop all services gracefully.")
 
         # Auto-open dashboard once the frontend dev server is ready
-        log_message("Waiting 12s for frontend to initialise before opening browser...")
-        time.sleep(12)
-        webbrowser.open("http://localhost:8081")
-        log_message("Browser opened -> http://localhost:8081")
+        log_message("Waiting for frontend to initialise (port 8081)...")
+        if wait_for_port(8081, timeout=45):
+            webbrowser.open("http://localhost:8081")
+            log_message("Browser opened -> http://localhost:8081")
+        else:
+            log_message("[WARN] Frontend did not respond on port 8081 after 45s")
         
         # Monitor services
         while True:

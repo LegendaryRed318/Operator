@@ -3,16 +3,5 @@
     "C:/Projects/Operator/logs",
     "C:/Projects/Operator/test_logs"
   ],
-  "projects": [
-    {
-      "name": "brainify",
-      "path": "C:/Users/olami/brainify",
-      "start_command": "C:\\Program Files\\nodejs\\npm.cmd run dev"
-    },
-    {
-      "name": "Brainnify-Ai",
-      "path": "C:/Users/olami/Brainnify-Ai",
-      "start_command": "C:\\Program Files\\nodejs\\npm.cmd run dev"
-    }
-  ]
+  "projects": []
 }

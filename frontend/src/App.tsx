@@ -16,7 +16,7 @@ const AppContent: React.FC = () => {
   const { messages, wsConnected: _wsConnected } = useVoice();
   const [isLoading, setIsLoading] = useState(true);
   const [locked, setLocked] = useState(true);
-  const [_activeView, _setActiveView] = useState('dashboard');
+  useState('dashboard');
   const [activeModel, setActiveModel] = useState('qwen2.5-coder');
   const [_errors, setErrors] = useState<ErrorItem[]>(mockErrors);
   const [_projects, setProjects] = useState<Project[]>(mockProjects);

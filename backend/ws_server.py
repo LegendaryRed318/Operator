@@ -23,6 +23,7 @@ import requests
 import threading
 import queue
 import sqlite3 as _sqlite3
+import psutil
 from typing import AsyncGenerator
 from pathlib import Path
 from decision_engine import select_model_by_ram
@@ -378,6 +379,8 @@ def classify_intent(text: str) -> str:
         return "memory"
     if any(term in lowered for term in finance_terms):
         return "financial"
+    if any(term in lowered for term in ['status report', 'system status', 'how are you doing', 'system health']):
+        return "status_report"
     
     return "general"
 
@@ -504,7 +507,37 @@ async def handle_voice_command(websocket, text: str):
         if selected_model:
             write_active_model(selected_model)
 
-        if use_gemini:
+        if intent == "status_report":
+            logger.info("[Voice] Status report requested")
+            # Gather health data
+            from server import _collect_system_snapshot
+            vitals = _collect_system_snapshot()
+            
+            # Count errors
+            error_count = 0
+            if DB_PATH.exists():
+                conn = _sqlite3.connect(str(DB_PATH))
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM errors")
+                error_count = cursor.fetchone()[0]
+                conn.close()
+            
+            summary = f"System status report, sir. CPU is at {vitals.get('cpu_percent')}% and RAM usage is {vitals.get('ram_percent')}%. "
+            if error_count > 0:
+                summary += f"I have detected {error_count} unresolved errors in the monitoring database. "
+            else:
+                summary += "All systems are currently nominal. "
+            
+            summary += "The neural core is stable and I am ready for your commands."
+            
+            await websocket.send(json.dumps({
+                "type": "response",
+                "text": summary,
+                "model": "internal:guardian",
+                "server_tts": True
+            }))
+            response = summary
+        elif use_gemini:
             write_active_model("gemini-flash")
             logger.info(f"[Voice] Using Gemini ({route_reason}) for: {text[:50]}...")
             response = await query_gemini(prompt_text)

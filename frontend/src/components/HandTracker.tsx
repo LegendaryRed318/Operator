@@ -11,6 +11,10 @@ declare global {
   }
 }
 
+interface MediaPipeResults {
+  multiHandLandmarks: Array<Array<{ x: number; y: number; z: number }>>;
+}
+
 const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const handsRef = useRef<any>(null);
@@ -90,7 +94,7 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
           minTrackingConfidence: 0.5,
         });
 
-        hands.onResults((results: any) => {
+        hands.onResults((results: MediaPipeResults) => {
           if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             setHandDetected(true);
             handDetectedRef.current = true;

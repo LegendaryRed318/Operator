@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Orb from '../Orb';
 import { useVoice } from '../../contexts/VoiceContext';
+import { getApiBaseUrl } from '../../utils/urls';
 
 interface Vitals { cpu: number; memory: number; tempCPU?: number | null; tempGPU?: number | null; hasTemperatures?: boolean; }
 
@@ -59,6 +60,8 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
   const [brainStatus, setBrainStatus] = useState('Brain editor ready');
   const [brainBusy, setBrainBusy] = useState(false);
   const [vaultStatus, setVaultStatus] = useState('Vault: checking...');
+  const [serviceHealth, setServiceHealth] = useState<any>({});
+  const [errors, setErrors] = useState<any[]>([]);
   const sleeping = false; // TODO: wire to sleep manager
 
   useEffect(() => {
@@ -77,8 +80,8 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
   const loadSkillsSummary = async () => {
     try {
       const [skillsRes, validateRes] = await Promise.all([
-        fetch('http://localhost:5050/skills'),
-        fetch('http://localhost:5050/skills/validate'),
+        fetch(`${getApiBaseUrl()}/skills`),
+        fetch(`${getApiBaseUrl()}/skills/validate`),
       ]);
       if (!skillsRes.ok || !validateRes.ok) {
         throw new Error('skills fetch failed');
@@ -104,7 +107,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
   const loadBrainProfile = async () => {
     setBrainStatus('Loading brain profile...');
     try {
-      const res = await fetch('http://localhost:5050/brain/profile');
+      const res = await fetch(`${getApiBaseUrl()}/brain/profile`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const profile = data?.profile ?? {};
@@ -122,7 +125,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
 
   const loadVaultHealth = async () => {
     try {
-      const res = await fetch('http://localhost:5050/vault/health');
+      const res = await fetch(`${getApiBaseUrl()}/vault/health`);
       if (!res.ok) throw new Error('health failed');
       const data = await res.json();
       const vault = data?.vault || {};
@@ -135,16 +138,62 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
     }
   };
 
+  const loadDetailedHealth = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/health/detailed`);
+      if (res.ok) {
+        const data = await res.json();
+        setServiceHealth(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch detailed health:', err);
+    }
+  };
+
+  const loadErrors = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/errors`);
+      if (res.ok) {
+        const data = await res.json();
+        setErrors(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch errors:', err);
+    }
+  };
+
+  const applyFix = async (errorId: number) => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/fix/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error_id: errorId }),
+      });
+      if (res.ok) {
+        alert('Fix application triggered. Check logs for details.');
+        loadErrors();
+      }
+    } catch (err) {
+      console.error('Failed to apply fix:', err);
+    }
+  };
+
   useEffect(() => {
     loadVaultHealth();
-    const t = setInterval(loadVaultHealth, 15000);
+    loadDetailedHealth();
+    loadErrors();
+    const t = setInterval(() => {
+      loadVaultHealth();
+      loadDetailedHealth();
+      loadErrors();
+    }, 15000);
     return () => clearInterval(t);
   }, []);
 
   const runSkillsReload = async () => {
     setSkillsBusy(true);
     try {
-      await fetch('http://localhost:5050/skills/reload', { method: 'POST' });
+      await fetch(`${getApiBaseUrl()}/skills/reload`, { method: 'POST' });
       await loadSkillsSummary();
     } finally {
       setSkillsBusy(false);
@@ -156,7 +205,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
     setBrainStatus('Saving brain profile (merge)...');
     try {
       const parsed = JSON.parse(brainProfileText || '{}');
-      const res = await fetch('http://localhost:5050/brain/profile', {
+      const res = await fetch(`${getApiBaseUrl()}/brain/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile: parsed }),
@@ -177,7 +226,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
     setBrainBusy(true);
     setBrainStatus('Appending profile note...');
     try {
-      const res = await fetch('http://localhost:5050/brain/profile/note', {
+      const res = await fetch(`${getApiBaseUrl()}/brain/profile/note`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: brainNote.trim() }),
@@ -196,7 +245,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
 
   const fetchModels = async () => {
     try {
-      const res = await fetch('http://localhost:5050/models');
+      const res = await fetch(`${getApiBaseUrl()}/models`);
       if (res.ok) {
         const data = await res.json();
         setModelsData(data);
@@ -271,6 +320,23 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
           <div><div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>RAM</div><div style={{ fontSize: 18, color: '#00b4ff' }}>{Math.round(vitals.memory)}%</div></div>
           {vitals.hasTemperatures && vitals.tempCPU && <div><div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>TEMP</div><div style={{ fontSize: 18, color: vitals.tempCPU > 80 ? '#ff4444' : '#ffaa00' }}>{Math.round(vitals.tempCPU)}°C</div></div>}
           
+          {/* SERVICE STATUS LEDS */}
+          <div style={{ marginTop: 5 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>SERVICE STATUS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {['api', 'websocket', 'ollama', 'frontend'].map((svc) => (
+                <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ 
+                    width: 8, height: 8, borderRadius: '50%', 
+                    background: serviceHealth[svc]?.status === 'online' ? '#00ff96' : '#ff4444',
+                    boxShadow: `0 0 5px ${serviceHealth[svc]?.status === 'online' ? '#00ff96' : '#ff4444'}`
+                  }} />
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{svc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
           <div style={{ marginTop: 5 }}>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>AI MODEL</div>
             <div style={{ fontSize: 16, color: getModelColor(modelsData.active), fontWeight: 600, letterSpacing: '0.05em' }}>
@@ -324,6 +390,50 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
               Reload
             </button>
           </div>
+        </div>
+
+        {/* ERROR MONITORING PANEL */}
+        <div style={{
+          position: 'absolute', left: 40, bottom: 40, zIndex: 6,
+          background: 'rgba(20,5,5,0.4)', padding: 16, borderRadius: 16,
+          border: '1px solid rgba(255,80,80,0.15)', backdropFilter: 'blur(8px)',
+          width: 320, maxHeight: 300, overflow: 'auto'
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#ff5050', fontFamily: "'Share Tech Mono', monospace", marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+             <div style={{ width: 6, height: 6, borderRadius: '50%', background: errors.length > 0 ? '#ff5050' : '#00ff96', animation: errors.length > 0 ? 'pulse 1s infinite' : 'none' }} />
+             ERROR MONITOR
+          </div>
+          <style>{`
+            @keyframes pulse {
+              0% { opacity: 1; transform: scale(1); }
+              50% { opacity: 0.5; transform: scale(1.2); }
+              100% { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+          {errors.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'rgba(0,255,150,0.5)', textAlign: 'center', padding: '10px 0' }}>SYSTEM NOMINAL</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {errors.map((err) => (
+                <div key={err.id} style={{ borderBottom: '1px solid rgba(255,80,80,0.1)', paddingBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: '#ff8080', fontWeight: 600 }}>{err.project_name}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{err.error_text}</div>
+                  {err.suggested_fix && (
+                    <button
+                      onClick={() => applyFix(err.id)}
+                      style={{ 
+                        marginTop: 6, width: '100%', background: 'rgba(0,255,150,0.15)', 
+                        border: '1px solid rgba(0,255,150,0.3)', color: '#9effc8', 
+                        borderRadius: 4, padding: '4px', cursor: 'pointer', fontSize: 10 
+                      }}
+                    >
+                      APPLY SUGGESTED FIX
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* BRAIN EDITOR PANEL */}
