@@ -148,6 +148,8 @@ _snapshot_lock = threading.Lock()
 _metrics_stop_event = threading.Event()
 _last_temp: Optional[float] = None
 _last_temp_time: float = 0
+_vault_monitor_stop_event = threading.Event()
+_vault_state: dict[str, Any] = {"connected": None, "writable": None, "last_reload": None, "last_backup": None}
 
 
 def _collect_system_snapshot() -> dict[str, Any]:
@@ -233,6 +235,45 @@ def _metrics_sampler():
         _metrics_stop_event.wait(10)
 
 
+def _vault_monitor():
+    """Monitor external vault availability and auto-reload skills on reconnect."""
+    while not _vault_monitor_stop_event.is_set():
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent))
+            from memory import get_vault_health, create_vault_backup
+            from skills import reload_skills_cache
+
+            health = get_vault_health()
+            prev_connected = _vault_state.get("connected")
+            _vault_state["connected"] = health.get("connected")
+            _vault_state["writable"] = health.get("writable")
+            _vault_state["last_health"] = health
+
+            if health.get("connected") and health.get("writable"):
+                # On reconnect, refresh skills cache.
+                if prev_connected is False:
+                    try:
+                        count = reload_skills_cache()
+                        _vault_state["last_reload"] = {"time": datetime.now().isoformat(), "count": count}
+                    except Exception as e:
+                        logger.warning(f"[VaultMonitor] Skill reload failed: {e}")
+
+                # Daily backup once per calendar day.
+                today = datetime.now().strftime("%Y-%m-%d")
+                last_backup_day = (_vault_state.get("last_backup") or {}).get("day")
+                if last_backup_day != today:
+                    try:
+                        bk = create_vault_backup()
+                        if bk.get("ok"):
+                            _vault_state["last_backup"] = {"day": today, "dir": bk.get("backup_dir")}
+                    except Exception as e:
+                        logger.warning(f"[VaultMonitor] Backup failed: {e}")
+        except Exception as e:
+            logger.debug(f"[VaultMonitor] iteration failed: {e}")
+        _vault_monitor_stop_event.wait(20)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
@@ -254,9 +295,13 @@ async def lifespan(app: FastAPI):
     _metrics_stop_event.clear()
     sampler = threading.Thread(target=_metrics_sampler, daemon=True)
     sampler.start()
+    _vault_monitor_stop_event.clear()
+    vault_monitor = threading.Thread(target=_vault_monitor, daemon=True)
+    vault_monitor.start()
 
     yield
     _metrics_stop_event.set()
+    _vault_monitor_stop_event.set()
     logger.info("[FastAPI] Server shutting down...")
 
 
@@ -603,6 +648,19 @@ class VoiceNoteRequest(BaseModel):
     tags: list[str] = []
 
 
+class BrainProfileSetRequest(BaseModel):
+    profile: dict = Field(default_factory=dict)
+    mode: str = Field(default="replace", pattern="^(replace|merge)$")
+
+
+class BrainProfileNoteRequest(BaseModel):
+    note: str
+
+
+class BrainProfileImportRequest(BaseModel):
+    raw_text: str
+
+
 @app.post("/vault/voice-note")
 async def save_voice_note_endpoint(request: VoiceNoteRequest):
     """Save a voice note (quick memo) to the vault."""
@@ -621,6 +679,121 @@ async def save_voice_note_endpoint(request: VoiceNoteRequest):
         raise
     except Exception as e:
         logger.error(f"[Vault] Voice note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/brain/profile")
+async def get_brain_profile_endpoint():
+    """Get persisted Jarvis brain profile."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import get_brain_profile
+        profile = await asyncio.to_thread(get_brain_profile)
+        return {"status": "ok", "profile": profile}
+    except Exception as e:
+        logger.error(f"[Brain] Profile read error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/brain/profile")
+async def set_brain_profile_endpoint(payload: BrainProfileSetRequest):
+    """Replace or merge Jarvis brain profile."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import set_brain_profile
+        updated = await asyncio.to_thread(set_brain_profile, payload.profile, payload.mode)
+        if isinstance(updated, dict) and "_validation_error" in updated:
+            return JSONResponse(status_code=400, content={"status": "error", "issues": updated["_validation_error"]})
+        return {"status": "ok", "profile": updated}
+    except Exception as e:
+        logger.error(f"[Brain] Profile write error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/brain/profile")
+async def patch_brain_profile_endpoint(payload: BrainProfileSetRequest):
+    """Merge updates into Jarvis brain profile."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import set_brain_profile
+        updated = await asyncio.to_thread(set_brain_profile, payload.profile, "merge")
+        if isinstance(updated, dict) and "_validation_error" in updated:
+            return JSONResponse(status_code=400, content={"status": "error", "issues": updated["_validation_error"]})
+        return {"status": "ok", "profile": updated}
+    except Exception as e:
+        logger.error(f"[Brain] Profile patch error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/brain/profile/note")
+async def add_brain_profile_note(payload: BrainProfileNoteRequest):
+    """Append a freeform note to Jarvis brain profile journal."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import append_brain_profile_note
+        ok = await asyncio.to_thread(append_brain_profile_note, payload.note)
+        return {"status": "ok" if ok else "error"}
+    except Exception as e:
+        logger.error(f"[Brain] Profile note error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/brain/profile/import")
+async def import_brain_profile(payload: BrainProfileImportRequest):
+    """Import raw memory export text and merge parsed fields into profile."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import import_brain_profile_export
+        result = await asyncio.to_thread(import_brain_profile_export, payload.raw_text)
+        if result.get("error"):
+            return JSONResponse(status_code=400, content=result)
+        return result
+    except Exception as e:
+        logger.error(f"[Brain] Profile import error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/vault/health")
+async def vault_health():
+    """Vault health diagnostics for drive-aware UX."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import get_vault_health
+        health = await asyncio.to_thread(get_vault_health)
+        return {
+            "status": "ok",
+            "vault": health,
+            "monitor": {
+                "last_reload": _vault_state.get("last_reload"),
+                "last_backup": _vault_state.get("last_backup"),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[Vault] Health error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/vault/backup")
+async def vault_backup(request: Request):
+    """Trigger manual vault backup now."""
+    try:
+        _require_admin(request)
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from memory import create_vault_backup
+        result = await asyncio.to_thread(create_vault_backup)
+        if not result.get("ok"):
+            return JSONResponse(status_code=503, content=result)
+        _vault_state["last_backup"] = {"day": datetime.now().strftime("%Y-%m-%d"), "dir": result.get("backup_dir")}
+        return result
+    except Exception as e:
+        logger.error(f"[Vault] Backup error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -707,7 +880,12 @@ async def trigger_skill(request: SkillTriggerRequest):
         import sys
         sys.path.insert(0, str(Path(__file__).parent))
         from skills import dispatch_skill_command
-        result = dispatch_skill_command(skill_name=request.skill, command_text=request.params.get("text", ""))
+        result = dispatch_skill_command(
+            skill_name=request.skill,
+            command_text=request.params.get("text", ""),
+            params=request.params or {},
+            source="api",
+        )
         return result
     except Exception as e:
         logger.error(f"[Skills] Trigger error: {e}")
@@ -716,30 +894,41 @@ async def trigger_skill(request: SkillTriggerRequest):
 
 @app.get("/skills")
 async def get_skills():
-    """List all available skills from the skills directory."""
+    """List built-in and TOML skills with metadata."""
     try:
-        skills = []
-        for skill_file in SKILLS_PATH.glob("*.toml"):
-            try:
-                content = skill_file.read_text(encoding='utf-8')
-                # Parse basic TOML for name/trigger
-                name = skill_file.stem
-                trigger = ""
-                for line in content.split('\n'):
-                    if line.startswith('trigger'):
-                        trigger = line.split('=')[1].strip().strip('"\'')
-                    elif line.startswith('name'):
-                        name = line.split('=')[1].strip().strip('"\'')
-                skills.append({
-                    "name": name,
-                    "filename": skill_file.name,
-                    "trigger": trigger,
-                    "size": skill_file.stat().st_size
-                })
-            except Exception:
-                pass
-        return {"skills": skills, "count": len(skills)}
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from skills import list_skills_snapshot
+        return list_skills_snapshot()
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/skills/reload")
+async def reload_skills(request: Request):
+    """Reload skill cache from disk."""
+    try:
+        _require_admin(request)
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from skills import reload_skills_cache
+        count = reload_skills_cache()
+        return {"status": "ok", "reloaded_count": count}
+    except Exception as e:
+        logger.error(f"[Skills] Reload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/skills/validate")
+async def validate_skills():
+    """Validate TOML skill files and report schema issues."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from skills import validate_skills_files
+        return validate_skills_files()
+    except Exception as e:
+        logger.error(f"[Skills] Validate error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -811,13 +1000,50 @@ async def import_skills_zip(request: Request, file: UploadFile = File(...)):
         except zipfile.BadZipFile:
             raise HTTPException(status_code=400, detail="Invalid ZIP file")
 
+        reloaded_count = None
+        if imported:
+            try:
+                from skills import reload_skills_cache
+                reloaded_count = reload_skills_cache()
+            except Exception as e:
+                logger.warning(f"[Skills] Imported ZIP but failed to reload skill cache: {e}")
+
         logger.info(f"[Skills] ZIP import complete: {len(imported)} files, {len(errors)} errors")
-        return {"imported": imported, "count": len(imported), "errors": errors, "path": str(SKILLS_PATH)}
+        return {
+            "imported": imported,
+            "count": len(imported),
+            "errors": errors,
+            "path": str(SKILLS_PATH),
+            "reloaded_count": reloaded_count,
+        }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"[Skills] Import error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/phases/status")
+async def phases_status():
+    """Return high-level phase progress snapshot for Operator roadmap."""
+    try:
+        phases = {
+            "phase_1_core_error_watcher": {"status": "complete", "completion_percent": 100},
+            "phase_2_alerts_notifications": {"status": "complete", "completion_percent": 100},
+            "phase_3_real_project_monitoring": {"status": "complete", "completion_percent": 100},
+            "phase_4_voice_orb_ui": {"status": "mostly_complete", "completion_percent": 92},
+            "phase_4_5_hud_dashboard": {"status": "in_progress", "completion_percent": 80},
+            "phase_5_second_brain_memory": {"status": "in_progress", "completion_percent": 45},
+            "phase_5_5_identity_access": {"status": "not_started", "completion_percent": 0},
+            "phase_6_skills_learning": {"status": "in_progress", "completion_percent": 65},
+            "phase_7_remote_mobile": {"status": "in_progress", "completion_percent": 35},
+            "phase_8_agents_finance": {"status": "not_started", "completion_percent": 0},
+            "phase_9_full_packaging": {"status": "not_started", "completion_percent": 0},
+        }
+        return {"project": "Operator", "timestamp": datetime.now().isoformat(), "phases": phases}
+    except Exception as e:
+        logger.error(f"[Phases] Status error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

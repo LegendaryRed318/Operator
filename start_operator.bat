@@ -3,6 +3,10 @@ setlocal EnableDelayedExpansion
 
 cd /d C:\Projects\Operator
 
+REM Environment Configuration for Ollama
+set OLLAMA_MODELS=D:\OllamaModels\.ollama\models
+set OLLAMA_URL=http://localhost:11434
+
 REM Check for help flag
 if "%~1"=="--help" goto :show_help
 

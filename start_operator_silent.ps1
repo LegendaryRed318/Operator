@@ -11,6 +11,10 @@ Set-Location -Path "C:\Projects\Operator"
     if (!(Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
 
+# Environment Configuration for Ollama
+$env:OLLAMA_MODELS = "D:\OllamaModels\.ollama\models"
+$env:OLLAMA_URL = "http://localhost:11434"
+
 # Get pythonw path
 $pythonw = "C:\Projects\Operator\backend\venv\Scripts\pythonw.exe"
 $python = "C:\Projects\Operator\backend\venv\Scripts\python.exe"
@@ -59,15 +63,16 @@ Start-Sleep -Seconds 3
 # 5. Frontend (Vite) - using npm with hidden window
 $npmCmd = "cd C:\Projects\Operator\frontend && npm run dev"
 Start-HiddenProcess -FilePath "cmd.exe" -Arguments "/c $npmCmd" -WorkingDirectory "C:\Projects\Operator"
-Write-Host "[Operator] Frontend started (port 5173)"
+Write-Host "[Operator] Frontend started (port 8081)"
 Start-Sleep -Seconds 3
 
 # 6. Tray Icon (try pythonw first, fall back to python)
 Start-HiddenProcess -FilePath $pythonw -Arguments "backend\tray.py" -WorkingDirectory "C:\Projects\Operator"
 Write-Host "[Operator] Tray Icon started"
 
-Write-Host "`n[Operator] All services started!`n"
-Write-Host "- Dashboard: http://localhost:5173"
+# Keep script running to maintain tray
+Write-Host "Press Ctrl+C to stop all services..."
+Write-Host "- Dashboard: http://localhost:8081"
 Write-Host "- WebSocket: ws://localhost:8765"
 Write-Host "- API: http://localhost:5050"
 Write-Host "- Jarvis ready (click orb to speak)`n"

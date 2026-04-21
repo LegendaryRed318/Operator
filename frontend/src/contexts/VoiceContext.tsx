@@ -40,11 +40,27 @@ const SILENCE_RMS_THRESHOLD = 0.012;
 const SILENCE_STOP_MS = 900;
 
 function getWebSocketUrl(): string {
+  const configured = import.meta.env.VITE_OPERATOR_WS_URL as string | undefined;
+  if (configured && configured.trim()) {
+    return configured.trim();
+  }
   const host = window.location.host;
   if (host.includes('.ngrok-free.app') || host.includes('.ngrok-free.dev')) {
     return `wss://${host}/ws`;
   }
   return 'ws://localhost:8765';
+}
+
+function getApiBaseUrl(): string {
+  const configured = import.meta.env.VITE_OPERATOR_API_URL as string | undefined;
+  if (configured && configured.trim()) {
+    return configured.trim().replace(/\/$/, '');
+  }
+  const host = window.location.host;
+  if (host.includes('.ngrok-free.app') || host.includes('.ngrok-free.dev')) {
+    return `${window.location.protocol}//${host}`;
+  }
+  return 'http://localhost:5050';
 }
 
 // TTS duration estimation removed — now event-driven via `tts_done` WebSocket event
@@ -378,7 +394,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
 
-      const response = await fetch('http://localhost:5050/transcribe', {
+      const response = await fetch(`${getApiBaseUrl()}/transcribe`, {
         method: 'POST',
         body: formData,
       });
@@ -528,7 +544,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         try {
           const formData = new FormData();
           formData.append('audio', blob, 'hotword.webm');
-          const res = await fetch('http://localhost:5050/transcribe', { method: 'POST', body: formData });
+          const res = await fetch(`${getApiBaseUrl()}/transcribe`, { method: 'POST', body: formData });
           const data = await res.json();
           const transcript = (data.text || '').toLowerCase().trim();
           console.log('[Hotword-Python] Heard:', transcript);

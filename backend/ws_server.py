@@ -115,11 +115,19 @@ def start_ollama() -> bool:
                 logger.error("[Ollama] Could not find ollama.exe")
                 return False
 
+            env = os.environ.copy()
+            ollama_models = os.getenv("OLLAMA_MODELS")
+            if ollama_models:
+                # Forward slashes as requested
+                env["OLLAMA_MODELS"] = ollama_models.replace("\\", "/")
+                logger.info(f"[Ollama] Using custom models path: {env['OLLAMA_MODELS']}")
+
             logger.info(f"[Ollama] Starting server with: {ollama_exe}")
             _ollama_process = subprocess.Popen(
                 [ollama_exe, "serve"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                env=env,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
 
@@ -340,35 +348,97 @@ async def query_gemini(prompt: str) -> str:
         return f"The Gemini service is unavailable, sir. Error: {e}"
 
 
+def classify_intent(text: str) -> str:
+    """Classify the intent of the user's message."""
+    lowered = text.lower()
+    
+    reasoning_terms = {
+        'why', 'explain', 'analyse', 'analyze', 'reason', 'think', 
+        'figure out', 'debug', 'error', 'fix this', 'what went wrong', 'understand',
+        'compare', 'explain deeply', 'tradeoff', 'design'
+    }
+    coding_terms = {
+        'code', 'python', 'typescript', 'refactor', 'debug',
+        'architecture', 'stack trace', 'api', 'database', 'algorithm',
+        'jarvis write', 'generate code', 'make a function', 'add feature'
+    }
+    memory_terms = {
+        'remember', 'recall', 'remind', 'forget', 'memory', 'past', 'history',
+        'last time', 'what did i say', 'what was the'
+    }
+    finance_terms = {
+        'stock', 'crypto', 'bitcoin', 'invest', 'portfolio', 'revenue', 'profit', 'market'
+    }
+
+    if any(term in lowered for term in coding_terms):
+        return "coding"
+    if any(term in lowered for term in reasoning_terms):
+        return "reasoning"
+    if any(term in lowered for term in memory_terms):
+        return "memory"
+    if any(term in lowered for term in finance_terms):
+        return "financial"
+    
+    return "general"
+
+
+def select_model_for_intent(text: str) -> str | None:
+    """Select the best model based on intent and RAM."""
+    intent = classify_intent(text)
+    available_gb = psutil.virtual_memory().available / (1024 ** 3)
+    
+    from decision_engine import get_installed_models, select_model_by_ram
+    installed = get_installed_models()
+    
+    # Intent-based overrides
+    if intent == 'coding' and "qwen2.5-coder:7b" in installed:
+        logger.info(f"[Intent] Coding detected -> using qwen2.5-coder:7b (RAM override)")
+        return "qwen2.5-coder:7b"
+    
+    if intent == 'reasoning' and "deepseek-r1:7b" in installed and available_gb > 4:
+        logger.info(f"[Intent] Reasoning detected -> using deepseek-r1:7b (RAM > 4GB)")
+        return "deepseek-r1:7b"
+    
+    if intent == 'memory' and "deepseek-r1:7b" in installed:
+        # User said "deepseek-r1:7b for memory" but didn't specify RAM tier override, 
+        # but let's assume it follows the reasoning-like importance if possible.
+        if available_gb > 4:
+            logger.info(f"[Intent] Memory detected -> using deepseek-r1:7b")
+            return "deepseek-r1:7b"
+
+    if intent == 'financial':
+        logger.info(f"[Intent] Financial detected -> using Gemini (Keep as-is)")
+        return None  # Triggers Gemini fallback
+
+    # Fallback to RAM-tier selection
+    model = select_model_by_ram()
+    logger.info(f"[Intent] {intent.capitalize()} detected -> using RAM-tier selection: {model or 'Gemini'}")
+    return model
+
+
 def choose_route(text: str, selected_model: str | None) -> tuple[str, str]:
     """
     Score request complexity and choose backend route.
     Returns (route, reason) where route is 'gemini' or 'ollama'.
     """
-    lowered = text.lower()
+    if selected_model is None:
+        return ("gemini", "no_local_model")
+        
+    intent = classify_intent(text)
+    if intent == "financial":
+        return ("gemini", "financial_intent")
+        
+    # Standard complexity check
     score = 0
     if len(text) > 120:
         score += 1
-
-    coding_terms = {
-        "code", "python", "typescript", "refactor", "debug",
-        "architecture", "stack trace", "api", "database", "algorithm"
-    }
-    analysis_terms = {"compare", "analyze", "explain deeply", "tradeoff", "design"}
-    finance_terms = {"stock", "crypto", "bitcoin", "invest", "portfolio", "revenue", "profit", "market"}
-
-    if any(term in lowered for term in coding_terms):
+    if intent in ("coding", "reasoning", "memory"):
         score += 2
-    if any(term in lowered for term in analysis_terms):
-        score += 1
-    if any(term in lowered for term in finance_terms):
-        score += 2
-
-    if selected_model is None:
-        return ("gemini", "no_local_model")
-    if USE_GEMINI_FALLBACK and score >= 2:
-        return ("gemini", f"complexity_score_{score}")
-    return ("ollama", f"complexity_score_{score}")
+        
+    if USE_GEMINI_FALLBACK and score >= 3: # Bumped score since intents are more specific now
+        return ("gemini", f"complexity_score_{score}_intent_{intent}")
+        
+    return ("ollama", f"intent_{intent}")
 
 
 async def handle_voice_command(websocket, text: str):
@@ -378,7 +448,7 @@ async def handle_voice_command(websocket, text: str):
     # Check for built-in skill triggers FIRST (instant response, no AI needed)
     if INLINE_IMPORTS_AVAILABLE:
         try:
-            skill_result = await asyncio.to_thread(dispatch_skill_command, None, text)
+            skill_result = await asyncio.to_thread(dispatch_skill_command, None, text, {}, "voice_ws")
             if skill_result.get("success"):
                 skill_response = skill_result.get("response", "")
                 logger.info(f"[Voice] Skill triggered for: {text[:50]}...")
@@ -427,7 +497,7 @@ async def handle_voice_command(websocket, text: str):
         prompt_text = f"{vault_context}\n\nQuery: {text}" if vault_context else text
 
     try:
-        selected_model = select_model_by_ram()
+        selected_model = select_model_for_intent(text)
         route, route_reason = choose_route(text, selected_model)
         use_gemini = route == "gemini"
 

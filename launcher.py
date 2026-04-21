@@ -124,11 +124,11 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
             "log_handle": log_handle,
         }
         
-        log_message(f"✓ Started {config['name']} (PID: {process.pid})")
+        log_message(f"[OK] Started {config['name']} (PID: {process.pid})")
         return process
         
     except Exception as e:
-        log_message(f"✗ Failed to start {config['name']}: {e}")
+        log_message(f"[FAIL] Failed to start {config['name']}: {e}")
         log_handle.close()
         raise
 
@@ -152,16 +152,16 @@ def stop_all_services():
             # Wait up to 5 seconds for graceful shutdown
             try:
                 process.wait(timeout=5)
-                log_message(f"  ✓ {config['name']} stopped gracefully")
+                log_message(f"  [OK] {config['name']} stopped gracefully")
             except subprocess.TimeoutExpired:
                 # Force kill if not terminated
-                log_message(f"  ⚠ {config['name']} not responding, forcing kill...")
+                log_message(f"  [WARN] {config['name']} not responding, forcing kill...")
                 process.kill()
                 process.wait()
-                log_message(f"  ✓ {config['name']} killed")
+                log_message(f"  [OK] {config['name']} killed")
                 
         except Exception as e:
-            log_message(f"  ✗ Error stopping {config['name']}: {e}")
+            log_message(f"  [FAIL] Error stopping {config['name']}: {e}")
         finally:
             # Close log file handle
             try:
@@ -192,7 +192,7 @@ def check_service_health():
         if process.poll() is not None:
             exit_code = process.returncode
             config = info["config"]
-            log_message(f"⚠ {config['name']} has exited (code: {exit_code})")
+            log_message(f"[WARN] {config['name']} has exited (code: {exit_code})")
             crashed.append(service_id)
 
             try:
@@ -206,15 +206,15 @@ def check_service_health():
         if attempts < MAX_RESTARTS:
             delay = RESTART_BACKOFF[min(attempts, len(RESTART_BACKOFF) - 1)]
             config = SERVICES[service_id]
-            log_message(f"↻ Restarting {config['name']} in {delay}s (attempt {attempts + 1}/{MAX_RESTARTS})...")
+            log_message(f"RESTARTING {config['name']} in {delay}s (attempt {attempts + 1}/{MAX_RESTARTS})...")
             time.sleep(delay)
             try:
                 start_service(service_id, config)
                 restart_counts[service_id] = attempts + 1
             except Exception as e:
-                log_message(f"✗ Failed to restart {config['name']}: {e}")
+                log_message(f"[FAIL] Failed to restart {config['name']}: {e}")
         else:
-            log_message(f"✗ {SERVICES[service_id]['name']} has crashed {MAX_RESTARTS} times — giving up.")
+            log_message(f"[FAIL] {SERVICES[service_id]['name']} has crashed {MAX_RESTARTS} times -- giving up.")
 
     return len(crashed) == 0
 
@@ -266,21 +266,21 @@ def main():
             
             start_service(service_id, config)
         
-        log_message("\n╔══════════════════════════════════════╗")
-        log_message("║     JARVIS SYSTEM GUARDIAN v1.0      ║")
-        log_message("║          OPERATOR ONLINE             ║")
-        log_message("╠══════════════════════════════════════╣")
-        log_message("║  Dashboard: http://localhost:8081    ║")
-        log_message("║  API:       http://localhost:5050    ║")
-        log_message("║  WebSocket: ws://localhost:8765      ║")
-        log_message("╚══════════════════════════════════════╝\n")
+        log_message("\n+--------------------------------------+")
+        log_message("|     JARVIS SYSTEM GUARDIAN v1.0      |")
+        log_message("|          OPERATOR ONLINE             |")
+        log_message("+--------------------------------------+")
+        log_message("|  Dashboard: http://localhost:8081    |")
+        log_message("|  API:       http://localhost:5050    |")
+        log_message("|  WebSocket: ws://localhost:8765      |")
+        log_message("+--------------------------------------+\n")
         log_message("Press Ctrl+C to stop all services gracefully.")
 
         # Auto-open dashboard once the frontend dev server is ready
         log_message("Waiting 12s for frontend to initialise before opening browser...")
         time.sleep(12)
         webbrowser.open("http://localhost:8081")
-        log_message("Browser opened → http://localhost:8081")
+        log_message("Browser opened -> http://localhost:8081")
         
         # Monitor services
         while True:

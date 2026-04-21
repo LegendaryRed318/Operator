@@ -6,6 +6,11 @@ Set WshShell = CreateObject("WScript.Shell")
 ' Change to Operator directory
 WshShell.CurrentDirectory = "C:\Projects\Operator"
 
+' Environment Configuration for Ollama
+Set colEnv = WshShell.Environment("PROCESS")
+colEnv("OLLAMA_MODELS") = "D:\OllamaModels\.ollama\models"
+colEnv("OLLAMA_URL") = "http://localhost:11434"
+
 ' Create required directories
 CreateDir("database")
 CreateDir("logs")

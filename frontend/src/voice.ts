@@ -5,6 +5,10 @@
 // - Local: ws://localhost:8765
 // - Ngrok: wss://*.ngrok-free.app (secure WebSocket for remote access)
 function getWebSocketUrl(): string {
+  const configured = import.meta.env.VITE_OPERATOR_WS_URL as string | undefined;
+  if (configured && configured.trim()) {
+    return configured.trim();
+  }
   const host = window.location.host;
   
   // Check if accessed via ngrok
@@ -15,6 +19,18 @@ function getWebSocketUrl(): string {
   
   // Local development fallback
   return 'ws://localhost:8765';
+}
+
+function getApiBaseUrl(): string {
+  const configured = import.meta.env.VITE_OPERATOR_API_URL as string | undefined;
+  if (configured && configured.trim()) {
+    return configured.trim().replace(/\/$/, '');
+  }
+  const host = window.location.host;
+  if (host.includes('.ngrok-free.app') || host.includes('.ngrok-free.dev')) {
+    return `${window.location.protocol}//${host}`;
+  }
+  return 'http://localhost:5050';
 }
 
 export class VoiceController {
@@ -208,7 +224,7 @@ export class VoiceController {
       formData.append('audio', audioBlob, 'recording.webm');
 
       console.log('[Voice] Sending audio to backend...');
-      const response = await fetch('http://localhost:5050/transcribe', {
+      const response = await fetch(`${getApiBaseUrl()}/transcribe`, {
         method: 'POST',
         body: formData,
       });

@@ -8,11 +8,13 @@ import json
 import logging
 import os
 import re
+import socket
 import subprocess
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 from paths import DB_PATH, LOGS_PATH, SKILLS_PATH
 
 # Try to import requests for weather API
@@ -37,6 +39,7 @@ except ImportError:
         TOML_LOADER = None
 
 logger = logging.getLogger(__name__)
+AUDIT_LOG_PATH = LOGS_PATH / "skills_audit.jsonl"
 
 # Built-in skill handlers (voice triggers that don't need TOML files)
 # App registry for the open_app skill — maps spoken names to executables
@@ -121,6 +124,8 @@ class SkillExecutor:
     
     def __init__(self):
         self.loaded_skills: dict = {}
+        self.skill_runtime_state: dict[str, dict[str, Any]] = {}
+        self._runtime_lock = threading.Lock()
         self.skill_handlers: dict = {
             "handle_good_morning": self._handle_good_morning,
             "handle_time": self._handle_time,
@@ -134,36 +139,174 @@ class SkillExecutor:
             "handle_coin_flip": self._handle_coin_flip,
         }
         self._load_toml_skills()
+
+    @staticmethod
+    def _is_online() -> bool:
+        try:
+            with socket.create_connection(("1.1.1.1", 53), timeout=1.5):
+                return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _coerce_float(value: Any, default: float) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _coerce_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _coerce_bool(value: Any, default: bool) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in ("true", "1", "yes", "on"):
+                return True
+            if lowered in ("false", "0", "no", "off"):
+                return False
+        return default
+
+    @staticmethod
+    def _normalize_mode(mode: Any) -> str:
+        if not isinstance(mode, str):
+            return "contains"
+        lowered = mode.strip().lower()
+        if lowered in ("contains", "exact", "regex"):
+            return lowered
+        return "contains"
+
+    def _append_audit_log(self, entry: dict[str, Any]) -> None:
+        try:
+            redacted = dict(entry)
+            text = str(redacted.get("command_text", ""))
+            text = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "[redacted-email]", text)
+            redacted["command_text"] = text
+            LOGS_PATH.mkdir(parents=True, exist_ok=True)
+            with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(redacted, ensure_ascii=True) + "\n")
+        except Exception as e:
+            logger.warning(f"[Skills] Failed to write audit entry: {e}")
+
+    def _run_with_timeout(self, handler: Callable[[str], str], text: str, timeout_s: float) -> tuple[bool, Optional[str], Optional[str]]:
+        result: dict[str, Any] = {"done": False, "value": None, "error": None}
+
+        def _runner():
+            try:
+                result["value"] = handler(text)
+            except Exception as e:
+                result["error"] = str(e)
+            finally:
+                result["done"] = True
+
+        thread = threading.Thread(target=_runner, daemon=True)
+        thread.start()
+        thread.join(timeout=max(0.1, timeout_s))
+        if thread.is_alive():
+            return False, None, f"Execution timed out after {timeout_s:.1f}s"
+        if result["error"] is not None:
+            return False, None, result["error"]
+        return True, str(result["value"] or ""), None
+
+    def _check_cooldown(self, skill_name: str, cooldown_s: float) -> tuple[bool, float]:
+        if cooldown_s <= 0:
+            return True, 0.0
+        now = time.time()
+        with self._runtime_lock:
+            state = self.skill_runtime_state.setdefault(skill_name, {})
+            last_run = float(state.get("last_run", 0.0))
+            elapsed = now - last_run
+            if elapsed < cooldown_s:
+                return False, cooldown_s - elapsed
+            state["last_run"] = now
+            return True, 0.0
+
+    def _normalize_loaded_skill(self, skill_file: Path, data: dict[str, Any]) -> Optional[dict[str, Any]]:
+        skill_def = data.get("skill")
+        if not isinstance(skill_def, dict):
+            return None
+        action_def = data.get("action", {})
+        if not isinstance(action_def, dict):
+            action_def = {}
+
+        skill_name = str(skill_def.get("name", skill_file.stem)).strip()
+        trigger_text = str(skill_def.get("trigger", "")).strip().lower()
+        aliases_raw = skill_def.get("aliases", [])
+        aliases: list[str] = []
+        if isinstance(aliases_raw, list):
+            aliases = [str(x).strip().lower() for x in aliases_raw if str(x).strip()]
+        elif isinstance(aliases_raw, str) and aliases_raw.strip():
+            aliases = [aliases_raw.strip().lower()]
+
+        trigger_mode = self._normalize_mode(skill_def.get("trigger_mode", "contains"))
+        enabled = self._coerce_bool(skill_def.get("enabled", True), True)
+        priority = self._coerce_int(skill_def.get("priority", 100), 100)
+        requires_online = self._coerce_bool(skill_def.get("requires_online", False), False)
+        cooldown_s = self._coerce_float(skill_def.get("cooldown_seconds", 0), 0.0)
+        timeout_s = self._coerce_float(skill_def.get("timeout_seconds", 8), 8.0)
+        response = str(skill_def.get("response", "")).strip()
+
+        action_type = str(action_def.get("type", "response")).strip().lower()
+        action_command = str(action_def.get("command", "")).strip()
+        action_response = str(action_def.get("response", response)).strip()
+        action_timeout = self._coerce_float(action_def.get("timeout_seconds", timeout_s), timeout_s)
+
+        return {
+            "name": skill_name,
+            "file": skill_file.name,
+            "definition": data,
+            "trigger": trigger_text,
+            "aliases": aliases,
+            "trigger_mode": trigger_mode,
+            "description": str(skill_def.get("description", "")),
+            "enabled": enabled,
+            "priority": priority,
+            "requires_online": requires_online,
+            "cooldown_seconds": max(0.0, cooldown_s),
+            "timeout_seconds": max(0.5, timeout_s),
+            "response": response,
+            "action_type": action_type,
+            "action_command": action_command,
+            "action_response": action_response,
+            "action_timeout_seconds": max(0.5, action_timeout),
+        }
     
     def _load_toml_skills(self):
         """Load skill definitions from TOML files."""
         if TOML_LOADER is None:
             logger.warning("[Skills] No TOML parser available (install 'toml' package)")
             return
-        
+
         try:
+            self.loaded_skills.clear()
             SKILLS_PATH.mkdir(parents=True, exist_ok=True)
             for skill_file in SKILLS_PATH.glob("*.toml"):
                 try:
                     with open(skill_file, "rb") as f:
                         data = TOML_LOADER(f)
-                    
-                    if "skill" in data:
-                        skill_def = data["skill"]
-                        skill_name = skill_def.get("name", skill_file.stem)
-                        self.loaded_skills[skill_name] = {
-                            "file": skill_file.name,
-                            "definition": data,
-                            "trigger": skill_def.get("trigger", "").lower(),
-                            "description": skill_def.get("description", ""),
-                        }
+                    normalized = self._normalize_loaded_skill(skill_file, data)
+                    if normalized:
+                        skill_name = normalized["name"]
+                        self.loaded_skills[skill_name] = normalized
                         logger.info(f"[Skills] Loaded: {skill_name}")
                 except Exception as e:
                     logger.error(f"[Skills] Failed to load {skill_file}: {e}")
         except Exception as e:
             logger.error(f"[Skills] Error loading skills: {e}")
+
+    def reload(self) -> int:
+        """Reload skill definitions from disk and return count."""
+        self._load_toml_skills()
+        return len(self.loaded_skills)
     
-    def match_trigger(self, text: str) -> Optional[tuple[str, Callable]]:
+    def match_trigger(self, text: str) -> Optional[dict[str, Any]]:
         """
         Match voice text against skill triggers.
         Returns (skill_name, handler_function) or None if no match.
@@ -178,15 +321,99 @@ class SkillExecutor:
                     handler_name = skill_info["handler"]
                     handler = self.skill_handlers.get(handler_name)
                     if handler:
-                        return (skill_id, handler)
-        
-        # Check TOML-loaded skills
-        for skill_name, skill_data in self.loaded_skills.items():
-            trigger = skill_data.get("trigger", "")
-            if trigger and trigger in text_lower:
-                return (skill_name, lambda t: f"Skill '{skill_name}' recognized but full execution not yet implemented.")
-        
+                        return {
+                            "skill_name": skill_id,
+                            "handler": handler,
+                            "implemented": True,
+                            "matched_by": "built_in_contains",
+                            "metadata": {
+                                "enabled": True,
+                                "priority": 0,
+                                "requires_online": False,
+                                "cooldown_seconds": 0.0,
+                                "timeout_seconds": 10.0,
+                            },
+                        }
+
+        # Check TOML-loaded skills sorted by priority
+        candidates = sorted(
+            self.loaded_skills.items(),
+            key=lambda kv: int(kv[1].get("priority", 100))
+        )
+        for skill_name, skill_data in candidates:
+            if not skill_data.get("enabled", True):
+                continue
+            patterns = []
+            trigger = str(skill_data.get("trigger", "")).strip()
+            if trigger:
+                patterns.append(trigger)
+            patterns.extend(skill_data.get("aliases", []))
+            mode = skill_data.get("trigger_mode", "contains")
+
+            matched_by = None
+            for pattern in patterns:
+                if mode == "exact" and pattern == text_lower:
+                    matched_by = "toml_exact"
+                    break
+                if mode == "regex":
+                    try:
+                        if re.search(pattern, text_lower):
+                            matched_by = "toml_regex"
+                            break
+                    except re.error:
+                        logger.warning(f"[Skills] Invalid regex in skill '{skill_name}': {pattern}")
+                elif mode == "contains" and pattern in text_lower:
+                    matched_by = "toml_contains"
+                    break
+
+            if not matched_by:
+                continue
+
+            handler = self._make_toml_handler(skill_name, skill_data)
+            return {
+                "skill_name": skill_name,
+                "handler": handler,
+                "implemented": True,
+                "matched_by": matched_by,
+                "metadata": {
+                    "enabled": bool(skill_data.get("enabled", True)),
+                    "priority": int(skill_data.get("priority", 100)),
+                    "requires_online": bool(skill_data.get("requires_online", False)),
+                    "cooldown_seconds": float(skill_data.get("cooldown_seconds", 0.0)),
+                    "timeout_seconds": float(skill_data.get("timeout_seconds", 8.0)),
+                },
+            }
+
         return None
+
+    def _make_toml_handler(self, skill_name: str, skill_data: dict[str, Any]) -> Callable[[str], str]:
+        def _handler(text: str) -> str:
+            action_type = skill_data.get("action_type", "response")
+            if action_type == "command":
+                command = skill_data.get("action_command", "")
+                if not command:
+                    return f"Skill '{skill_name}' has no command configured."
+                timeout_s = float(skill_data.get("action_timeout_seconds", 8.0))
+                completed = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_s,
+                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+                )
+                if completed.returncode != 0:
+                    stderr = (completed.stderr or "").strip()
+                    return f"Skill '{skill_name}' command failed: {stderr[:120] or f'exit code {completed.returncode}'}"
+                out = (completed.stdout or "").strip()
+                if out:
+                    return out[:300]
+                return skill_data.get("action_response") or f"Skill '{skill_name}' executed successfully."
+
+            # default response action
+            return skill_data.get("action_response") or skill_data.get("response") or f"Skill '{skill_name}' executed."
+
+        return _handler
     
     def _handle_good_morning(self, text: str = "") -> str:
         """Good morning briefing for RED."""
@@ -477,7 +704,7 @@ def try_handle_skill(text: str) -> Optional[str]:
     Try to handle a voice command as a skill.
     Returns response text if handled, None if not a skill command.
     """
-    result = dispatch_skill_command(command_text=text)
+    result = dispatch_skill_command(command_text=text, source="voice")
     if result.get("success"):
         return result.get("response")
     return None
@@ -490,34 +717,103 @@ def trigger_skill_by_name(name: str, params: dict = None) -> dict:
     Returns result dictionary.
     """
     text = params.get("text", "") if params else ""
-    return dispatch_skill_command(skill_name=name, command_text=text)
+    return dispatch_skill_command(skill_name=name, command_text=text, params=params or {}, source="api")
 
 
-def dispatch_skill_command(skill_name: str | None = None, command_text: str = "") -> dict:
+def dispatch_skill_command(
+    skill_name: str | None = None,
+    command_text: str = "",
+    params: dict | None = None,
+    source: str = "unknown",
+) -> dict:
     """
     Canonical skill dispatch used by both WebSocket and HTTP paths.
     If skill_name is omitted, this attempts trigger matching from command_text.
     """
     executor = get_skill_executor()
+    params = params or {}
 
     resolved_name = skill_name
     handler = None
+    matched_by = "explicit_name"
+    metadata = {
+        "enabled": True,
+        "priority": 0,
+        "requires_online": False,
+        "cooldown_seconds": 0.0,
+        "timeout_seconds": 10.0,
+    }
     if not resolved_name:
         match = executor.match_trigger(command_text)
         if not match:
             return {"success": False, "error": "No skill matched", "skill": None}
-        resolved_name, handler = match
+        resolved_name = match.get("skill_name")
+        handler = match.get("handler")
+        matched_by = match.get("matched_by", "trigger_match")
+        metadata = {**metadata, **(match.get("metadata") or {})}
     elif resolved_name in BUILT_IN_SKILLS:
         handler_name = BUILT_IN_SKILLS[resolved_name]["handler"]
         handler = executor.skill_handlers.get(handler_name)
+    elif resolved_name in executor.loaded_skills:
+        skill_data = executor.loaded_skills[resolved_name]
+        handler = executor._make_toml_handler(resolved_name, skill_data)
+        metadata = {
+            "enabled": bool(skill_data.get("enabled", True)),
+            "priority": int(skill_data.get("priority", 100)),
+            "requires_online": bool(skill_data.get("requires_online", False)),
+            "cooldown_seconds": float(skill_data.get("cooldown_seconds", 0.0)),
+            "timeout_seconds": float(skill_data.get("timeout_seconds", 8.0)),
+        }
+
+    audit_entry: dict[str, Any] = {
+        "timestamp": datetime.now().isoformat(),
+        "skill": resolved_name,
+        "source": source,
+        "command_text": command_text,
+        "matched_by": matched_by,
+        "success": False,
+        "duration_ms": 0,
+    }
+
+    if metadata.get("enabled") is False:
+        audit_entry["error"] = "Skill is disabled"
+        executor._append_audit_log(audit_entry)
+        return {"success": False, "error": "Skill is disabled", "skill": resolved_name}
+
+    if metadata.get("requires_online") and not executor._is_online():
+        audit_entry["error"] = "Skill requires internet connectivity"
+        executor._append_audit_log(audit_entry)
+        return {"success": False, "error": "Skill requires internet connectivity", "skill": resolved_name}
+
+    cooldown_s = float(metadata.get("cooldown_seconds", 0.0))
+    can_run, wait_s = executor._check_cooldown(str(resolved_name), cooldown_s)
+    if not can_run:
+        msg = f"Skill cooling down. Try again in {wait_s:.1f}s."
+        audit_entry["error"] = msg
+        executor._append_audit_log(audit_entry)
+        return {"success": False, "error": msg, "skill": resolved_name, "cooldown_remaining_seconds": round(wait_s, 2)}
 
     if handler and callable(handler):
-        try:
-            response = handler(command_text)
-            return {"success": True, "response": response, "skill": resolved_name, "implemented": True}
-        except Exception as e:
-            logger.error(f"[Skills] Execution error for {resolved_name}: {e}")
-            return {"success": False, "error": str(e), "skill": resolved_name}
+        timeout_s = float(params.get("timeout_seconds", metadata.get("timeout_seconds", 10.0)))
+        started = time.perf_counter()
+        ok, response, err = executor._run_with_timeout(handler, command_text, timeout_s)
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        audit_entry["duration_ms"] = duration_ms
+        if ok:
+            audit_entry["success"] = True
+            executor._append_audit_log(audit_entry)
+            return {
+                "success": True,
+                "response": response,
+                "skill": resolved_name,
+                "implemented": True,
+                "matched_by": matched_by,
+                "duration_ms": duration_ms,
+            }
+        logger.error(f"[Skills] Execution error for {resolved_name}: {err}")
+        audit_entry["error"] = err
+        executor._append_audit_log(audit_entry)
+        return {"success": False, "error": str(err), "skill": resolved_name, "duration_ms": duration_ms}
 
     if resolved_name in executor.loaded_skills:
         return {
@@ -528,6 +824,119 @@ def dispatch_skill_command(skill_name: str | None = None, command_text: str = ""
         }
 
     return {"success": False, "error": f"Unknown skill: {resolved_name}", "skill": resolved_name}
+
+
+def reload_skills_cache() -> int:
+    """Reload TOML skills so new imports are available immediately."""
+    executor = get_skill_executor()
+    return executor.reload()
+
+
+def list_skills_snapshot() -> dict:
+    """Return built-in and loaded skills with runtime metadata."""
+    executor = get_skill_executor()
+    built_in = []
+    for key, info in BUILT_IN_SKILLS.items():
+        built_in.append({
+            "name": key,
+            "description": info.get("description", ""),
+            "triggers": info.get("triggers", []),
+            "enabled": True,
+            "priority": 0,
+            "source": "built_in",
+        })
+
+    loaded = []
+    for name, data in sorted(executor.loaded_skills.items(), key=lambda kv: int(kv[1].get("priority", 100))):
+        loaded.append({
+            "name": name,
+            "filename": data.get("file"),
+            "trigger": data.get("trigger"),
+            "aliases": data.get("aliases", []),
+            "trigger_mode": data.get("trigger_mode", "contains"),
+            "description": data.get("description", ""),
+            "enabled": bool(data.get("enabled", True)),
+            "priority": int(data.get("priority", 100)),
+            "requires_online": bool(data.get("requires_online", False)),
+            "cooldown_seconds": float(data.get("cooldown_seconds", 0.0)),
+            "timeout_seconds": float(data.get("timeout_seconds", 8.0)),
+            "source": "toml",
+        })
+
+    return {"built_in": built_in, "loaded": loaded, "count_loaded": len(loaded), "count_built_in": len(built_in)}
+
+
+def validate_skills_files() -> dict:
+    """Validate TOML skill files and report schema issues."""
+    issues: list[dict[str, Any]] = []
+    validated = 0
+    seen_patterns: dict[str, str] = {}
+    for skill_file in SKILLS_PATH.glob("*.toml"):
+        validated += 1
+        try:
+            if TOML_LOADER is None:
+                issues.append({"file": skill_file.name, "level": "error", "message": "No TOML parser installed"})
+                continue
+            with open(skill_file, "rb") as f:
+                data = TOML_LOADER(f)
+            if "skill" not in data or not isinstance(data["skill"], dict):
+                issues.append({"file": skill_file.name, "level": "error", "message": "Missing [skill] section"})
+                continue
+            skill = data["skill"]
+            if not str(skill.get("name", "")).strip():
+                issues.append({"file": skill_file.name, "level": "warning", "message": "skill.name missing; filename will be used"})
+            if not str(skill.get("trigger", "")).strip() and not skill.get("aliases"):
+                issues.append({"file": skill_file.name, "level": "error", "message": "Need skill.trigger or skill.aliases"})
+            trigger = str(skill.get("trigger", "")).strip().lower()
+            if trigger:
+                key = f"trigger:{trigger}"
+                if key in seen_patterns:
+                    issues.append({
+                        "file": skill_file.name,
+                        "level": "warning",
+                        "message": f"Trigger conflict with {seen_patterns[key]}: '{trigger}'",
+                    })
+                else:
+                    seen_patterns[key] = skill_file.name
+            aliases = skill.get("aliases", [])
+            if isinstance(aliases, list):
+                for alias in aliases:
+                    alias_key = str(alias).strip().lower()
+                    if not alias_key:
+                        continue
+                    key = f"alias:{alias_key}"
+                    if key in seen_patterns:
+                        issues.append({
+                            "file": skill_file.name,
+                            "level": "warning",
+                            "message": f"Alias conflict with {seen_patterns[key]}: '{alias_key}'",
+                        })
+                    else:
+                        seen_patterns[key] = skill_file.name
+            mode = str(skill.get("trigger_mode", "contains")).strip().lower()
+            if mode not in ("contains", "exact", "regex"):
+                issues.append({"file": skill_file.name, "level": "error", "message": "skill.trigger_mode must be contains/exact/regex"})
+            if mode == "regex":
+                pattern = str(skill.get("trigger", "")).strip()
+                if pattern:
+                    try:
+                        re.compile(pattern)
+                    except re.error as e:
+                        issues.append({"file": skill_file.name, "level": "error", "message": f"Invalid regex trigger: {e}"})
+            if "action" in data and isinstance(data["action"], dict):
+                action_type = str(data["action"].get("type", "response")).strip().lower()
+                if action_type not in ("response", "command"):
+                    issues.append({"file": skill_file.name, "level": "error", "message": "action.type must be response or command"})
+        except Exception as e:
+            issues.append({"file": skill_file.name, "level": "error", "message": f"Parse failure: {e}"})
+
+    return {
+        "validated_files": validated,
+        "issues": issues,
+        "error_count": sum(1 for x in issues if x.get("level") == "error"),
+        "warning_count": sum(1 for x in issues if x.get("level") == "warning"),
+        "ok": not any(x.get("level") == "error" for x in issues),
+    }
 
 
 if __name__ == "__main__":

@@ -5,6 +5,9 @@ Vault location: Loaded from OPERATOR_VAULT_PATH env var, defaults to repo-local 
 """
 
 import logging
+import json
+import re
+import shutil
 from datetime import datetime
 from paths import VAULT_PATH
 
@@ -17,6 +20,71 @@ FOLDERS = {
     "conversations": VAULT_ROOT / "conversations",
     "errors": VAULT_ROOT / "errors",
 }
+PROFILE_JSON_PATH = FOLDERS["raw_sources"] / "jarvis_brain_profile.json"
+PROFILE_MD_PATH = FOLDERS["wiki"] / "user-profile" / "RED_Profile.md"
+BACKUPS_PATH = FOLDERS["raw_sources"] / "backups"
+
+
+DEFAULT_BRAIN_PROFILE = {
+    "identity": {
+        "preferred_name": "RED",
+        "full_name": "Olamide Arowolo",
+        "pronouns": "he/him",
+        "age_years": 14,
+        "birthdate": "October 25",
+        "origin": "Nigeria",
+        "current_location": "United Kingdom",
+        "school": "St Illtyds High School",
+        "best_friends": ["Tyler", "Daniel"],
+    },
+    "preferences": {
+        "tone": {
+            "likes_humor": True,
+            "direct_feedback": True,
+            "can_be_blunt": True,
+            "allow_profanity_general": True,
+            "allow_slurs": False,
+        },
+        "budget": {
+            "prefers_free_tools": True,
+        },
+    },
+    "goals": {
+        "primary": [
+            "Become a billionaire",
+            "Become an entrepreneur",
+            "Build Jarvis into a major invention",
+            "Lose weight",
+        ],
+        "money_mindset": "Strongly focused on making money and business growth.",
+    },
+    "interests": {
+        "coding": True,
+        "gaming": ["Minecraft"],
+        "sports": ["football", "rugby", "tennis", "basketball", "swimming"],
+    },
+    "assistant_rules": {
+        "ask_clarifying_questions_on_personal_challenges": True,
+        "use_he_him_pronouns": True,
+        "financial_advisor_mode": "guidance_only_no_direct_fund_control",
+        "location_tracking": "disabled",
+        "device_surveillance": "disabled",
+    },
+    "contacts": {
+        "emails": [
+            "Olamidepeniel@gmail.com",
+            "LegendaryRed318@gmail.com",
+            "shadowwyred@gmail.com",
+        ]
+    },
+    "projects": [
+        "NexusPlay.io",
+        "GameGalaxy Hub",
+        "Brainify AI",
+        "BloodLust Minecraft Plugin",
+    ],
+    "updated_at": None,
+}
 
 
 def ensure_vault() -> bool:
@@ -24,9 +92,251 @@ def ensure_vault() -> bool:
     try:
         for folder in FOLDERS.values():
             folder.mkdir(parents=True, exist_ok=True)
+        PROFILE_MD_PATH.parent.mkdir(parents=True, exist_ok=True)
+        BACKUPS_PATH.mkdir(parents=True, exist_ok=True)
         return True
     except Exception as e:
         logger.warning(f"[Memory] Vault not accessible at {VAULT_ROOT}: {e}")
+        return False
+
+
+def get_vault_health() -> dict:
+    """Return vault connectivity/writability diagnostics."""
+    exists = VAULT_ROOT.exists()
+    writable = False
+    test_file = FOLDERS["raw_sources"] / ".vault_write_test.tmp"
+    latency_ms = None
+    started = datetime.now()
+    try:
+        if exists:
+            FOLDERS["raw_sources"].mkdir(parents=True, exist_ok=True)
+            test_file.write_text("ok", encoding="utf-8")
+            _ = test_file.read_text(encoding="utf-8")
+            test_file.unlink(missing_ok=True)
+            writable = True
+    except Exception:
+        writable = False
+    elapsed = datetime.now() - started
+    latency_ms = int(elapsed.total_seconds() * 1000)
+
+    free_bytes = None
+    total_bytes = None
+    try:
+        usage = shutil.disk_usage(str(VAULT_ROOT))
+        free_bytes = int(usage.free)
+        total_bytes = int(usage.total)
+    except Exception:
+        pass
+
+    return {
+        "path": str(VAULT_ROOT),
+        "connected": bool(exists),
+        "writable": bool(writable),
+        "read_write_latency_ms": latency_ms,
+        "free_bytes": free_bytes,
+        "total_bytes": total_bytes,
+        "checked_at": datetime.now().isoformat(),
+    }
+
+
+def _validate_brain_profile(profile: dict) -> tuple[bool, list[str]]:
+    issues: list[str] = []
+    if not isinstance(profile, dict):
+        return False, ["Profile must be a JSON object"]
+    identity = profile.get("identity", {})
+    if identity and not isinstance(identity, dict):
+        issues.append("identity must be an object")
+    if isinstance(identity, dict):
+        age = identity.get("age_years")
+        if age is not None and (not isinstance(age, int) or age < 0 or age > 120):
+            issues.append("identity.age_years must be an integer between 0 and 120")
+    contacts = profile.get("contacts", {})
+    if isinstance(contacts, dict):
+        emails = contacts.get("emails", [])
+        if emails is not None:
+            if not isinstance(emails, list):
+                issues.append("contacts.emails must be a list")
+            else:
+                for em in emails:
+                    if not isinstance(em, str) or "@" not in em:
+                        issues.append(f"Invalid email entry: {em}")
+    return len(issues) == 0, issues
+
+
+def _write_profile_markdown(profile: dict) -> None:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    content = (
+        "# RED Profile (Jarvis Brain)\n\n"
+        f"_Last updated: {now}_\n\n"
+        "## Identity\n"
+        f"- Preferred name: {profile.get('identity', {}).get('preferred_name', 'RED')}\n"
+        f"- Full name: {profile.get('identity', {}).get('full_name', '')}\n"
+        f"- Pronouns: {profile.get('identity', {}).get('pronouns', '')}\n"
+        f"- Age: {profile.get('identity', {}).get('age_years', '')}\n"
+        f"- Birthdate: {profile.get('identity', {}).get('birthdate', '')}\n"
+        f"- School: {profile.get('identity', {}).get('school', '')}\n\n"
+        "## Goals\n"
+    )
+    goals = profile.get("goals", {}).get("primary", [])
+    for g in goals:
+        content += f"- {g}\n"
+    content += (
+        "\n## Preferences\n"
+        "- Prefer free tools and alternatives\n"
+        "- Likes direct, clear responses with humor\n"
+        "- Keep safety guardrails active\n\n"
+        "## Notes\n"
+        "- Edit via API: GET/PUT/PATCH /brain/profile\n"
+        "- Add notes via POST /brain/profile/note\n"
+    )
+    PROFILE_MD_PATH.write_text(content, encoding="utf-8")
+
+
+def _deep_merge(base: dict, patch: dict) -> dict:
+    merged = dict(base)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def get_brain_profile() -> dict:
+    """Read Jarvis brain profile; initialize default if missing."""
+    if not ensure_vault():
+        return {}
+    try:
+        if not PROFILE_JSON_PATH.exists():
+            profile = dict(DEFAULT_BRAIN_PROFILE)
+            profile["updated_at"] = datetime.now().isoformat()
+            PROFILE_JSON_PATH.write_text(json.dumps(profile, indent=2), encoding="utf-8")
+            _write_profile_markdown(profile)
+            return profile
+        raw = PROFILE_JSON_PATH.read_text(encoding="utf-8")
+        return json.loads(raw)
+    except Exception as e:
+        logger.error(f"[Memory] Failed to read brain profile: {e}")
+        return {}
+
+
+def set_brain_profile(profile: dict, mode: str = "replace") -> dict:
+    """
+    Persist Jarvis brain profile.
+    mode='replace' writes full profile, mode='merge' deep-merges with existing.
+    """
+    if not ensure_vault():
+        return {}
+    try:
+        existing = get_brain_profile() or {}
+        if mode == "merge":
+            updated = _deep_merge(existing, profile or {})
+        else:
+            updated = profile or {}
+        valid, issues = _validate_brain_profile(updated)
+        if not valid:
+            logger.warning(f"[Memory] Brain profile validation failed: {issues}")
+            return {"_validation_error": issues}
+        updated["updated_at"] = datetime.now().isoformat()
+        PROFILE_JSON_PATH.write_text(json.dumps(updated, indent=2), encoding="utf-8")
+        _write_profile_markdown(updated)
+        return updated
+    except Exception as e:
+        logger.error(f"[Memory] Failed to save brain profile: {e}")
+        return {}
+
+
+def append_brain_profile_note(note: str) -> bool:
+    """Append freeform user note into profile journal."""
+    if not ensure_vault():
+        return False
+
+
+def import_brain_profile_export(raw_text: str) -> dict:
+    """
+    Parse freeform memory export text and merge extracted fields into brain profile.
+    Returns updated profile and extraction metadata.
+    """
+    if not raw_text or not raw_text.strip():
+        return {"error": "empty_input"}
+    existing = get_brain_profile() or {}
+    patch: dict = {"imported_memories": {"raw_export_excerpt": raw_text[:2000]}}
+    identity: dict = {}
+
+    name_match = re.search(r"full name is ([A-Za-z ]+)", raw_text, flags=re.I)
+    if name_match:
+        identity["full_name"] = name_match.group(1).strip()
+    pref_match = re.search(r"called ([A-Za-z0-9_-]+)", raw_text, flags=re.I)
+    if pref_match:
+        identity["preferred_name"] = pref_match.group(1).strip()
+    age_match = re.search(r"(\d{1,2}) years old", raw_text, flags=re.I)
+    if age_match:
+        try:
+            identity["age_years"] = int(age_match.group(1))
+        except ValueError:
+            pass
+    bday_match = re.search(r"turn \d+ on ([A-Za-z]+ \d{1,2})", raw_text, flags=re.I)
+    if bday_match:
+        identity["birthdate"] = bday_match.group(1).strip()
+
+    emails = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", raw_text)
+    if emails:
+        patch["contacts"] = {"emails": sorted(set(emails))}
+
+    if identity:
+        patch["identity"] = identity
+    if "free alternatives" in raw_text.lower() or "free tools" in raw_text.lower():
+        patch.setdefault("preferences", {})
+        patch["preferences"]["budget"] = {"prefers_free_tools": True}
+    if "clarifying questions" in raw_text.lower():
+        patch.setdefault("assistant_rules", {})
+        patch["assistant_rules"]["ask_clarifying_questions_on_personal_challenges"] = True
+
+    merged = _deep_merge(existing, patch)
+    result = set_brain_profile(merged, mode="replace")
+    if "_validation_error" in result:
+        return {"error": "validation_failed", "issues": result["_validation_error"]}
+    return {"status": "ok", "profile": result, "extracted_emails": len(emails)}
+
+
+def create_vault_backup() -> dict:
+    """Create timestamped backup of key memory/skills artifacts."""
+    if not ensure_vault():
+        return {"ok": False, "error": "vault_unavailable"}
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_dir = BACKUPS_PATH / ts
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    copied: list[str] = []
+    targets = [
+        PROFILE_JSON_PATH,
+        PROFILE_MD_PATH,
+        FOLDERS["conversations"],
+        VAULT_ROOT / "skills",
+    ]
+    for target in targets:
+        try:
+            if target.is_file():
+                dest = backup_dir / target.name
+                shutil.copy2(target, dest)
+                copied.append(str(dest))
+            elif target.is_dir():
+                dest = backup_dir / target.name
+                shutil.copytree(target, dest, dirs_exist_ok=True)
+                copied.append(str(dest))
+        except Exception as e:
+            logger.warning(f"[Memory] Backup skip {target}: {e}")
+    return {"ok": True, "backup_dir": str(backup_dir), "items_copied": copied}
+    if not note or not note.strip():
+        return False
+    try:
+        journal = FOLDERS["raw_sources"] / "brain_profile_notes.md"
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        with open(journal, "a", encoding="utf-8") as f:
+            f.write(f"\n## {ts}\n- {note.strip()}\n")
+        return True
+    except Exception as e:
+        logger.error(f"[Memory] Failed to append brain note: {e}")
         return False
 
 
