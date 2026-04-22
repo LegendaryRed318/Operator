@@ -58,11 +58,17 @@ OLLAMA_MODEL_FAST = "qwen2.5-coder:1.5b-base"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = "gemini-1.5-flash-latest"
 USE_GEMINI_FALLBACK = os.getenv("USE_GEMINI_FALLBACK", "true").lower() == "true"
+USE_ELEVENLABS = os.getenv("USE_ELEVENLABS", "false").lower() == "true"
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "onwK4e9ZLuTAKqWW03F9")
 
 if GEMINI_API_KEY:
     logger.info("[Config] Gemini API key configured (masked: ...%s)", GEMINI_API_KEY[-4:])
 else:
     logger.warning("[Config] No Gemini API key found - complex tasks will use Ollama")
+
+if USE_ELEVENLABS and ELEVENLABS_API_KEY:
+    logger.info("[Config] ElevenLabs TTS enabled")
 
 connected_clients = set()
 ACTIVE_MODEL = OLLAMA_MODEL_FAST
@@ -219,11 +225,70 @@ def _tts_worker():
         if _main_loop and _main_loop.is_running():
             asyncio.run_coroutine_threadsafe(broadcast(msg), _main_loop)
 
+    def _play_elevenlabs(text: str) -> bool:
+        if not USE_ELEVENLABS or not ELEVENLABS_API_KEY:
+            return False
+        try:
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+            headers = {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": ELEVENLABS_API_KEY
+            }
+            data = {
+                "text": text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.5
+                }
+            }
+            response = requests.post(url, json=data, headers=headers)
+            if response.status_code == 200:
+                import tempfile
+                # use playsound or pygame. pygame is safer on Windows
+                try:
+                    import pygame
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
+                        f.write(response.content)
+                        temp_path = f.name
+                    
+                    pygame.mixer.init()
+                    pygame.mixer.music.load(temp_path)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy():
+                        time.sleep(0.1)
+                    pygame.mixer.quit()
+                    try:
+                        os.remove(temp_path)
+                    except:
+                        pass
+                    return True
+                except ImportError:
+                    logger.error("[TTS] pygame not installed. Run: pip install pygame")
+                    return False
+            else:
+                logger.error(f"[ElevenLabs] API Error: {response.text}")
+                return False
+        except Exception as e:
+            logger.error(f"[ElevenLabs] Exception: {e}")
+            return False
+
     while True:
         text = _tts_queue.get()
         if text is None:
             break
 
+        logger.info(f"[TTS] Speaking: {text[:60]}...")
+        
+        # Try ElevenLabs First
+        if _play_elevenlabs(text):
+            logger.info("[TTS] Finished speaking (ElevenLabs)")
+            _broadcast_from_thread({"type": "tts_done"})
+            _tts_queue.task_done()
+            continue
+
+        # Fallback to pyttsx3
         if not tts_available or engine is None:
             logger.warning("[TTS] Server TTS unavailable, sending tts_fallback to browser")
             _broadcast_from_thread({
@@ -234,11 +299,10 @@ def _tts_worker():
             _tts_queue.task_done()
             continue
 
-        logger.info(f"[TTS] Speaking: {text[:60]}...")
         try:
             engine.say(text)
             engine.runAndWait()
-            logger.info("[TTS] Finished speaking")
+            logger.info("[TTS] Finished speaking (pyttsx3)")
             _broadcast_from_thread({"type": "tts_done"})
         except Exception as e:
             logger.warning(f"[TTS] Speak failed ({e}), sending tts_fallback to browser")
@@ -463,8 +527,8 @@ async def handle_voice_command(websocket, text: str):
                 }))
                 await broadcast({"type": "state", "state": "speaking"})
 
-                # Speak via server TTS (force=True so it speaks even with browser connected)
-                speak_server(skill_response, force=True)
+                # Speak via server TTS (force=False so it defers to browser if connected)
+                speak_server(skill_response, force=False)
 
                 try:
                     await asyncio.to_thread(save_conversation, text, skill_response)
@@ -578,8 +642,8 @@ async def handle_voice_command(websocket, text: str):
                 break
         conversation_histories[websocket] = history
 
-        # Server TTS — force=True so pyttsx3 speaks via computer speakers
-        speak_server(response, force=True)
+        # Server TTS — force=False so it defers to browser if connected
+        speak_server(response, force=False)
 
         # Save to vault
         if INLINE_IMPORTS_AVAILABLE:

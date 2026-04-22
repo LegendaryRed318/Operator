@@ -48,7 +48,7 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
 };
 
 export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel }) => {
-  const { state: voiceState, lastResponse, interimText, manualWake, sendTextCommand } = useVoice();
+  const { state: voiceState, lastResponse, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode } = useVoice();
   const inputRef = useRef<HTMLInputElement>(null);
   const [aiText, setAiText] = useState('Operator Online');
   const [clock, setClock] = useState('');
@@ -63,6 +63,14 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
   const [serviceHealth, setServiceHealth] = useState<any>({});
   const [errors, setErrors] = useState<any[]>([]);
   const sleeping = false; // TODO: wire to sleep manager
+  
+  const [wakeSensitivity, setWakeSensitivity] = useState(
+    () => localStorage.getItem('jarvis_wake_sensitivity') || 'Normal'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('jarvis_wake_sensitivity', wakeSensitivity);
+  }, [wakeSensitivity]);
 
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleTimeString('en-GB', { hour12: false }));
@@ -72,10 +80,15 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
   }, []);
 
   useEffect(() => {
-    if (voiceState === 'speaking' && lastResponse) {
-      setAiText(lastResponse);
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.type === 'stream_chunk') {
+        setAiText((lastMsg.partial || '') + ' █');
+      } else if (lastMsg.type === 'response') {
+        setAiText(lastMsg.text || "I'm sorry sir, I didn't catch that.");
+      }
     }
-  }, [voiceState, lastResponse]);
+  }, [messages]);
 
   const loadSkillsSummary = async () => {
     try {
@@ -313,7 +326,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
         {/* FLOATING GAUGES */}
         <div style={{
           position: 'absolute', left: 40, top: '20%', display: 'flex', flexDirection: 'column', gap: 20, zIndex: 5,
-          background: 'rgba(3,5,8,0.4)', padding: 20, borderRadius: 16, border: '1px solid rgba(0,180,255,0.1)', backdropFilter: 'blur(8px)'
+          background: 'rgba(3,5,8,0.4)', padding: 20, borderRadius: 16, border: '1px solid rgba(0,180,255,0.1)', backdropFilter: 'blur(8px)', width: 180
         }}>
           <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#00b4ff', fontFamily: "'Share Tech Mono', monospace" }}>SYSTEM DIAGNOSTICS</div>
           <div><div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>CPU</div><div style={{ fontSize: 18, color: '#00ff96' }}>{Math.round(vitals.cpu)}%</div></div>
@@ -356,6 +369,45 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
               ))}
             </div>
           </div>
+
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>WAKE SENSITIVITY</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['Strict', 'Normal', 'Loose'].map(level => (
+                <div 
+                  key={level} 
+                  onClick={() => setWakeSensitivity(level)}
+                  style={{ 
+                    flex: 1, textAlign: 'center', fontSize: 10, padding: '4px 0', cursor: 'pointer',
+                    background: wakeSensitivity === level ? 'rgba(0,180,255,0.3)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${wakeSensitivity === level ? '#00b4ff' : 'transparent'}`,
+                    borderRadius: 4, color: wakeSensitivity === level ? '#fff' : 'rgba(255,255,255,0.5)'
+                  }}
+                >
+                  {level}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* HISTORY PANEL */}
+        <div style={{
+          position: 'absolute', left: 280, top: '20%', zIndex: 6,
+          background: 'rgba(3,5,8,0.4)', padding: 16, borderRadius: 16,
+          border: '1px solid rgba(0,180,255,0.12)', backdropFilter: 'blur(8px)',
+          width: 300, maxHeight: 400, display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#00b4ff', fontFamily: "'Share Tech Mono', monospace", marginBottom: 10 }}>
+            COMMUNICATIONS LOG
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.filter(m => m.type === 'response' || m.type === 'voice_command' || m.type === 'command').slice(-10).map((m, i) => (
+              <div key={i} style={{ fontSize: 12, fontFamily: "'Share Tech Mono', monospace", color: m.type === 'response' ? '#a8cce0' : '#00ff96', lineHeight: 1.4 }}>
+                <span style={{ opacity: 0.5 }}>{m.type === 'response' ? 'JARVIS:' : 'RED:'}</span> {m.text || m.partial || ''}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* SKILLS ADMIN PANEL */}
@@ -397,7 +449,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
           position: 'absolute', left: 40, bottom: 40, zIndex: 6,
           background: 'rgba(20,5,5,0.4)', padding: 16, borderRadius: 16,
           border: '1px solid rgba(255,80,80,0.15)', backdropFilter: 'blur(8px)',
-          width: 320, maxHeight: 300, overflow: 'auto'
+          width: 320, maxHeight: 260, overflow: 'auto'
         }}>
           <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#ff5050', fontFamily: "'Share Tech Mono', monospace", marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
              <div style={{ width: 6, height: 6, borderRadius: '50%', background: errors.length > 0 ? '#ff5050' : '#00ff96', animation: errors.length > 0 ? 'pulse 1s infinite' : 'none' }} />
@@ -532,6 +584,17 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
         {/* FLOATING CHAT INPUT */}
         <div style={{ position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '40%', minWidth: 400 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,180,255,0.3)', borderRadius: 24, padding: '12px 20px', backdropFilter: 'blur(10px)' }}>
+            <div 
+              onClick={toggleConversationMode}
+              style={{ 
+                padding: '6px 12px', borderRadius: 16, cursor: 'pointer', fontSize: 11, fontWeight: 'bold', letterSpacing: '1px',
+                background: isConversationMode ? 'rgba(0,255,150,0.2)' : 'rgba(255,255,255,0.1)', 
+                border: `1px solid ${isConversationMode ? '#00ff96' : 'rgba(255,255,255,0.3)'}`, 
+                color: isConversationMode ? '#00ff96' : '#fff' 
+              }}
+            >
+              CONV {isConversationMode ? 'ON' : 'OFF'}
+            </div>
             <input
               ref={inputRef} type="text" placeholder="Speak or type to JARVIS..."
               disabled={isSending}

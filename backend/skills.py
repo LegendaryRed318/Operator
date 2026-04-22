@@ -229,10 +229,17 @@ class SkillExecutor:
             return True, 0.0
 
     def _normalize_loaded_skill(self, skill_file: Path, data: dict[str, Any]) -> Optional[dict[str, Any]]:
-        skill_def = data.get("skill")
+        if "skill" in data:
+            skill_def = data.get("skill", {})
+            action_def = data.get("action", {})
+        else:
+            # OpenJarvis schema
+            skill_def = data
+            steps = data.get("steps", [])
+            action_def = steps[0] if isinstance(steps, list) and len(steps) > 0 else {}
+
         if not isinstance(skill_def, dict):
             return None
-        action_def = data.get("action", {})
         if not isinstance(action_def, dict):
             action_def = {}
 
@@ -253,7 +260,8 @@ class SkillExecutor:
         timeout_s = self._coerce_float(skill_def.get("timeout_seconds", 8), 8.0)
         response = str(skill_def.get("response", "")).strip()
 
-        action_type = str(action_def.get("type", "response")).strip().lower()
+        # In OpenJarvis, action type is action_def.get("action", "response") rather than "type"
+        action_type = str(action_def.get("type", action_def.get("action", "response"))).strip().lower()
         action_command = str(action_def.get("command", "")).strip()
         action_response = str(action_def.get("response", response)).strip()
         action_timeout = self._coerce_float(action_def.get("timeout_seconds", timeout_s), timeout_s)

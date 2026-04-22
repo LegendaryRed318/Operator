@@ -15,6 +15,8 @@ interface VoiceContextType {
   sendTextCommand: (text: string) => Promise<void>;
   messages: any[];
   wsConnected: boolean;
+  isConversationMode: boolean;
+  toggleConversationMode: () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -35,15 +37,10 @@ const WAKE_WORD_PATTERNS = [
   /\bjalvis\b/,
   /\bdovis\b/
 ];
-const MAX_RECORDING_MS = 12000;
+const MAX_RECORDING_MS = 8000;
 const SILENCE_CHECK_MS = 200;
 const SILENCE_RMS_THRESHOLD = 0.012;
-const SILENCE_STOP_MS = 900;
-
-// TTS duration estimation removed — now event-driven via `tts_done` WebSocket event
-
-// TTS duration estimation removed — now event-driven via `tts_done` WebSocket event
-
+const SILENCE_STOP_MS = 600;
 
 /**
  * Clean markdown/formatting from text before speaking.
@@ -74,6 +71,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
   const [interimText, setInterimText] = useState('');
+  const [isConversationMode, setIsConversationMode] = useState(false);
+
+  const stateWatchdogRef = useRef<{ state: VoiceState; since: number }>({ state: 'idle', since: Date.now() });
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -95,7 +95,6 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const speakCooldown = useRef(false);
   const isConnecting = useRef(false);
 
-  // FIX: Track ongoing TTS timeout so we can cancel it if tts_fallback arrives
   const ttsDurationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recordingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silenceInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -103,10 +102,42 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const lastWakeTriggerAt = useRef(0);
   const WAKE_DEBOUNCE_MS = 2500;
 
+  // Use a ref for isConversationMode so callbacks get latest value without dependencies
+  const isConversationModeRef = useRef(isConversationMode);
+  useEffect(() => {
+    isConversationModeRef.current = isConversationMode;
+  }, [isConversationMode]);
+
   const setVoiceState = useCallback((newState: VoiceState, offline = false) => {
     setState(newState);
     setIsOffline(offline);
+    stateWatchdogRef.current = { state: newState, since: Date.now() };
   }, []);
+
+  const toggleConversationMode = useCallback(() => {
+    setIsConversationMode(prev => {
+      const next = !prev;
+      console.log(`[Voice] Conversation mode: ${next ? 'ON' : 'OFF'}`);
+      return next;
+    });
+  }, []);
+
+  // Priority 5: Orb state watchdog
+  useEffect(() => {
+    const watchdog = setInterval(() => {
+      const { state: trackedState, since } = stateWatchdogRef.current;
+      const elapsed = Date.now() - since;
+      
+      if (trackedState === 'thinking' && elapsed > 15000) {
+        console.warn('[Watchdog] Stuck in thinking state for >15s. Forcing reset.');
+        setVoiceState(hotwordActive.current ? 'hotword' : 'idle');
+      } else if (trackedState === 'speaking' && elapsed > 20000 && !isSpeakingRef.current) {
+        console.warn('[Watchdog] Stuck in speaking state for >20s. Forcing reset.');
+        setVoiceState(hotwordActive.current ? 'hotword' : 'idle');
+      }
+    }, 5000);
+    return () => clearInterval(watchdog);
+  }, [setVoiceState]);
 
   const reportWakeTelemetry = useCallback((event: string, detail?: string) => {
     ws.current?.send(JSON.stringify({
@@ -125,6 +156,29 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     return true;
   }, []);
 
+  const onSpeechFinished = useCallback(() => {
+    isSpeakingRef.current = false;
+    if (ttsDurationTimeout.current) {
+      clearTimeout(ttsDurationTimeout.current);
+      ttsDurationTimeout.current = null;
+    }
+    
+    // Give a small cooldown before transitioning state
+    setTimeout(() => {
+      speakCooldown.current = false;
+      if (isConversationModeRef.current) {
+        console.log('[Voice] Conversation mode ON — auto-triggering mic');
+        setVoiceState('listening');
+        // Because of dependency cycle with startListening, we call manualWake from outside
+      } else if (hotwordActive.current) {
+        setVoiceState('hotword');
+        // hotwordListenLoop will be called if hotwordActive is true, but since we broke dependencies
+        // we might just let state update and rely on another effect, OR we just ignore and let hotword continue.
+      } else {
+        setVoiceState('idle');
+      }
+    }, 900);
+  }, [setVoiceState]);
 
   const initWebSocket = useCallback(async (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -168,90 +222,32 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             setVoiceState('speaking');
 
             if (data.server_tts) {
-              /**
-               * Server TTS is active — the backend will send a `tts_done`
-               * event when pyttsx3 finishes speaking. We set a safety timeout
-               * (60s) in case the event is lost, but normally tts_done arrives
-               * and cancels this timeout, giving us precise synchronization.
-               */
               console.log(`[Voice] Server TTS active — waiting for tts_done event`);
               isSpeakingRef.current = true;
               speakCooldown.current = true;
 
-              // Clear any previous timeout
-              if (ttsDurationTimeout.current) {
-                clearTimeout(ttsDurationTimeout.current);
-              }
+              if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
 
-              // Safety fallback: if tts_done never arrives, recover after 60s
               ttsDurationTimeout.current = setTimeout(() => {
-                console.warn('[Voice] tts_done never arrived — recovering after safety timeout');
-                isSpeakingRef.current = false;
-                speakCooldown.current = false;
-                if (hotwordActive.current) {
-                  setVoiceState('hotword');
-                  hotwordListenLoop();
-                } else {
-                  setVoiceState('idle');
-                }
-              }, 60000);
+                console.warn('[Voice] tts_done never arrived — recovering after safety timeout (12s)');
+                onSpeechFinished();
+              }, 12000);
 
             } else {
-              // Browser TTS (server didn't handle it)
               const cleanText = cleanTextForSpeech(responseText);
-              speak(cleanText, () => {
-                if (hotwordActive.current) {
-                  setVoiceState('hotword');
-                  hotwordListenLoop();
-                } else {
-                  setVoiceState('idle');
-                }
-              });
+              speak(cleanText, onSpeechFinished);
             }
 
           } else if (data.type === 'tts_done') {
-            /**
-             * Server TTS finished speaking — this is the real signal.
-             * Cancel the safety timeout and transition state immediately.
-             */
             console.log('[Voice] Server TTS finished (tts_done received)');
-            if (ttsDurationTimeout.current) {
-              clearTimeout(ttsDurationTimeout.current);
-              ttsDurationTimeout.current = null;
-            }
-            isSpeakingRef.current = false;
-            speakCooldown.current = false;
-            if (hotwordActive.current) {
-              setVoiceState('hotword');
-              hotwordListenLoop();
-            } else {
-              setVoiceState('idle');
-            }
-
+            onSpeechFinished();
           } else if (data.type === 'tts_fallback') {
-            /**
-             * Server TTS failed — cancel the safety timeout and
-             * use browser TTS instead.
-             */
             console.log(`[Voice] Server TTS failed (${data.reason}) — using browser fallback`);
-
-            if (ttsDurationTimeout.current) {
-              clearTimeout(ttsDurationTimeout.current);
-              ttsDurationTimeout.current = null;
-            }
-
+            if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
             const fallbackText = data.text || "I'm sorry sir, I didn't catch that.";
             const cleanText = cleanTextForSpeech(fallbackText);
             setVoiceState('speaking');
-            speak(cleanText, () => {
-              if (hotwordActive.current) {
-                setVoiceState('hotword');
-                hotwordListenLoop();
-              } else {
-                setVoiceState('idle');
-              }
-            });
-
+            speak(cleanText, onSpeechFinished);
           } else if (data.type === 'state') {
             if (data.state === 'thinking') setVoiceState('thinking');
           } else if (data.type === 'ack') {
@@ -288,12 +284,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       }, 3000);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOffline, setVoiceState]);
+  }, [isOffline, setVoiceState, onSpeechFinished]);
 
-  /**
-   * Browser speech synthesis with better voice selection and error handling.
-   * Tries British male → any en-GB → any English → system default.
-   */
   const speakWithBrowserTTS = useCallback((text: string, onDone?: () => void) => {
     if (!text.trim()) {
       onDone?.();
@@ -311,12 +303,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     const trySpeak = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length === 0) {
-        // Voices not loaded yet — wait and retry
         setTimeout(trySpeak, 100);
         return;
       }
 
-      // Priority: British male → en-GB → any English
       const britishMale = voices.find(v =>
         (v.name.includes('George') || v.name.includes('David') || v.name.includes('James')) &&
         v.lang.startsWith('en')
@@ -336,7 +326,6 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       };
 
       utterance.onerror = (e) => {
-        // 'interrupted' is normal when we cancel() — don't log as error
         if (e.error !== 'interrupted') {
           console.error('[TTS] Browser speech error:', e.error);
         }
@@ -354,10 +343,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     speakCooldown.current = true;
     speakWithBrowserTTS(text, () => {
       isSpeakingRef.current = false;
-      setTimeout(() => {
-        speakCooldown.current = false;
-        onDone?.();
-      }, 1500); // Small cooldown so mic doesn't pick up tail end
+      speakCooldown.current = false;
+      onDone?.();
     });
   }, [speakWithBrowserTTS]);
 
@@ -393,6 +380,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         hotwordActive.current = false;
         if (hotwordTimeout.current) clearTimeout(hotwordTimeout.current);
         setVoiceState('idle');
+        setIsConversationMode(false);
         return;
       }
 
@@ -400,12 +388,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         ws.current?.send(JSON.stringify({ type: 'voice_command', text: data.text }));
       } else {
         setVoiceState(hotwordActive.current ? 'hotword' : 'idle');
-        if (hotwordActive.current) hotwordListenLoop();
       }
     } catch (error) {
       console.error('[Voice] Transcription error:', error);
       setVoiceState(hotwordActive.current ? 'hotword' : 'idle');
-      if (hotwordActive.current) hotwordListenLoop();
     }
     audioChunks.current = [];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -642,6 +628,15 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     try { recognition.start(); } catch { /* ignore */ }
   }, [canTriggerWake, pythonHotwordLoop, reportWakeTelemetry, setVoiceState, startListening]);
 
+  // Hook up state-driven triggers that used to be inside onSpeechFinished to avoid dependency cycles
+  useEffect(() => {
+    if (state === 'listening' && !isRecording.current && !isSpeakingRef.current) {
+      startListening();
+    } else if (state === 'hotword' && !isRecording.current && !isSpeakingRef.current && hotwordActive.current) {
+      hotwordListenLoop();
+    }
+  }, [state, startListening, hotwordListenLoop]);
+
   const activateHotwordMode = useCallback(() => {
     if (!hotwordActive.current) {
       console.log('[Voice] Hotword mode activated');
@@ -679,7 +674,6 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     console.log('[Voice] Text command sent:', text);
   }, [initWebSocket, setVoiceState]);
 
-  // Listen for wave gesture
   useEffect(() => {
     const handleWake = () => {
       const now = Date.now();
@@ -692,12 +686,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     return () => window.removeEventListener('jarvis:wake', handleWake);
   }, [activateHotwordMode]);
 
-  // Autoconnect on mount
   useEffect(() => {
     initWebSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   return (
     <VoiceContext.Provider value={{
@@ -711,7 +703,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       activateHotwordMode,
       sendTextCommand,
       messages,
-      wsConnected
+      wsConnected,
+      isConversationMode,
+      toggleConversationMode
     }}>
       {children}
     </VoiceContext.Provider>

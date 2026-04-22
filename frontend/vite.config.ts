@@ -18,6 +18,7 @@ export default defineConfig({
     allowedHosts: [
       'dry-handcraft-dusk.ngrok-free.dev',   // Your exact domain
       '.ngrok-free.dev',                     // Allows ALL ngrok domains
+      '.ngrok-free.app',
       'localhost',
       '127.0.0.1'
     ]
