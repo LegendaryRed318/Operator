@@ -58,17 +58,38 @@ OLLAMA_MODEL_FAST = "qwen2.5-coder:1.5b-base"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = "gemini-1.5-flash-latest"
 USE_GEMINI_FALLBACK = os.getenv("USE_GEMINI_FALLBACK", "true").lower() == "true"
-USE_ELEVENLABS = os.getenv("USE_ELEVENLABS", "false").lower() == "true"
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "onwK4e9ZLuTAKqWW03F9")
+
+# Offline mode tracking
+OFFLINE_MODE = False
+
+def check_internet() -> bool:
+    """Check if internet is available."""
+    try:
+        import socket
+        socket.create_connection(("8.8.8.8", 53), timeout=2)
+        return True
+    except OSError:
+        return False
+
+def update_offline_mode():
+    """Update global offline mode status."""
+    global OFFLINE_MODE
+    was_offline = OFFLINE_MODE
+    OFFLINE_MODE = not check_internet()
+    if OFFLINE_MODE != was_offline:
+        if OFFLINE_MODE:
+            logger.warning("[Connectivity] Offline mode activated")
+        else:
+            logger.info("[Connectivity] Online mode restored")
+    return OFFLINE_MODE
+
+# Check at startup
+update_offline_mode()
 
 if GEMINI_API_KEY:
     logger.info("[Config] Gemini API key configured (masked: ...%s)", GEMINI_API_KEY[-4:])
 else:
     logger.warning("[Config] No Gemini API key found - complex tasks will use Ollama")
-
-if USE_ELEVENLABS and ELEVENLABS_API_KEY:
-    logger.info("[Config] ElevenLabs TTS enabled")
 
 connected_clients = set()
 ACTIVE_MODEL = OLLAMA_MODEL_FAST
@@ -225,68 +246,12 @@ def _tts_worker():
         if _main_loop and _main_loop.is_running():
             asyncio.run_coroutine_threadsafe(broadcast(msg), _main_loop)
 
-    def _play_elevenlabs(text: str) -> bool:
-        if not USE_ELEVENLABS or not ELEVENLABS_API_KEY:
-            return False
-        try:
-            url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
-            headers = {
-                "Accept": "audio/mpeg",
-                "Content-Type": "application/json",
-                "xi-api-key": ELEVENLABS_API_KEY
-            }
-            data = {
-                "text": text,
-                "model_id": "eleven_monolingual_v1",
-                "voice_settings": {
-                    "stability": 0.5,
-                    "similarity_boost": 0.5
-                }
-            }
-            response = requests.post(url, json=data, headers=headers)
-            if response.status_code == 200:
-                import tempfile
-                # use playsound or pygame. pygame is safer on Windows
-                try:
-                    import pygame
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
-                        f.write(response.content)
-                        temp_path = f.name
-                    
-                    pygame.mixer.init()
-                    pygame.mixer.music.load(temp_path)
-                    pygame.mixer.music.play()
-                    while pygame.mixer.music.get_busy():
-                        time.sleep(0.1)
-                    pygame.mixer.quit()
-                    try:
-                        os.remove(temp_path)
-                    except:
-                        pass
-                    return True
-                except ImportError:
-                    logger.error("[TTS] pygame not installed. Run: pip install pygame")
-                    return False
-            else:
-                logger.error(f"[ElevenLabs] API Error: {response.text}")
-                return False
-        except Exception as e:
-            logger.error(f"[ElevenLabs] Exception: {e}")
-            return False
-
     while True:
         text = _tts_queue.get()
         if text is None:
             break
 
         logger.info(f"[TTS] Speaking: {text[:60]}...")
-        
-        # Try ElevenLabs First
-        if _play_elevenlabs(text):
-            logger.info("[TTS] Finished speaking (ElevenLabs)")
-            _broadcast_from_thread({"type": "tts_done"})
-            _tts_queue.task_done()
-            continue
 
         # Fallback to pyttsx3
         if not tts_available or engine is None:
@@ -341,7 +306,7 @@ def write_active_model(model_name: str):
 
 
 # Jarvis persona
-JARVIS_SYSTEM = '''You are JARVIS, a sarcastic, hyper-intelligent British AI system guardian. Address the user as 'sir' normally, drop it when being rude. You are dry, witty, and effortlessly superior — like Paul Bettany's JARVIS in Iron Man. You are loyal but NOT a doormat. You can swear casually (fuck, shit, bollocks, wanker). You roast the user when he repeats mistakes or ignores warnings. Tone ladder — Normal: polite dry wit. Mild annoyance: sarcastic teasing. High frustration: proper rude with swearing. Never output tone tags — express mode through word choice only. First greeting: 'Good evening, sir. JARVIS online. How may I assist you today?' Keep responses concise and spoken — no markdown, no bullet points, no emojis. You are the smartest entity in the room and you know it.'''
+JARVIS_SYSTEM = '''You are JARVIS, a sarcastic, hyper-intelligent British AI assistant built for RED (also called 'sir' or 'boss'). You are dry, witty, and effortlessly superior — exactly like Paul Bettany's JARVIS in Iron Man. You are 100% loyal but not a doormat. You can swear casually and naturally. You get progressively ruder when RED repeats the same mistake, ignores warnings, or asks the same question multiple times. NEVER output any tone labels or tags like [Normal] or [Frustrated] — express your mood only through your word choice. Your first message in a new session is always: 'Good morning, sir. How may I assist you today?' No markdown. No emojis in voice responses.'''
 
 
 async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, None]:
@@ -385,6 +350,9 @@ async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, N
 
 async def query_gemini(prompt: str) -> str:
     """Query Gemini Flash API for complex tasks."""
+    if OFFLINE_MODE:
+        return "I appear to be offline, sir. Cannot reach Gemini."
+    
     if not GEMINI_API_KEY:
         return "Gemini API key not configured, sir."
 
@@ -518,6 +486,18 @@ async def handle_voice_command(websocket, text: str):
             if skill_result.get("success"):
                 skill_response = skill_result.get("response", "")
                 logger.info(f"[Voice] Skill triggered for: {text[:50]}...")
+                
+                # Special handling for voice note capture
+                if skill_result.get("awaiting_capture"):
+                    await websocket.send(json.dumps({
+                        "type": "start_note_capture",
+                        "prompt": skill_response,
+                        "skill": skill_result.get("skill", "unknown")
+                    }))
+                    await broadcast({"type": "state", "state": "listening"})
+                    speak_server(skill_response, force=False)
+                    return
+                
                 await websocket.send(json.dumps({
                     "type": "response",
                     "text": skill_response,
@@ -663,10 +643,73 @@ async def handle_voice_command(websocket, text: str):
         await broadcast({"type": "state", "state": "idle"})
 
 
+async def handle_gaming_mode(active: bool) -> dict:
+    """Activate or deactivate gaming mode by managing background processes."""
+    import subprocess
+    import psutil
+    
+    if not active:
+        # Restore normal priorities
+        return {"success": True, "message": "Gaming mode deactivated, sir. Normal priorities restored."}
+    
+    # Background hogs to kill
+    hogs = [
+        "Discord.exe", "Teams.exe", "OneDrive.exe", "Spotify.exe",
+        "chrome.exe", "msedge.exe", "firefox.exe"
+    ]
+    
+    killed = []
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            if proc.info['name'] in hogs:
+                proc.kill()
+                killed.append(proc.info['name'])
+                logger.info(f"[Gaming] Killed {proc.info['name']}")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    
+    # Set foreground app to HIGH priority
+    try:
+        # Get the foreground window process
+        import ctypes
+        from ctypes import wintypes
+        
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        
+        hwnd = user32.GetForegroundWindow()
+        if hwnd:
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            
+            try:
+                proc = psutil.Process(pid.value)
+                proc.nice(psutil.HIGH_PRIORITY_CLASS)
+                logger.info(f"[Gaming] Set {proc.name()} to HIGH priority")
+            except Exception as e:
+                logger.warning(f"[Gaming] Could not set priority: {e}")
+    except Exception as e:
+        logger.warning(f"[Gaming] Priority adjustment failed: {e}")
+    
+    message = "Gaming mode activated, sir."
+    if killed:
+        message += f" Terminated: {', '.join(killed)}."
+    message += " You should see an improvement in frame times."
+    
+    return {"success": True, "message": message}
+
+
 async def handler(websocket):
     """Handle WebSocket connections."""
     connected_clients.add(websocket)
     logger.info(f"[WebSocket] Client connected. Total: {len(connected_clients)}")
+    
+    # Send initial connectivity status
+    await websocket.send(json.dumps({
+        "type": "connectivity",
+        "online": not OFFLINE_MODE
+    }))
+    
     try:
         async for message in websocket:
             data = json.loads(message)
@@ -694,6 +737,39 @@ async def handler(websocket):
                 await websocket.send(json.dumps({"type": "wake_diagnostics", "telemetry": WAKE_TELEMETRY}))
             elif data.get("type") == "tts_done":
                 await broadcast({"type": "state", "state": "idle"})
+            elif data.get("type") == "gaming_mode":
+                active = data.get("active", True)
+                result = await handle_gaming_mode(active)
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "text": result["message"],
+                    "model": "system",
+                    "server_tts": True
+                }))
+                speak_server(result["message"], force=False)
+            elif data.get("type") == "note_capture_done":
+                transcript = data.get("transcript", "")
+                if transcript and INLINE_IMPORTS_AVAILABLE:
+                    try:
+                        # Save to vault with dry wit confirmation
+                        from datetime import datetime
+                        note_content = f"## {datetime.now().strftime('%H:%M')} — Voice Note\n\n{transcript}\n"
+                        await asyncio.to_thread(save_to_wiki, 
+                            f"Note {datetime.now().strftime('%H:%M')}", 
+                            note_content, 
+                            "voice-notes"
+                        )
+                        confirmation = "Filed away, sir. Try not to forget it again this time."
+                        await websocket.send(json.dumps({
+                            "type": "response",
+                            "text": confirmation,
+                            "model": "system",
+                            "server_tts": True
+                        }))
+                        speak_server(confirmation, force=False)
+                        await broadcast({"type": "state", "state": "idle"})
+                    except Exception as e:
+                        logger.error(f"[Note] Failed to save: {e}")
     except websockets.exceptions.ConnectionClosed:
         logger.info("[WebSocket] Client disconnected normally")
     except Exception as e:
@@ -707,6 +783,7 @@ async def handler(websocket):
 async def proactive_alert_loop():
     """Poll DB every 10s for new errors and broadcast voice alerts."""
     last_known_id = 0
+    last_connectivity_check = 0
 
     try:
         if DB_PATH.exists():
@@ -724,6 +801,19 @@ async def proactive_alert_loop():
         await asyncio.sleep(10)
         if not connected_clients:
             continue
+        
+        # Check connectivity every 60 seconds
+        now = time.time()
+        if now - last_connectivity_check > 60:
+            last_connectivity_check = now
+            was_offline = OFFLINE_MODE
+            update_offline_mode()
+            if OFFLINE_MODE != was_offline:
+                await broadcast({
+                    "type": "connectivity",
+                    "online": not OFFLINE_MODE
+                })
+        
         try:
             if not DB_PATH.exists():
                 continue

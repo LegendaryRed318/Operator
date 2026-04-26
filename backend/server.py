@@ -57,14 +57,15 @@ SKILLS_PATH.mkdir(parents=True, exist_ok=True)
 
 
 def _get_whisper_model():
-    """Lazy-load Whisper model."""
+    """Lazy-load Whisper model - using small for better accuracy on 8GB RAM."""
     global _whisper_model
     with _whisper_lock:
         if _whisper_model is None:
             try:
                 from faster_whisper import WhisperModel
-                _whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
-                logger.info("[Whisper] Model loaded (base, cpu, int8)")
+                # Upgraded from "base" to "small" for better accuracy
+                _whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
+                logger.info("[Whisper] Model loaded (small, cpu, int8)")
             except Exception as e:
                 logger.error(f"[Whisper] Failed to load model: {e}")
         return _whisper_model
@@ -175,7 +176,11 @@ def _collect_system_snapshot() -> dict[str, Any]:
                     "free": usage.free,
                     "percent": usage.percent
                 })
+            except PermissionError:
+                # Drive exists but user doesn't have permission - skip silently
+                continue
             except Exception:
+                # Drive doesn't exist or other error - skip
                 continue
     else:
         for part in psutil.disk_partitions():
@@ -389,6 +394,7 @@ async def health():
 async def health_detailed():
     """Probe all JARVIS sub-services and return a status map."""
     import socket
+    from datetime import datetime
     
     def check_port(port: int) -> bool:
         try:
@@ -396,19 +402,44 @@ async def health_detailed():
                 return True
         except:
             return False
-
-    # Probe status of all critical ports
-    results = {
-        "api": {"status": "online", "port": 5050},
-        "websocket": {"status": "online" if check_port(8765) else "offline", "port": 8765},
-        "ollama": {"status": "online" if check_port(11434) else "offline", "port": 11434},
-        "frontend": {"status": "online" if check_port(8081) else "offline", "port": 8081},
+    
+    def check_database() -> bool:
+        """Try a quick write test to SQLite."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH), timeout=2.0)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            conn.close()
+            return True
+        except:
+            return False
+    
+    # Check all services
+    ws_ok = check_port(8765)
+    ollama_ok = check_port(11434)
+    db_ok = check_database()
+    
+    # Determine overall status
+    all_ok = ws_ok and ollama_ok and db_ok
+    any_ok = ws_ok or ollama_ok or db_ok
+    
+    if all_ok:
+        status = "ok"
+    elif any_ok:
+        status = "degraded"
+    else:
+        status = "offline"
+    
+    return {
+        "status": status,
+        "services": {
+            "api": True,
+            "websocket": ws_ok,
+            "ollama": ollama_ok,
+            "database": db_ok
+        },
+        "timestamp": datetime.now().isoformat()
     }
-    
-    # Check if Watcher is likely running by looking for its PID if we can find it, 
-    # but for now port checks are most reliable for the network services.
-    
-    return results
 
 
 @app.get("/config", response_model=ConfigResponse)
@@ -562,10 +593,21 @@ async def transcribe(audio: UploadFile = File(...)):
 
         # Run transcription in thread pool (blocking IO)
         def do_transcribe():
-            segments, _ = model.transcribe(str(wav_path), language='en', beam_size=5)
-            return " ".join(seg.text for seg in segments).strip()
+            # Added initial_prompt and language for JARVIS voice commands
+            segments, info = model.transcribe(
+                str(wav_path),
+                beam_size=5,
+                initial_prompt="Jarvis computer voice commands:",
+                language="en"
+            )
+            text = " ".join([seg.text for seg in segments]).strip()
+            return text
 
-        text = await asyncio.to_thread(do_transcribe)
+        loop = asyncio.get_event_loop()
+        text = await asyncio.wait_for(
+            loop.run_in_executor(None, do_transcribe),
+            timeout=30.0
+        )
 
         # Cleanup temp files
         try:

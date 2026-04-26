@@ -23,7 +23,7 @@ class DecisionEngine:
         self.api_url = f"{self.base_url}/api/generate"
         logger.info("DecisionEngine ready (using direct HTTP API)")
 
-    def _query_ollama(self, prompt: str, system: str = "", max_tokens: int = 500, temperature: float = 0.3) -> str:
+    def _query_ollama(self, prompt: str, system: str = "", max_tokens: int = 4096, temperature: float = 0.3) -> str:
         """Send a query to Ollama HTTP API with dynamic RAM-aware model selection."""
         try:
             # Always check RAM before query for optimal model selection

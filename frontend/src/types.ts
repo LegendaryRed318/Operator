@@ -5,14 +5,40 @@
 // Voice state management
 export type VoiceState = 'idle' | 'hotword' | 'listening' | 'thinking' | 'speaking' | 'error' | 'offline';
 
-// WebSocket message types
+// WebSocket message types - comprehensive union for all message variants
+export type WebSocketMessageType = 
+  | 'state' 
+  | 'response' 
+  | 'error' 
+  | 'transcription' 
+  | 'ping' 
+  | 'ack'
+  | 'tts_done'
+  | 'tts_fallback'
+  | 'proactive_alert'
+  | 'wake_word'
+  | 'voice_command'
+  | 'command'
+  | 'wake_telemetry'
+  | 'wake_diagnostics'
+  | 'gaming_mode'
+  | 'connectivity';
+
 export interface WebSocketMessage {
-  type: 'state' | 'response' | 'error' | 'transcription' | 'ping' | 'ack';
+  type: WebSocketMessageType;
   state?: VoiceState;
   text?: string;
   error?: string;
   model?: string;
   server_tts?: boolean;
+  reason?: string;
+  project?: string;
+  detail?: string;
+  mode?: string;
+  telemetry?: Record<string, unknown>;
+  online?: boolean;
+  event?: string;
+  active?: boolean;
 }
 
 // Conversation history entry

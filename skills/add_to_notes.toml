@@ -1,0 +1,11 @@
+[skill]
+name = "Add to Notes"
+triggers = ["add to notes", "take a note", "note this", "remember this"]
+action_type = "voice_capture_then_write"
+
+[actions.voice_capture_then_write]
+vault_path = "E:/JarvisVault/notes"
+
+[response]
+success = "Go ahead, sir."
+after_capture = "Noted."

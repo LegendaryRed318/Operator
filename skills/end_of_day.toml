@@ -1,0 +1,10 @@
+[skill]
+name = "End of Day"
+triggers = ["end of day", "wrap up", "eod", "thats it for today", "shutting down"]
+action_type = "vault_log"
+
+[actions.vault_log]
+vault_path = "E:/JarvisVault/logs"
+
+[response]
+success = "End of day logged, sir. Rest well."

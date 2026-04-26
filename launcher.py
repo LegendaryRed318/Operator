@@ -66,7 +66,8 @@ SERVICES = {
     },
     "frontend": {
         "name": "Frontend (Vite)",
-        "cmd": ["npm", "run", "dev"],
+        # Use cmd.exe /c to run npm without spawning PowerShell window
+        "cmd": ["cmd.exe", "/c", "npm", "run", "dev"],
         "cwd": str(FRONTEND_DIR),
         "log": LOGS_DIR / "frontend.log",
         "delay": 8,  # Wait for WebSocket to be ready
@@ -77,6 +78,10 @@ SERVICES = {
 processes = {}
 # Restart attempt counters per service
 restart_counts: dict = {}
+# Service start times for restart count reset (reset after 5 min of stability)
+service_start_times: dict = {}
+# Time after which restart count resets (5 minutes)
+RESTART_RESET_SECONDS = 300
 
 
 def log_message(message: str):
@@ -108,9 +113,7 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
     creationflags = subprocess.CREATE_NO_WINDOW
     
     try:
-        # Use shell=True on Windows for non-executable commands like npm
-        use_shell = os.name == 'nt' and config["cmd"][0] == "npm"
-        
+        # FIX: No shell=True needed — cmd.exe /c handles it without PowerShell window
         process = subprocess.Popen(
             config["cmd"],
             cwd=config["cwd"],
@@ -119,7 +122,7 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
             stdin=subprocess.DEVNULL,
             creationflags=creationflags,
             start_new_session=False,
-            shell=use_shell
+            shell=False
         )
         
         processes[service_id] = {
@@ -127,7 +130,10 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
             "config": config,
             "log_handle": log_handle,
         }
-        
+
+        # Track start time for restart count reset logic (5 min stability = reset)
+        service_start_times[service_id] = time.time()
+
         log_message(f"[OK] Started {config['name']} (PID: {process.pid})")
         return process
         
@@ -189,7 +195,8 @@ RESTART_BACKOFF = [5, 15, 30]  # seconds between restart attempts
 
 
 def check_service_health():
-    """Check if any services have crashed; restart them with exponential backoff."""
+    """Check if any services have crashed; restart them with exponential backoff.
+    Reset restart count after 5 minutes of stable operation."""
     crashed = []
     for service_id, info in list(processes.items()):
         process = info["process"]
@@ -203,9 +210,21 @@ def check_service_health():
                 info["log_handle"].close()
             except Exception:
                 pass
+        else:
+            # Service is running — check if we should reset restart count
+            start_time = service_start_times.get(service_id)
+            if start_time:
+                elapsed = time.time() - start_time
+                if elapsed > RESTART_RESET_SECONDS and restart_counts.get(service_id, 0) > 0:
+                    log_message(f"[OK] {info['config']['name']} stable for {RESTART_RESET_SECONDS//60}min — reset restart count")
+                    restart_counts[service_id] = 0
 
     for service_id in crashed:
         del processes[service_id]
+        # Remove start time tracking for crashed service
+        if service_id in service_start_times:
+            del service_start_times[service_id]
+
         attempts = restart_counts.get(service_id, 0)
         if attempts < MAX_RESTARTS:
             delay = RESTART_BACKOFF[min(attempts, len(RESTART_BACKOFF) - 1)]
@@ -215,12 +234,12 @@ def check_service_health():
             try:
                 start_service(service_id, config)
                 restart_counts[service_id] = attempts + 1
+                # Track start time for restart count reset logic
+                service_start_times[service_id] = time.time()
             except Exception as e:
                 log_message(f"[FAIL] Failed to restart {config['name']}: {e}")
         else:
             log_message(f"[FAIL] {SERVICES[service_id]['name']} has crashed {MAX_RESTARTS} times -- giving up.")
-
-    return len(crashed) == 0
 
 
 def wait_for_port(port: int, timeout: int = 30) -> bool:
@@ -288,7 +307,7 @@ def main():
         log_message(f"|     JARVIS SYSTEM GUARDIAN v{mode_label}    |")
         log_message("|          OPERATOR ONLINE             |")
         log_message("+--------------------------------------+")
-        log_message("|  Dashboard: http://localhost:8081    |")
+        log_message("|  Dashboard: http://localhost:8080    |")
         log_message("|  API:       http://localhost:5050    |")
         log_message("|  WebSocket: ws://localhost:8765      |")
         log_message("+--------------------------------------+")
@@ -296,12 +315,12 @@ def main():
         log_message("Press Ctrl+C to stop all services gracefully.")
 
         # Auto-open dashboard once the frontend dev server is ready
-        log_message("Waiting for frontend to initialise (port 8081)...")
-        if wait_for_port(8081, timeout=45):
-            webbrowser.open("http://localhost:8081")
-            log_message("Browser opened -> http://localhost:8081")
+        log_message("Waiting for frontend to initialise (port 8080)...")
+        if wait_for_port(8080, timeout=45):
+            webbrowser.open("http://localhost:8080")
+            log_message("Browser opened -> http://localhost:8080")
         else:
-            log_message("[WARN] Frontend did not respond on port 8081 after 45s")
+            log_message("[WARN] Frontend did not respond on port 8080 after 45s")
 
         # Monitor services
         while True:

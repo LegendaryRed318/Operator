@@ -277,6 +277,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             if (data.state === 'thinking') setVoiceState('thinking');
           } else if (data.type === 'ack') {
             console.log('[Voice]', data.message);
+          } else if (data.type === 'start_note_capture') {
+            console.log('[Voice] Starting note capture recording');
+            // Start a 10-second VAD recording session for note taking
+            startNoteCaptureRecording();
           }
         } catch (e) {
           console.error('[Voice] Failed to parse message:', e);
@@ -523,6 +527,98 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       setVoiceState('idle');
     }
   }, [initWebSocket, sendAudioForTranscription, setVoiceState]);
+
+  // Special 10-second VAD recording for vault note capture
+  const startNoteCaptureRecording = useCallback(async () => {
+    if (isRecording.current) return;
+    
+    const connected = await initWebSocket();
+    if (!connected) return;
+
+    try {
+      setVoiceState('listening');
+      console.log('[Voice] Note capture recording started (10s max)');
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      
+      recorder.onstop = async () => {
+        isRecording.current = false;
+        stream.getTracks().forEach(t => t.stop());
+        audioCtx.close();
+        if (vadInterval.current) clearInterval(vadInterval.current);
+
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        if (blob.size < 1000) {
+          setVoiceState('idle');
+          return;
+        }
+
+        try {
+          // Transcribe the note
+          const formData = new FormData();
+          formData.append('audio', blob, 'note.webm');
+          const res = await fetch(`${getApiBaseUrl()}/transcribe`, { method: 'POST', body: formData });
+          const data = await res.json();
+          const transcript = data.text || '';
+          
+          console.log('[Voice] Note captured:', transcript);
+          
+          // Send back to server for saving to vault
+          ws.current?.send(JSON.stringify({
+            type: 'note_capture_done',
+            transcript: transcript
+          }));
+        } catch (err) {
+          console.error('[Voice] Note transcription failed:', err);
+          setVoiceState('idle');
+        }
+      };
+
+      recorder.start();
+      isRecording.current = true;
+
+      // VAD: Stop after 1.2s of silence or max 10 seconds
+      const dataArray = new Uint8Array(analyser.ffftSize || 2048);
+      let silenceStart = Date.now();
+      const MAX_NOTE_MS = 10000;
+      const SILENCE_MS = 1200;
+      const startTime = Date.now();
+
+      vadInterval.current = window.setInterval(() => {
+        analyser.getByteTimeDomainData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
+        const average = sum / dataArray.length;
+        const rms = average / 128;
+
+        if (rms < SILENCE_RMS_THRESHOLD) {
+          if (Date.now() - silenceStart > SILENCE_MS) {
+            if (recorder.state === 'recording') recorder.stop();
+          }
+        } else {
+          silenceStart = Date.now();
+        }
+
+        if (Date.now() - startTime > MAX_NOTE_MS) {
+          if (recorder.state === 'recording') recorder.stop();
+        }
+      }, SILENCE_CHECK_MS);
+
+    } catch (err) {
+      console.error('[Voice] Note capture failed:', err);
+      setVoiceState('idle');
+    }
+  }, [initWebSocket, setVoiceState]);
 
   const pythonHotwordLoop = useCallback(async () => {
     if (!hotwordActive.current || isRecording.current || isSpeakingRef.current || speakCooldown.current) return;

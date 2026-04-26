@@ -117,12 +117,20 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
             const fingersUp = [indexExtended, middleExtended, ringExtended, pinkyExtended]
               .filter(Boolean).length;
 
+            // Wave detection with debounce (500ms hold required)
             if (fingersUp >= 3) {
               const now = Date.now();
+              // 5s cooldown between waves
               if (now - lastWave.current > 5000) {
-                lastWave.current = now;
-                console.log('[HandTracker] WAVE FIRED - fingers up:', fingersUp);
-                onWave();
+                // Require gesture to be held for 500ms before firing
+                setTimeout(() => {
+                  // Re-check if hand is still present and gesture still valid
+                  if (handDetectedRef.current && lastWave.current < now) {
+                    lastWave.current = Date.now();
+                    console.log('[HandTracker] WAVE FIRED - fingers up:', fingersUp);
+                    onWave();
+                  }
+                }, 500);
               }
             }
           } else {
@@ -175,8 +183,7 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
 
     initHands();
 
-    // Cleanup: Stop camera on unmount but keep MediaPipe context alive
-    // to avoid WebGL context destruction issues
+    // Cleanup: Stop camera on unmount and close MediaPipe
     return () => {
       if (cameraRef.current) {
         try {
@@ -186,8 +193,15 @@ const HandTracker: React.FC<HandTrackerProps> = ({ onWave }) => {
           // Ignore cleanup errors
         }
       }
-      // Note: We intentionally do NOT stop MediaPipe Hands to avoid
-      // the "destroyed WebGL context" loop. The context persists for app lifetime.
+      // Close MediaPipe Hands to release WebGL context
+      if (handsRef.current) {
+        try {
+          handsRef.current.close();
+          console.log('[HandTracker] MediaPipe Hands closed on unmount');
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
     };
   }, []); // Empty deps — run ONCE only. onWave handled via ref below.
 

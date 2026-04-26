@@ -25,8 +25,14 @@ database/*.db
 
 # GitNexus index
 .gitnexus/
+repomix-output.xml
 
 # OS
 .DS_Store
 Thumbs.db
 .aider*
+
+# Temporary files
+Untitled.base
+*.base
+test_logs/

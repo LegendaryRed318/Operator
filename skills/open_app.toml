@@ -1,0 +1,9 @@
+[skill]
+name = "Open App"
+triggers = ["open", "launch", "start"]
+action_type = "open_application"
+
+[actions.open_application]
+
+[response]
+success = "Opening {app_name}, sir."
