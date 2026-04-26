@@ -1,0 +1,17 @@
+# File Organizer - Organizes Downloads folder
+[skill]
+name = "file_organizer"
+trigger = "organize files"
+aliases = ["clean downloads", "organize downloads", "sort my files"]
+trigger_mode = "contains"
+description = "Organize Downloads folder by file type"
+priority = 60
+enabled = true
+requires_online = false
+cooldown_seconds = 120
+timeout_seconds = 30
+
+[action]
+type = "command"
+command = "powershell -Command \"$downloads = $env:USERPROFILE + '\\Downloads'; $docs = $downloads + '\\Documents'; $pics = $downloads + '\\Pictures'; $music = $downloads + '\\Music'; $videos = $downloads + '\\Videos'; $installers = $downloads + '\\Installers'; New-Item -ItemType Directory -Force -Path $docs,$pics,$music,$videos,$installers | Out-Null; Move-Item -Path $downloads\\*.pdf,$downloads\\*.docx,$downloads\\*.xlsx,$downloads\\*.txt -Destination $docs -Force -ErrorAction SilentlyContinue; Move-Item -Path $downloads\\*.jpg,$downloads\\*.png,$downloads\\*.gif,$downloads\\*.bmp -Destination $pics -Force -ErrorAction SilentlyContinue; Move-Item -Path $downloads\\*.mp3,$downloads\\*.wav,$downloads\\*.flac -Destination $music -Force -ErrorAction SilentlyContinue; Move-Item -Path $downloads\\*.mp4,$downloads\\*.avi,$downloads\\*.mkv -Destination $videos -Force -ErrorAction SilentlyContinue; Move-Item -Path $downloads\\*.exe,$downloads\\*.msi,$downloads\\*.zip,$downloads\\*.rar -Destination $installers -Force -ErrorAction SilentlyContinue; Write-Output 'Downloads folder organized'\""
+response = "Your Downloads folder has been organized into subfolders by file type."

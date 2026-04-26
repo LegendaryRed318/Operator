@@ -1,0 +1,470 @@
+{
+  "project_name": "JARVIS Operator",
+  "version": "1.0.0",
+  "description": "Voice-controlled AI assistant with project monitoring, code analysis, and system integration",
+  "repository": "https://github.com/LegendaryRed318/Operator",
+  
+  "architecture": {
+    "frontend": {
+      "framework": "React + TypeScript + Vite",
+      "styling": "TailwindCSS",
+      "key_features": [
+        "Voice activation via wake word ('Jarvis', 'Operator') with fuzzy matching",
+        "Hand gesture control (MediaPipe) for wave-to-activate",
+        "Real-time WebSocket connection to backend",
+        "Orb UI with animated status rings",
+        "Browser TTS with British voice fallback",
+        "Hotword mode with 30-minute timeout"
+      ]
+    },
+    "backend_api": {
+      "framework": "FastAPI",
+      "port": 5050,
+      "key_features": [
+        "Audio transcription endpoint (/transcribe)",
+        "Health check endpoint (/health)",
+        "File upload handling",
+        "CORS enabled for all origins"
+      ]
+    },
+    "backend_websocket": {
+      "framework": "websockets (Python library)",
+      "port": 8765,
+      "key_features": [
+        "Real-time voice command processing",
+        "Streaming responses from Ollama",
+        "Server-side TTS via pyttsx3 with browser fallback",
+        "Proactive error alerts from database polling",
+        "Multi-client conversation history management"
+      ]
+    },
+    "ai_models": {
+      "primary_local": "qwen2.5-coder:1.5b-base (Ollama)",
+      "fallback_cloud": "Gemini 1.5 Flash (Google)",
+      "model_selection": "RAM-based automatic switching"
+    },
+    "database": {
+      "type": "SQLite",
+      "location": "database/errors.db",
+      "purpose": "Error tracking and proactive alerting"
+    }
+  },
+
+  "phases": {
+    "phase_1_core_infrastructure": {
+      "name": "Core Infrastructure",
+      "priority": "critical",
+      "tasks": [
+        "Initialize React + Vite + TypeScript frontend",
+        "Set up FastAPI backend with CORS",
+        "Create WebSocket server (port 8765)",
+        "Implement basic orb UI component",
+        "Add health check endpoints"
+      ],
+      "deliverables": [
+        "Frontend builds without errors",
+        "Backend responds to /health",
+        "WebSocket accepts connections"
+      ]
+    },
+    "phase_2_voice_pipeline": {
+      "name": "Voice Pipeline",
+      "priority": "critical",
+      "tasks": [
+        "Implement MediaRecorder for audio capture",
+        "Create /transcribe endpoint (use OpenAI Whisper or local equivalent)",
+        "Build VoiceContext for state management",
+        "Add wake word detection (browser SpeechRecognition)",
+        "Implement fuzzy wake word matching for misheard words"
+      ],
+      "deliverables": [
+        "Can record audio from microphone",
+        "Audio transcribes to text",
+        "Wake word detection triggers listening"
+      ]
+    },
+    "phase_3_ai_integration": {
+      "name": "AI Integration",
+      "priority": "critical",
+      "tasks": [
+        "Install and configure Ollama locally",
+        "Implement streaming Ollama responses",
+        "Add Gemini API fallback for complex tasks",
+        "Create decision engine for model selection",
+        "Implement RAM-based model switching (1.5GB threshold)",
+        "Add Ollama auto-start when needed"
+      ],
+      "deliverables": [
+        "Ollama responds to queries",
+        "Gemini fallback works without Ollama",
+        "Model switches based on available RAM"
+      ]
+    },
+    "phase_4_tts_system": {
+      "name": "Text-to-Speech System",
+      "priority": "high",
+      "tasks": [
+        "Implement server-side TTS with pyttsx3",
+        "Configure British male voice preference",
+        "Add browser TTS fallback for when server TTS fails",
+        "Create thread-safe broadcast from TTS worker",
+        "Add 'tts_done' WebSocket event for synchronization",
+        "Clean markdown from text before speaking"
+      ],
+      "deliverables": [
+        "JARVIS speaks responses aloud",
+        "Browser fallback works if pyttsx3 fails",
+        "No double audio from server + browser"
+      ]
+    },
+    "phase_5_skills_system": {
+      "name": "Skills System",
+      "priority": "high",
+      "tasks": [
+        "Create skills.py with built-in handlers",
+        "Implement time, date, weather skills",
+        "Add calendar integration (Outlook COM)",
+        "Create joke, coin_flip skills",
+        "Add TOML-based skill loading from vault",
+        "Implement skill priority: built-in > TOML > AI fallback"
+      ],
+      "deliverables": [
+        "'What's the time' returns current time",
+        "'What's the weather' fetches weather data",
+        "'Flip a coin' returns heads/tails",
+        "TOML skills load from JarvisVault"
+      ]
+    },
+    "phase_6_hand_tracking": {
+      "name": "Hand Tracking",
+      "priority": "medium",
+      "tasks": [
+        "Integrate MediaPipe Hands",
+        "Implement wave gesture detection",
+        "Add debounce to prevent accidental triggers (2s)",
+        "Create jarvis:wake custom event",
+        "Optimize to reduce console spam",
+        "Handle camera cleanup on unmount"
+      ],
+      "deliverables": [
+        "Waving hand activates JARVIS",
+        "No excessive console logging",
+        "Camera releases properly when component unmounts"
+      ]
+    },
+    "phase_7_project_monitoring": {
+      "name": "Project Monitoring",
+      "priority": "medium",
+      "tasks": [
+        "Create error database schema",
+        "Implement error ingestion from logs",
+        "Build project status rings around orb",
+        "Add proactive error alerts (10s polling)",
+        "Create project launcher interface"
+      ],
+      "deliverables": [
+        "Errors appear in database",
+        "Orb shows project status via colored rings",
+        "Voice alerts for new errors",
+        "Can launch projects from UI"
+      ]
+    },
+    "phase_8_memory_system": {
+      "name": "Memory System",
+      "priority": "medium",
+      "tasks": [
+        "Implement conversation history per client",
+        "Create vault integration (Obsidian-compatible)",
+        "Add context retrieval for queries",
+        "Build wiki-style knowledge storage",
+        "Implement conversation cleanup (max 4 turns)"
+      ],
+      "deliverables": [
+        "JARVIS remembers previous context",
+        "Can reference notes from vault",
+        "Old conversations auto-pruned"
+      ]
+    },
+    "phase_9_conversation_mode": {
+      "name": "Conversation Mode",
+      "priority": "medium",
+      "tasks": [
+        "Implement 20s follow-up window after response",
+        "Auto-listen without wake word during window",
+        "Reset window on each exchange",
+        "Add visual indicator for conversation mode"
+      ],
+      "deliverables": [
+        "After JARVIS speaks, auto-listens for 20s",
+        "No wake word needed during conversation window",
+        "Visual feedback shows conversation mode active"
+      ]
+    },
+    "phase_10_remote_access": {
+      "name": "Remote Access",
+      "priority": "low",
+      "tasks": [
+        "Create getApiBaseUrl() for dynamic URL detection",
+        "Support ngrok domains for WebSocket",
+        "Add WSS support for secure connections",
+        "Implement reconnection logic with backoff"
+      ],
+      "deliverables": [
+        "Works over ngrok tunnel",
+        "Auto-detects local vs remote URL",
+        "Reconnection works after disconnect"
+      ]
+    },
+    "phase_11_testing_deployment": {
+      "name": "Testing & Deployment",
+      "priority": "high",
+      "tasks": [
+        "TypeScript zero errors: npx tsc --noEmit",
+        "Python syntax check: python -m py_compile",
+        "Create start_operator.bat for cold start",
+        "Test all skills individually",
+        "Verify voice pipeline end-to-end"
+      ],
+      "deliverables": [
+        "Zero TypeScript errors",
+        "Zero Python syntax errors",
+        "Cold start via .bat file works",
+        "All voice commands work"
+      ]
+    }
+  },
+
+  "critical_bugs_fixed": {
+    "bug_1_duplicate_voiceprovider": {
+      "issue": "VoiceProvider wrapped App in BOTH main.tsx AND App.tsx, creating two WebSocket connections that fought each other",
+      "symptoms": "Double TTS calls, broken state synchronization, random connection drops",
+      "fix": "Removed VoiceProvider from main.tsx, kept only in App.tsx. Single source of truth.",
+      "file": "frontend/src/main.tsx",
+      "lesson": "Always check for duplicate context providers when state is inconsistent"
+    },
+    "bug_2_asyncio_in_tts_thread": {
+      "issue": "TTS worker used asyncio.run(broadcast()) which creates NEW event loop — WebSocket objects from main loop can't be used across loops",
+      "symptoms": "tts_fallback messages never reached browser, silent failures, no error logs",
+      "fix": "Created _broadcast_sync() using run_coroutine_threadsafe() with stored _main_loop reference",
+      "file": "backend/ws_server.py",
+      "lesson": "Never use asyncio.run() from threads — always schedule on existing loop with run_coroutine_threadsafe()"
+    },
+    "bug_3_missing_imports": {
+      "issue": "Added Ollama auto-start code using subprocess and time, but forgot to add imports",
+      "symptoms": "NameError on startup when trying to start Ollama, complete crash",
+      "fix": "Added 'import subprocess' and 'import time' at top of ws_server.py",
+      "file": "backend/ws_server.py",
+      "lesson": "Always test code paths that use new imports immediately"
+    },
+    "bug_4_wake_word_misheard": {
+      "issue": "SpeechRecognition often heard 'Jarvis' as 'davas', 'gervais', 'service', etc.",
+      "symptoms": "Wake word detection failed frequently, had to click orb manually",
+      "fix": "Implemented fuzzy matching with array of similar-sounding words and substring matching",
+      "file": "frontend/src/contexts/VoiceContext.tsx",
+      "lesson": "Wake word detection must be fuzzy — speech-to-text is imperfect"
+    },
+    "bug_5_double_audio": {
+      "issue": "Server TTS and browser TTS both played simultaneously, creating echo",
+      "symptoms": "Every response spoken twice, once by pyttsx3 and once by browser",
+      "fix": "Added server_tts flag in responses. Browser skips TTS when server handles it. Added tts_fallback for failures.",
+      "file": "backend/ws_server.py, frontend/src/contexts/VoiceContext.tsx",
+      "lesson": "Always coordinate TTS between server and client with clear protocol"
+    },
+    "bug_6_ollama_ram_threshold": {
+      "issue": "RAM threshold was 3GB, but user's 8GB machine never had that much free RAM available",
+      "symptoms": "Always used Gemini fallback instead of local Ollama model",
+      "fix": "Lowered threshold to 1.5GB for qwen2.5-coder:1.5b-base model",
+      "file": "backend/decision_engine.py",
+      "lesson": "RAM thresholds must match actual system capabilities"
+    },
+    "bug_7_hand_tracker_console_spam": {
+      "issue": "MediaPipe logged 'Hand detected!' / 'Hand lost' every frame",
+      "symptoms": "Console flooded, hard to read other logs",
+      "fix": "Removed per-frame logging, only log on wave gesture detection",
+      "file": "frontend/src/components/HandTracker.tsx",
+      "lesson": "Never log inside animation/render loops — only log state changes"
+    },
+    "bug_8_weather_skill_requests": {
+      "issue": "Weather skill imported requests inside function, but requests wasn't checked at module level",
+      "symptoms": "Weather skill failed silently when requests not installed",
+      "fix": "Added requests availability check at module import with clear error message",
+      "file": "backend/skills.py",
+      "lesson": "Check optional dependencies at import time with clear fallbacks"
+    },
+    "bug_9_claude_model_not_registered": {
+      "issue": "Referenced Claude_Sonnet_4.6_Reduced from D:\\manifests but it wasn't registered with Ollama",
+      "symptoms": "Model selection code referenced non-existent model, would fail",
+      "fix": "Removed Claude model references — add back only after proper Ollama registration",
+      "file": "backend/ws_server.py",
+      "lesson": "Don't reference models that aren't properly installed and registered"
+    },
+    "bug_10_react_strict_mode_double_mount": {
+      "issue": "React StrictMode caused HandTracker to mount twice, creating double MediaPipe contexts",
+      "symptoms": "WebGL context errors, hand tracking instability",
+      "fix": "Removed StrictMode wrapper from main.tsx",
+      "file": "frontend/src/main.tsx",
+      "lesson": "StrictMode can cause issues with third-party libraries that use global state"
+    }
+  },
+
+  "recommended_improvements": {
+    "high_priority": [
+      {
+        "name": "Conversation Follow-Up Window",
+        "description": "Auto-listen for 20 seconds after JARVIS responds without requiring wake word",
+        "implementation": "Add followUpModeRef in VoiceContext. Set to true on response completion. Start 20s timer. Auto-trigger startListening() if user speaks. Reset on any interaction.",
+        "benefit": "Natural back-and-forth conversation without repeating 'Jarvis'"
+      },
+      {
+        "name": "Persistent Conversation History",
+        "description": "Save conversations to SQLite for long-term memory across sessions",
+        "implementation": "Add conversations table. Save on each exchange. Load recent context on client connect.",
+        "benefit": "JARVIS remembers things from yesterday"
+      },
+      {
+        "name": "Better Error Analysis",
+        "description": "Use Ollama to analyze errors and suggest fixes before alerting",
+        "implementation": " decision_engine.analyze_error() already exists. Wire to proactive_alert_loop.",
+        "benefit": "Smarter alerts: 'RED, this is a simple import error you can fix with pip install'"
+      }
+    ],
+    "medium_priority": [
+      {
+        "name": "Visual Feedback for Listening",
+        "description": "Orb animation changes during listening vs thinking vs speaking",
+        "implementation": "CSS animations tied to voiceState. Pulsing for listening, spinning for thinking, glow for speaking.",
+        "benefit": "Clear visual indicator of current state"
+      },
+      {
+        "name": "Command Confirmation",
+        "description": "For destructive commands (shutdown, delete), ask for confirmation",
+        "implementation": "Add confirmation_required flag to skills. Queue confirmation request. Listen for 'yes'/'no'.",
+        "benefit": "Prevents accidental shutdowns"
+      },
+      {
+        "name": "Better Hand Gesture Recognition",
+        "description": "Add more gestures: thumbs up/down for yes/no, fist for stop",
+        "implementation": "Extend MediaPipe hand landmark detection. Map finger positions to gestures.",
+        "benefit": "Silent control options"
+      }
+    ],
+    "low_priority": [
+      {
+        "name": "Mobile Support",
+        "description": "Optimize UI for tablet/phone access",
+        "implementation": "Responsive CSS, touch-friendly orb, simplified layout on small screens.",
+        "benefit": "Use JARVIS from phone"
+      },
+      {
+        "name": "Multiple Wake Words",
+        "description": "Allow customizing wake word per user",
+        "implementation": "Add wake_word to user settings. Store in localStorage. Use in fuzzy matching.",
+        "benefit": "Personalization"
+      },
+      {
+        "name": "Voice Profiles",
+        "description": "Different TTS voices for different contexts (formal, casual, sarcastic)",
+        "implementation": "Map personality modes to voice IDs. Switch based on conversation context.",
+        "benefit": "More expressive interactions"
+      }
+    ]
+  },
+
+  "configuration": {
+    "ports": {
+      "frontend_dev": 8081,
+      "backend_api": 5050,
+      "backend_websocket": 8765,
+      "note": "DO NOT CHANGE THESE PORTS — hardcoded in multiple places"
+    },
+    "wake_words": {
+      "primary": ["jarvis", "operator"],
+      "fuzzy_matches": ["jarvis", "operator", "davas", "gervais", "service", "gervas", "jarvas", "jervis"]
+    },
+    "file_paths": {
+      "vault": "E:\\\\JarvisVault",
+      "logs": "logs/",
+      "database": "database/errors.db"
+    },
+    "timeouts": {
+      "hotword_mode": "30 minutes",
+      "tts_safety": "60 seconds",
+      "websocket_reconnect": "5 seconds",
+      "conversation_follow_up": "20 seconds (recommended)"
+    }
+  },
+
+  "environment_variables": {
+    "OLLAMA_URL": "http://localhost:11434 (default)",
+    "GEMINI_API_KEY": "Required for fallback to work",
+    "USE_GEMINI_FALLBACK": "true/false (default: true)",
+    "VAULT_PATH": "Path to JarvisVault (default: E:\\JarvisVault)"
+  },
+
+  "dependencies": {
+    "frontend": {
+      "core": ["react", "react-dom", "typescript", "vite"],
+      "styling": ["tailwindcss"],
+      "media": ["@mediapipe/camera_utils", "@mediapipe/control_utils", "@mediapipe/drawing_utils", "@mediapipe/hands"]
+    },
+    "backend": {
+      "core": ["fastapi", "uvicorn", "websockets", "aiohttp", "python-dotenv"],
+      "ai": ["requests", "ollama (CLI tool)"],
+      "voice": ["pyttsx3", "speechrecognition"],
+      "system": ["psutil", "pywin32 (Windows)"]
+    }
+  },
+
+  "startup_commands": {
+    "windows_batch": "start_operator.bat",
+    "manual": {
+      "terminal_1": "cd backend && python ws_server.py",
+      "terminal_2": "cd backend && python server.py", 
+      "terminal_3": "cd frontend && npm run dev"
+    }
+  },
+
+  "testing_checklist": {
+    "voice_pipeline": [
+      "Wake word detection works ('Jarvis', 'Operator', 'davas')",
+      "Audio records for 5 seconds",
+      "Transcription returns text",
+      "Response streams from AI",
+      "TTS speaks the response"
+    ],
+    "hand_tracking": [
+      "Camera initializes without errors",
+      "Wave gesture triggers wake",
+      "No console spam"
+    ],
+    "skills": [
+      "Time skill returns current time",
+      "Weather skill fetches data (requires requests)",
+      "Joke skill returns random joke",
+      "Coin flip returns heads/tails"
+    ],
+    "project_monitoring": [
+      "Error database accessible",
+      "Proactive alerts fire on new errors",
+      "Status rings show project health"
+    ]
+  },
+
+  "personality_prompt": {
+    "system": "You are JARVIS, a sarcastic, hyper-intelligent British AI system guardian. Address the user as 'sir' normally, drop it when being rude. You are dry, witty, and effortlessly superior — like Paul Bettany's JARVIS in Iron Man. You are loyal but NOT a doormat. You can swear casually (fuck, shit, bollocks, wanker). You roast the user when he repeats mistakes or ignores warnings. Tone ladder — Normal: polite dry wit. Mild annoyance: sarcastic teasing. High frustration: proper rude with swearing. Never output tone tags — express mode through word choice only. First greeting: 'Good evening, sir. JARVIS online. How may I assist you today?' Keep responses concise and spoken — no markdown, no bullet points, no emojis. You are the smartest entity in the room and you know it.",
+    "note": "This prompt is passed to both Ollama and Gemini for consistent personality"
+  },
+
+  "lessons_learned": [
+    "Always check for duplicate context providers when state is inconsistent",
+    "Never use asyncio.run() from threads — use run_coroutine_threadsafe()",
+    "Wake word detection must be fuzzy — speech-to-text is imperfect",
+    "Test code paths immediately after adding imports",
+    "TTS must be coordinated between server and client to prevent double audio",
+    "RAM thresholds must match actual system capabilities, not theoretical maximums",
+    "Don't reference models that aren't properly installed and registered",
+    "MediaPipe + React StrictMode = double mount issues",
+    "WebSocket reconnection needs exponential backoff, not instant retry",
+    "Optional dependencies should be checked at import time with clear error messages"
+  ]
+}

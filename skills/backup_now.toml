@@ -1,0 +1,17 @@
+# Quick Backup - Backup important files
+[skill]
+name = "backup_now"
+trigger = "backup now"
+aliases = ["quick backup", "backup my files", "sync files"]
+trigger_mode = "contains"
+description = "Quick backup of important files to backup location"
+priority = 50
+enabled = true
+requires_online = false
+cooldown_seconds = 300
+timeout_seconds = 60
+
+[action]
+type = "command"
+command = "powershell -Command \"$src = $env:USERPROFILE + '\\Documents'; $backup = $env:USERPROFILE + '\\Backup_' + (Get-Date -Format 'yyyy-MM-dd'); robocopy $src $backup /MIR /NFL /NDL /NJH /NJS /nc /ns /np; Write-Output 'Backup completed to ' + $backup\""
+response = "Quick backup completed. Your Documents folder has been backed up."

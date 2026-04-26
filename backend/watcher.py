@@ -63,7 +63,7 @@ def load_config():
     """Load configuration from config.json."""
     if not CONFIG_PATH.exists():
         # Create default config
-        default_config = {"watched_folders": ["C:/Projects/Operator/test_logs"]}
+        default_config = {"watched_folders": [str(_ROOT / "test_logs")]}
         with open(CONFIG_PATH, "w") as f:
             json.dump(default_config, f, indent=2)
         return default_config

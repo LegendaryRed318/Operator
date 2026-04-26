@@ -26,7 +26,7 @@ import sqlite3 as _sqlite3
 import psutil
 from typing import AsyncGenerator
 from pathlib import Path
-from decision_engine import select_model_by_ram
+from decision_engine import select_model_by_ram, get_installed_models
 from paths import DB_PATH, LOGS_PATH
 
 try:
@@ -453,10 +453,9 @@ def select_model_for_intent(text: str) -> str | None:
     """Select the best model based on intent and RAM."""
     intent = classify_intent(text)
     available_gb = psutil.virtual_memory().available / (1024 ** 3)
-    
-    from decision_engine import get_installed_models, select_model_by_ram
+
     installed = get_installed_models()
-    
+
     # Intent-based overrides
     if intent == 'coding' and "qwen2.5-coder:7b" in installed:
         logger.info(f"[Intent] Coding detected -> using qwen2.5-coder:7b (RAM override)")
@@ -567,6 +566,7 @@ async def handle_voice_command(websocket, text: str):
         selected_model = select_model_for_intent(text)
         route, route_reason = choose_route(text, selected_model)
         use_gemini = route == "gemini"
+        intent = classify_intent(text)
 
         if selected_model:
             write_active_model(selected_model)
@@ -580,7 +580,7 @@ async def handle_voice_command(websocket, text: str):
             # Count errors
             error_count = 0
             if DB_PATH.exists():
-                conn = _sqlite3.connect(str(DB_PATH))
+                conn = _sqlite3.connect(str(DB_PATH), timeout=5.0)
                 cursor = conn.cursor()
                 cursor.execute("SELECT COUNT(*) FROM errors")
                 error_count = cursor.fetchone()[0]

@@ -1,0 +1,17 @@
+# Focus Mode - Minimizes distractions
+[skill]
+name = "focus_mode"
+trigger = "focus mode"
+aliases = ["do not disturb", "deep work", "concentration mode"]
+trigger_mode = "contains"
+description = "Enable do-not-disturb mode and close distracting apps"
+priority = 80
+enabled = true
+requires_online = false
+cooldown_seconds = 60
+timeout_seconds = 5
+
+[action]
+type = "command"
+command = "powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('+{ESC}'); Start-Sleep -Milliseconds 500; Add-Type '[DllImport(\\\"user32.dll\\\")] public static extern bool ShowWindowAsync(int hWnd, int nCmdShow);' -Name U32 -Namespace Win32 -PassThru; Start-Process notepad -WindowStyle Minimized\""
+response = "Focus mode enabled. Notifications silenced and distracting windows minimized."

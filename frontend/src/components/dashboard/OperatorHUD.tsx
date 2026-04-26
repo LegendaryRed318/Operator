@@ -48,7 +48,7 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
 };
 
 export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel }) => {
-  const { state: voiceState, lastResponse, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode } = useVoice();
+  const { state: voiceState, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode } = useVoice();
   const inputRef = useRef<HTMLInputElement>(null);
   const [aiText, setAiText] = useState('Operator Online');
   const [clock, setClock] = useState('');

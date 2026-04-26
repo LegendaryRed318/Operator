@@ -1,0 +1,16 @@
+# Quick Research - Search and summarize
+[skill]
+name = "quick_research"
+trigger = "research"
+aliases = ["look up", "search for", "find information about"]
+trigger_mode = "contains"
+description = "Quick web search with AI summarization"
+priority = 70
+enabled = true
+requires_online = true
+cooldown_seconds = 10
+timeout_seconds = 30
+
+[action]
+type = "response"
+response = "Research mode activated. What topic would you like me to research?"

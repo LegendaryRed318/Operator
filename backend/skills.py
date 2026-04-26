@@ -116,6 +116,41 @@ BUILT_IN_SKILLS = {
         "handler": "handle_coin_flip",
         "description": "Flip a virtual coin"
     },
+    "reminder": {
+        "triggers": ["remind me to", "set a reminder", "create reminder", "add reminder"],
+        "handler": "handle_reminder",
+        "description": "Set a reminder for later"
+    },
+    "timer": {
+        "triggers": ["set timer", "start timer", "timer for", "countdown"],
+        "handler": "handle_timer",
+        "description": "Set a countdown timer"
+    },
+    "quick_note": {
+        "triggers": ["take a note", "quick note", "jot down", "remember this"],
+        "handler": "handle_quick_note",
+        "description": "Save a quick note to memory"
+    },
+    "quick_math": {
+        "triggers": ["calculate", "what is", "compute", "math"],
+        "handler": "handle_quick_math",
+        "description": "Quick mathematical calculations"
+    },
+    "unit_convert": {
+        "triggers": ["convert", "how many", "inches to", "miles to", "celsius to", "fahrenheit to"],
+        "handler": "handle_unit_convert",
+        "description": "Convert between units"
+    },
+    "define_word": {
+        "triggers": ["define", "what does", "meaning of", "dictionary"],
+        "handler": "handle_define_word",
+        "description": "Look up word definitions"
+    },
+    "random_number": {
+        "triggers": ["random number", "pick a number", "generate random"],
+        "handler": "handle_random_number",
+        "description": "Generate a random number"
+    },
 }
 
 
@@ -137,6 +172,13 @@ class SkillExecutor:
             "handle_open_app": self._handle_open_app,
             "handle_joke": self._handle_joke,
             "handle_coin_flip": self._handle_coin_flip,
+            "handle_reminder": self._handle_reminder,
+            "handle_timer": self._handle_timer,
+            "handle_quick_note": self._handle_quick_note,
+            "handle_quick_math": self._handle_quick_math,
+            "handle_unit_convert": self._handle_unit_convert,
+            "handle_define_word": self._handle_define_word,
+            "handle_random_number": self._handle_random_number,
         }
         self._load_toml_skills()
 
@@ -674,6 +716,250 @@ class SkillExecutor:
         import random
         result = random.choice(["Heads", "Tails"])
         return f"The coin shows... {result}, RED."
+
+    def _handle_reminder(self, text: str = "") -> str:
+        """Set a reminder."""
+        import re
+        # Try to extract reminder text and optional time
+        time_patterns = [
+            r"in (\d+)\s*(minutes?|mins?|hours?|hrs?)",
+            r"at (\d{1,2}):?(\d{2})?\s*(am|pm)?",
+            r"in an?\s*(hour|minute)",
+        ]
+
+        reminder_text = text
+        when = "later"
+
+        for pattern in time_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                if "hour" in match.group(0):
+                    when = f"in {match.group(1)} {match.group(2)}"
+                elif "minute" in match.group(0):
+                    when = f"in {match.group(1)} {match.group(2)}"
+                elif match.group(1).isdigit():
+                    when = f"at {match.group(1)}:{match.group(2) or '00'} {match.group(3) or ''}"
+                reminder_text = re.sub(pattern, "", text).strip()
+                break
+
+        if not reminder_text.strip():
+            return "What would you like me to remind you about, RED?"
+
+        # Save reminder to file
+        try:
+            reminders_path = LOGS_PATH / "reminders.jsonl"
+            LOGS_PATH.mkdir(parents=True, exist_ok=True)
+            with open(reminders_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({
+                    "text": reminder_text[:200],
+                    "when": when,
+                    "created": datetime.now().isoformat(),
+                }) + "\n")
+            return f"I've added a reminder to '{reminder_text[:50]}' for {when}, RED."
+        except Exception as e:
+            logger.error(f"[Skills] Reminder error: {e}")
+            return f"I've noted your reminder: '{reminder_text[:50]}'. Check your reminders file."
+
+    def _handle_timer(self, text: str = "") -> str:
+        """Set a countdown timer."""
+        import re
+
+        # Extract duration
+        match = re.search(r"(\d+)\s*(minutes?|mins?|hours?|hrs?|seconds?|secs?)", text, re.IGNORECASE)
+        if not match:
+            return "How long should I set the timer for, RED?"
+
+        value = int(match.group(1))
+        unit = match.group(2).lower()
+
+        if "hour" in unit:
+            seconds = value * 3600
+            duration_str = f"{value} hour{'s' if value != 1 else ''}"
+        elif "minute" in unit:
+            seconds = value * 60
+            duration_str = f"{value} minute{'s' if value != 1 else ''}"
+        else:
+            seconds = value
+            duration_str = f"{value} second{'s' if value != 1 else ''}"
+
+        # Save timer to file (external process would handle actual notification)
+        try:
+            timers_path = LOGS_PATH / "timers.jsonl"
+            LOGS_PATH.mkdir(parents=True, exist_ok=True)
+            with open(timers_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({
+                    "duration_seconds": seconds,
+                    "duration_label": duration_str,
+                    "created": datetime.now().isoformat(),
+                    "status": "running",
+                }) + "\n")
+            return f"Timer set for {duration_str}, RED. I'll let you know when it's done."
+        except Exception as e:
+            logger.error(f"[Skills] Timer error: {e}")
+            return f"Timer set for {duration_str}."
+
+    def _handle_quick_note(self, text: str = "") -> str:
+        """Save a quick note."""
+        # Extract note content after trigger phrases
+        note_patterns = [
+            r"(?:take a note|quick note|jot down|remember this)\s*(?:to|that|:)?\s*(.+)",
+            r"remember this[:\s]+(.+)",
+        ]
+
+        note_text = text
+        for pattern in note_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                note_text = match.group(1).strip()
+                break
+
+        if not note_text or len(note_text) < 3:
+            return "What would you like me to remember, RED?"
+
+        try:
+            notes_path = LOGS_PATH / "quick_notes.jsonl"
+            LOGS_PATH.mkdir(parents=True, exist_ok=True)
+            with open(notes_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps({
+                    "note": note_text[:500],
+                    "created": datetime.now().isoformat(),
+                    "tags": [],
+                }) + "\n")
+            return f"I've saved your note: '{note_text[:60]}{'...' if len(note_text) > 60 else ''}', RED."
+        except Exception as e:
+            logger.error(f"[Skills] Note error: {e}")
+            return f"Note saved: '{note_text[:60]}{'...' if len(note_text) > 60 else ''}'."
+
+    def _handle_quick_math(self, text: str = "") -> str:
+        """Quick mathematical calculations."""
+        import re
+
+        # Extract math expression
+        math_chars = set("0123456789+-*/().^ ")
+        expr = ""
+        for char in text:
+            if char.lower() in math_chars or char == " ":
+                expr += char
+
+        # Clean up expression
+        expr = expr.replace("^", "**").replace("x", "*").replace("X", "*")
+
+        if not expr.strip():
+            return "What calculation would you like me to do, RED?"
+
+        # Safety check - only allow math operations
+        if any(c in expr for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"):
+            return "I can only handle numerical calculations, RED."
+
+        try:
+            # Limit expression length for safety
+            if len(expr) > 100:
+                expr = expr[:100]
+            result = eval(expr, {"__builtins__": {}}, {})
+            return f"The result is {result}, RED."
+        except Exception as e:
+            logger.error(f"[Skills] Math error: {e}")
+            return f"I couldn't calculate that, RED. Please check the expression."
+
+    def _handle_unit_convert(self, text: str = "") -> str:
+        """Convert between units."""
+        import re
+
+        text_lower = text.lower()
+
+        # Common conversions
+        conversions = {
+            ("celsius", "fahrenheit"): lambda x: (x * 9/5) + 32,
+            ("fahrenheit", "celsius"): lambda x: (x - 32) * 5/9,
+            ("miles", "kilometers"): lambda x: x * 1.60934,
+            ("kilometers", "miles"): lambda x: x / 1.60934,
+            ("inches", "centimeters"): lambda x: x * 2.54,
+            ("centimeters", "inches"): lambda x: x / 2.54,
+            ("feet", "meters"): lambda x: x * 0.3048,
+            ("meters", "feet"): lambda x: x / 0.3048,
+            ("pounds", "kilograms"): lambda x: x * 0.453592,
+            ("kilograms", "pounds"): lambda x: x / 0.453592,
+            ("ounces", "grams"): lambda x: x * 28.3495,
+            ("grams", "ounces"): lambda x: x / 28.3495,
+        }
+
+        # Extract number and units
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(\w+)\s*(?:to|in|as|into)\s*(\w+)", text_lower)
+        if not match:
+            return "What units would you like to convert, RED?"
+
+        value = float(match.group(1))
+        from_unit = match.group(2)
+        to_unit = match.group(3)
+
+        # Find conversion function
+        converter = None
+        for (f, t), func in conversions.items():
+            if f in from_unit and t in to_unit:
+                converter = func
+                from_unit = f
+                to_unit = t
+                break
+
+        if not converter:
+            return f"I don't know how to convert {from_unit} to {to_unit}, RED. I can handle temperature, distance, weight, and length conversions."
+
+        try:
+            result = converter(value)
+            return f"{value} {from_unit} equals {result:.2f} {to_unit}, RED."
+        except Exception as e:
+            logger.error(f"[Skills] Conversion error: {e}")
+            return f"I couldn't complete that conversion, RED."
+
+    def _handle_define_word(self, text: str = "") -> str:
+        """Look up word definitions."""
+        import re
+
+        # Extract word
+        match = re.search(r"(?:define|what does|meaning of|dictionary)\s+(?:the\s+)?(?:word\s+)?['\"]?(\w+)['\"]?", text, re.IGNORECASE)
+        if not match:
+            return "What word would you like me to define, RED?"
+
+        word = match.group(1).lower()
+
+        # Simple built-in dictionary for common words
+        definitions = {
+            "algorithm": "A step-by-step procedure for solving a problem or accomplishing a task.",
+            "api": "Application Programming Interface - a set of protocols for building software.",
+            "variable": "A storage location paired with a symbolic name in programming.",
+            "function": "A reusable block of code that performs a specific task.",
+            "class": "A blueprint for creating objects in object-oriented programming.",
+            "inheritance": "A mechanism where a class derives properties from another class.",
+            "polymorphism": "The ability of objects to take multiple forms in OOP.",
+            "encapsulation": "Bundling data and methods that operate on that data.",
+            "recursion": "A function that calls itself to solve smaller instances.",
+            "iteration": "Repeating a process multiple times, typically in a loop.",
+        }
+
+        if word in definitions:
+            return f"{word.capitalize()}: {definitions[word]}"
+
+        # For unknown words, suggest looking it up
+        return f"I don't have '{word}' in my local dictionary, RED. Try: 'research {word}' for more information."
+
+    def _handle_random_number(self, text: str = "") -> str:
+        """Generate a random number."""
+        import re
+        import random
+
+        # Extract range
+        match = re.search(r"(\d+)\s*(?:to|through|-)\s*(\d+)", text)
+        if match:
+            min_val = int(match.group(1))
+            max_val = int(match.group(2))
+            if min_val > max_val:
+                min_val, max_val = max_val, min_val
+            result = random.randint(min_val, max_val)
+            return f"Your random number between {min_val} and {max_val} is... {result}, RED."
+
+        # Default 1-100
+        result = random.randint(1, 100)
+        return f"Your random number is... {result}, RED."
     
     def execute_skill(self, skill_name: str, text: str) -> str:
         """
@@ -783,14 +1069,21 @@ def dispatch_skill_command(
         "duration_ms": 0,
     }
 
+    # Generate trace ID for trace-driven learning
+    import uuid
+    trace_id = str(uuid.uuid4())
+    started_at = time.time()
+
     if metadata.get("enabled") is False:
         audit_entry["error"] = "Skill is disabled"
         executor._append_audit_log(audit_entry)
+        _log_skill_trace(trace_id, str(resolved_name), command_text, "Skill disabled", False, time.time() - started_at)
         return {"success": False, "error": "Skill is disabled", "skill": resolved_name}
 
     if metadata.get("requires_online") and not executor._is_online():
         audit_entry["error"] = "Skill requires internet connectivity"
         executor._append_audit_log(audit_entry)
+        _log_skill_trace(trace_id, str(resolved_name), command_text, "Offline", False, time.time() - started_at)
         return {"success": False, "error": "Skill requires internet connectivity", "skill": resolved_name}
 
     cooldown_s = float(metadata.get("cooldown_seconds", 0.0))
@@ -799,6 +1092,7 @@ def dispatch_skill_command(
         msg = f"Skill cooling down. Try again in {wait_s:.1f}s."
         audit_entry["error"] = msg
         executor._append_audit_log(audit_entry)
+        _log_skill_trace(trace_id, str(resolved_name), command_text, msg, False, time.time() - started_at)
         return {"success": False, "error": msg, "skill": resolved_name, "cooldown_remaining_seconds": round(wait_s, 2)}
 
     if handler and callable(handler):
@@ -810,6 +1104,9 @@ def dispatch_skill_command(
         if ok:
             audit_entry["success"] = True
             executor._append_audit_log(audit_entry)
+            # Log trace for skill discovery
+            _log_skill_trace(trace_id, str(resolved_name), command_text, response, ok, time.time() - started_at)
+            _log_skill_analytics(trace_id, str(resolved_name), command_text, response, ok, duration_ms, source, matched_by)
             return {
                 "success": True,
                 "response": response,
@@ -817,21 +1114,94 @@ def dispatch_skill_command(
                 "implemented": True,
                 "matched_by": matched_by,
                 "duration_ms": duration_ms,
+                "trace_id": trace_id,
             }
         logger.error(f"[Skills] Execution error for {resolved_name}: {err}")
         audit_entry["error"] = err
         executor._append_audit_log(audit_entry)
+        _log_skill_trace(trace_id, str(resolved_name), command_text, str(err), False, time.time() - started_at)
+        _log_skill_analytics(trace_id, str(resolved_name), command_text, str(err), False, duration_ms, source, matched_by)
         return {"success": False, "error": str(err), "skill": resolved_name, "duration_ms": duration_ms}
 
     if resolved_name in executor.loaded_skills:
+        response = f"Skill '{resolved_name}' is recognized but not yet executable."
+        _log_skill_trace(trace_id, str(resolved_name), command_text, response, True, time.time() - started_at)
         return {
             "success": True,
-            "response": f"Skill '{resolved_name}' is recognized but not yet executable.",
+            "response": response,
             "skill": resolved_name,
             "implemented": False,
+            "trace_id": trace_id,
         }
 
+    _log_skill_trace(trace_id, str(resolved_name), command_text, f"Unknown skill: {resolved_name}", False, time.time() - started_at)
     return {"success": False, "error": f"Unknown skill: {resolved_name}", "skill": resolved_name}
+
+
+def _log_skill_trace(
+    trace_id: str,
+    skill_name: str,
+    query: str,
+    result: str,
+    success: bool,
+    duration: float,
+) -> None:
+    """Log a skill execution to the trace store for later discovery/optimization."""
+    try:
+        from openjarvis.traces.store import TraceStore
+        from openjarvis.core.types import Trace, TraceStep, StepType
+
+        trace_db_path = LOGS_PATH / "traces.db"
+        store = TraceStore(str(trace_db_path))
+
+        trace = Trace(
+            trace_id=trace_id,
+            query=query,
+            agent="jarvis_voice",
+            model="skill_executor",
+            engine="toml_builtin",
+            result=result[:2000] if result else "",
+            outcome="success" if success else "failure",
+            feedback=1.0 if success else 0.0,
+            started_at=time.time() - duration,
+            ended_at=time.time(),
+            total_tokens=0,
+            total_latency_seconds=duration,
+            metadata={"skill_name": skill_name, "source": "voice"},
+            messages=[],
+            steps=[
+                TraceStep(
+                    step_type=StepType.TOOL_CALL,
+                    timestamp=time.time() - duration,
+                    duration_seconds=duration,
+                    input={"skill": skill_name, "text": query},
+                    output={"result": result, "success": success},
+                    metadata={"skill": skill_name},
+                )
+            ],
+        )
+        store.save(trace)
+        store.close()
+    except Exception as e:
+        logger.debug(f"[Skills] Trace logging failed: {e}")
+
+
+def _log_skill_analytics(
+    trace_id: str,
+    skill_name: str,
+    command_text: str,
+    response: str,
+    success: bool,
+    duration_ms: int,
+    source: str,
+    matched_by: str,
+) -> None:
+    """Log skill execution to analytics database."""
+    try:
+        from skill_analytics import log_execution as log_analytics
+        log_analytics(trace_id, skill_name, command_text, response, success, duration_ms, source, matched_by)
+    except Exception as e:
+        logger.debug(f"[Skills] Analytics logging failed: {e}")
 
 
 def reload_skills_cache() -> int:

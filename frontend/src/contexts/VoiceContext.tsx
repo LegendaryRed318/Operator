@@ -26,6 +26,7 @@ interface VoiceProviderProps {
 }
 
 const HOTWORD_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const FOLLOW_UP_WINDOW_MS = 20 * 1000; // 20 second conversation follow-up window
 const WAKE_WORD_PATTERNS = [
   /\bjarvis\b/,
   /\bhey jarvis\b/,
@@ -102,6 +103,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const lastWakeTriggerAt = useRef(0);
   const WAKE_DEBOUNCE_MS = 2500;
 
+  const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Use a ref for isConversationMode so callbacks get latest value without dependencies
   const isConversationModeRef = useRef(isConversationMode);
   useEffect(() => {
@@ -162,18 +166,39 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       clearTimeout(ttsDurationTimeout.current);
       ttsDurationTimeout.current = null;
     }
-    
+
+    // Start the 20-second conversation follow-up window
+    if (!isConversationModeRef.current) {
+      setIsConversationMode(true);
+      console.log('[Voice] Starting follow-up window (20s) — auto-listening enabled');
+    }
+
+    // Reset the follow-up timer
+    if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+
+    followUpTimeoutRef.current = setTimeout(() => {
+      console.log('[Voice] Follow-up window expired — returning to idle');
+      setIsConversationMode(false);
+      followUpTimeoutRef.current = null;
+      followUpTimerRef.current = null;
+      if (!hotwordActive.current) {
+        setVoiceState('idle');
+      }
+    }, FOLLOW_UP_WINDOW_MS);
+
     // Give a small cooldown before transitioning state
     setTimeout(() => {
       speakCooldown.current = false;
-      if (isConversationModeRef.current) {
-        console.log('[Voice] Conversation mode ON — auto-triggering mic');
+      if (followUpTimeoutRef.current && hotwordActive.current) {
+        // In hotword mode, stay in hotword after speaking
+        setVoiceState('hotword');
+      } else if (followUpTimeoutRef.current) {
+        // In conversation mode, stay in listening for the follow-up window
+        console.log('[Voice] Follow-up: auto-triggering mic');
         setVoiceState('listening');
-        // Because of dependency cycle with startListening, we call manualWake from outside
       } else if (hotwordActive.current) {
         setVoiceState('hotword');
-        // hotwordListenLoop will be called if hotwordActive is true, but since we broke dependencies
-        // we might just let state update and rely on another effect, OR we just ignore and let hotword continue.
       } else {
         setVoiceState('idle');
       }
@@ -375,6 +400,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       if (stopWords.some(w => lower.includes(w))) {
         window.speechSynthesis.cancel();
         if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
+        if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+        if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+        followUpTimeoutRef.current = null;
+        followUpTimerRef.current = null;
         isSpeakingRef.current = false;
         speakCooldown.current = false;
         hotwordActive.current = false;
@@ -385,6 +414,17 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       }
 
       if (data.text?.trim()) {
+        // Reset the follow-up window when user speaks
+        if (followUpTimeoutRef.current) {
+          clearTimeout(followUpTimeoutRef.current);
+          followUpTimeoutRef.current = setTimeout(() => {
+            console.log('[Voice] Follow-up window expired after user response');
+            setIsConversationMode(false);
+            followUpTimeoutRef.current = null;
+            followUpTimerRef.current = null;
+            if (!hotwordActive.current) setVoiceState('idle');
+          }, FOLLOW_UP_WINDOW_MS);
+        }
         ws.current?.send(JSON.stringify({ type: 'voice_command', text: data.text }));
       } else {
         setVoiceState(hotwordActive.current ? 'hotword' : 'idle');

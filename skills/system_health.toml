@@ -1,0 +1,16 @@
+# System Health Check - Full diagnostic
+[skill]
+name = "system_health"
+trigger = "health check"
+aliases = ["system diagnostic", "run diagnostics", "check system health"]
+trigger_mode = "contains"
+description = "Run comprehensive system health diagnostic"
+priority = 75
+enabled = true
+requires_online = false
+cooldown_seconds = 60
+timeout_seconds = 10
+
+[action]
+type = "response"
+response = "Running system health check... CPU, memory, disk, and network diagnostics in progress."

@@ -2,7 +2,7 @@
 """
 launcher.py - Silent background launcher for Operator (Jarvis)
 Starts all services without visible console windows.
-Optimized for 8GB machines with proper logging.
+Mode-aware: reads JARVIS_MODE env var to adjust for small/homelab.
 """
 
 import subprocess
@@ -13,6 +13,10 @@ import signal
 import webbrowser
 from pathlib import Path
 from datetime import datetime
+
+# Detect mode before anything else
+_JARVIS_MODE = os.getenv("JARVIS_MODE", "small").lower()
+_IS_HOMELAB = _JARVIS_MODE == "homelab"
 
 # Configuration
 ROOT_DIR = Path(__file__).parent.resolve()
@@ -234,31 +238,32 @@ def wait_for_port(port: int, timeout: int = 30) -> bool:
 
 def main():
     """Main launcher function."""
+    mode_label = "HOMELAB" if _IS_HOMELAB else "SMALL"
     log_message("=" * 60)
-    log_message("Operator (Jarvis) Silent Launcher")
+    log_message(f"Operator (Jarvis) Silent Launcher - {mode_label} MODE")
     log_message(f"Root Directory: {ROOT_DIR}")
     log_message(f"Logs Directory: {LOGS_DIR}")
     log_message("=" * 60)
-    
+
     # Set up signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
     # On Windows, also handle CTRL_CLOSE_EVENT
     if hasattr(signal, 'SIGBREAK'):
         signal.signal(signal.SIGBREAK, signal_handler)
-    
+
     try:
         # Ensure required directories exist
         for dir_name in ["database", "models", "skills", "test_logs"]:
             (ROOT_DIR / dir_name).mkdir(exist_ok=True)
-        
+
         # Create default config if missing
         config_file = BACKEND_DIR / "config.json"
         if not config_file.exists():
-            config_file.write_text('{"watched_folders": ["C:/Projects/Operator/test_logs"]}')
+            config_file.write_text('{"watched_folders": ["' + str(ROOT_DIR / "test_logs") + '"]}')
             log_message("Created default config.json")
-        
+
         # Activate virtual environment if it exists
         venv_python = BACKEND_DIR / "venv" / "Scripts" / "python.exe"
         if venv_python.exists():
@@ -267,26 +272,27 @@ def main():
             for service in SERVICES.values():
                 if service["cmd"][0] == sys.executable:
                     service["cmd"][0] = str(venv_python)
-        
+
         # Start services in order
         log_message("\nStarting services...")
-        
+
         for service_id, config in SERVICES.items():
             # Wait for specified delay before starting
             if config["delay"] > 0:
                 log_message(f"Waiting {config['delay']}s before starting {config['name']}...")
                 time.sleep(config["delay"])
-            
+
             start_service(service_id, config)
-        
+
         log_message("\n+--------------------------------------+")
-        log_message("|     JARVIS SYSTEM GUARDIAN v1.0      |")
+        log_message(f"|     JARVIS SYSTEM GUARDIAN v{mode_label}    |")
         log_message("|          OPERATOR ONLINE             |")
         log_message("+--------------------------------------+")
         log_message("|  Dashboard: http://localhost:8081    |")
         log_message("|  API:       http://localhost:5050    |")
         log_message("|  WebSocket: ws://localhost:8765      |")
-        log_message("+--------------------------------------+\n")
+        log_message("+--------------------------------------+")
+        log_message(f"Mode: {mode_label}")
         log_message("Press Ctrl+C to stop all services gracefully.")
 
         # Auto-open dashboard once the frontend dev server is ready
@@ -296,7 +302,7 @@ def main():
             log_message("Browser opened -> http://localhost:8081")
         else:
             log_message("[WARN] Frontend did not respond on port 8081 after 45s")
-        
+
         # Monitor services
         while True:
             time.sleep(5)

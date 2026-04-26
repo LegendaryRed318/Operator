@@ -1,0 +1,16 @@
+# Morning Routine - Starts your day with weather, calendar, and briefing
+[skill]
+name = "morning_routine"
+trigger = "start my day"
+aliases = ["morning routine", "daily briefing", "good morning"]
+trigger_mode = "contains"
+description = "Get weather, calendar events, and system status in one command"
+priority = 100
+enabled = true
+requires_online = true
+cooldown_seconds = 30
+timeout_seconds = 15
+
+[action]
+type = "response"
+response = "Starting your morning routine... Check your dashboard for weather, calendar, and system status."

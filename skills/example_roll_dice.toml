@@ -1,0 +1,21 @@
+# Example TOML Skills for JARVIS
+# These are simple skill definitions that work out of the box
+# Place in C:\Projects\Operator\skills\ or E:\JarvisVault\skills\
+
+# ===== ROLL DICE =====
+[skill]
+name = "roll_dice"
+trigger = "roll"
+aliases = ["throw dice", "dice"]
+trigger_mode = "contains"
+description = "Roll a virtual dice"
+priority = 50
+enabled = true
+requires_online = false
+cooldown_seconds = 2
+timeout_seconds = 5
+
+[action]
+type = "command"
+command = "powershell -Command \"Get-Random -Minimum 1 -Maximum 7\""
+response = ""  # Will be overridden by command output
