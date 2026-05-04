@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useVoice } from '../contexts/VoiceContext';
 
@@ -260,6 +260,38 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     };
   }, [state, getColor, audioLevel]);
 
+  const [showHint, setShowHint] = useState(false);
+
+  // Push-to-talk keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !e.repeat && state === 'idle') {
+        e.preventDefault();
+        manualWake();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && state === 'listening') {
+        // Space released - could trigger end of speech here if needed
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    // Show hint after 3 seconds
+    const hintTimer = setTimeout(() => setShowHint(true), 3000);
+    const hideHintTimer = setTimeout(() => setShowHint(false), 8000);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      clearTimeout(hintTimer);
+      clearTimeout(hideHintTimer);
+    };
+  }, [state, manualWake]);
+
   const handleClick = () => {
     // Call optional external onClick handler
     onClick?.();
@@ -268,20 +300,39 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
   };
 
   return (
-    <div 
-      ref={mountRef} 
-      onClick={handleClick}
-      style={{ 
-        width: '300px', 
-        height: '300px', 
-        margin: '0 auto', 
-        cursor: 'pointer',
-        borderRadius: '50%',
-        filter: state === 'speaking' ? 'drop-shadow(0 0 20px #00ffaa)' : 
-                state === 'offline' ? 'drop-shadow(0 0 10px #666666)' : 'none',
-        transition: 'filter 0.3s ease'
-      }} 
-    />
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <div
+        ref={mountRef}
+        onClick={handleClick}
+        style={{
+          width: '300px',
+          height: '300px',
+          margin: '0 auto',
+          cursor: 'pointer',
+          borderRadius: '50%',
+          filter: state === 'speaking' ? 'drop-shadow(0 0 20px #00ffaa)' :
+                  state === 'offline' ? 'drop-shadow(0 0 10px #666666)' : 'none',
+          transition: 'filter 0.3s ease'
+        }}
+      />
+      {/* Push-to-talk hint */}
+      {showHint && state === 'idle' && (
+        <div style={{
+          position: 'absolute',
+          bottom: '-30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '11px',
+          color: 'rgba(0, 180, 255, 0.7)',
+          fontFamily: "'Share Tech Mono', monospace",
+          letterSpacing: '0.1em',
+          pointerEvents: 'none',
+          animation: 'fadeInOut 5s ease-in-out'
+        }}>
+          CLICK OR HOLD SPACE
+        </div>
+      )}
+    </div>
   );
 };
 
