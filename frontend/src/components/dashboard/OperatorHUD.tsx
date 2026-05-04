@@ -48,7 +48,7 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
 };
 
 export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel }) => {
-  const { state: voiceState, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode } = useVoice();
+  const { state: voiceState, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode, wsConnected } = useVoice();
   const inputRef = useRef<HTMLInputElement>(null);
   const [aiText, setAiText] = useState('Operator Online');
   const [clock, setClock] = useState('');
@@ -337,14 +337,19 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
           <div style={{ marginTop: 5 }}>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>SERVICE STATUS</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {['api', 'websocket', 'ollama', 'frontend'].map((svc) => (
-                <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ 
-                    width: 8, height: 8, borderRadius: '50%', 
-                    background: serviceHealth?.services?.[svc] === true ? '#00ff96' : '#ff4444',
-                    boxShadow: `0 0 5px ${serviceHealth?.services?.[svc] === true ? '#00ff96' : '#ff4444'}`
+              {[
+                { name: 'api', status: serviceHealth?.services?.api },
+                { name: 'websocket', status: serviceHealth?.services?.websocket },
+                { name: 'ollama', status: serviceHealth?.services?.ollama },
+                { name: 'frontend', status: wsConnected } // Use actual WebSocket state
+              ].map((svc) => (
+                <div key={svc.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: svc.status === true ? '#00ff96' : '#ff4444',
+                    boxShadow: `0 0 5px ${svc.status === true ? '#00ff96' : '#ff4444'}`
                   }} />
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{svc}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{svc.name}</div>
                 </div>
               ))}
             </div>

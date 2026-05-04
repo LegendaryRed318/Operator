@@ -193,6 +193,38 @@ def ensure_ollama_running():
     return True
 
 
+async def prewarm_ollama_model():
+    """Warm up the default Ollama model to avoid first-query delay."""
+    await asyncio.sleep(5)  # Wait for other services to settle
+
+    if not is_ollama_running():
+        logger.info("[Prewarm] Ollama not running, skipping model warm-up")
+        return
+
+    model = OLLAMA_MODEL_FAST
+    logger.info(f"[Prewarm] Warming up {model}...")
+
+    try:
+        # Send a simple query to load model into memory
+        payload = {
+            "model": model,
+            "prompt": "Hello",
+            "system": "You are JARVIS. Respond with only: 'Ready, sir.'",
+            "stream": False,
+            "options": {"temperature": 0.1, "num_predict": 10}
+        }
+
+        timeout = aiohttp.ClientTimeout(total=60, connect=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
+                if resp.status == 200:
+                    logger.info(f"[Prewarm] {model} is ready")
+                else:
+                    logger.warning(f"[Prewarm] {model} warm-up returned status {resp.status}")
+    except Exception as e:
+        logger.warning(f"[Prewarm] Could not warm up model: {e}")
+
+
 # Per-client conversation history
 conversation_histories: dict = {}
 MAX_HISTORY_TURNS = 4
@@ -1015,6 +1047,9 @@ async def main():
             logger.error(f"[RAG] Failed to initialize: {e}")
 
     asyncio.create_task(proactive_alert_loop())
+
+    # Pre-warm Ollama model to avoid first-query delay
+    asyncio.create_task(prewarm_ollama_model())
 
     logger.info("[WebSocket] Starting server on ws://localhost:8765")
     for attempt in range(3):
