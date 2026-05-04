@@ -341,8 +341,8 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
                 <div key={svc} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ 
                     width: 8, height: 8, borderRadius: '50%', 
-                    background: serviceHealth[svc]?.status === 'online' ? '#00ff96' : '#ff4444',
-                    boxShadow: `0 0 5px ${serviceHealth[svc]?.status === 'online' ? '#00ff96' : '#ff4444'}`
+                    background: serviceHealth?.services?.[svc] === true ? '#00ff96' : '#ff4444',
+                    boxShadow: `0 0 5px ${serviceHealth?.services?.[svc] === true ? '#00ff96' : '#ff4444'}`
                   }} />
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{svc}</div>
                 </div>

@@ -250,6 +250,18 @@ def append_brain_profile_note(note: str) -> bool:
     """Append freeform user note into profile journal."""
     if not ensure_vault():
         return False
+    
+    if not note or not note.strip():
+        return False
+    try:
+        journal = FOLDERS["raw_sources"] / "brain_profile_notes.md"
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        with open(journal, "a", encoding="utf-8") as f:
+            f.write(f"\n## {ts}\n- {note.strip()}\n")
+        return True
+    except Exception as e:
+        logger.error(f"[Memory] Failed to append brain note: {e}")
+        return False
 
 
 def import_brain_profile_export(raw_text: str) -> dict:
@@ -327,17 +339,6 @@ def create_vault_backup() -> dict:
         except Exception as e:
             logger.warning(f"[Memory] Backup skip {target}: {e}")
     return {"ok": True, "backup_dir": str(backup_dir), "items_copied": copied}
-    if not note or not note.strip():
-        return False
-    try:
-        journal = FOLDERS["raw_sources"] / "brain_profile_notes.md"
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-        with open(journal, "a", encoding="utf-8") as f:
-            f.write(f"\n## {ts}\n- {note.strip()}\n")
-        return True
-    except Exception as e:
-        logger.error(f"[Memory] Failed to append brain note: {e}")
-        return False
 
 
 def search_vault(query: str) -> list:

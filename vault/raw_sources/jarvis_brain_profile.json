@@ -19,7 +19,7 @@
       "direct_feedback": true,
       "can_be_blunt": true,
       "allow_profanity_general": true,
-      "allow_slurs": true
+      "allow_slurs": false
     },
     "budget": {
       "prefers_free_tools": true

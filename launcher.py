@@ -26,6 +26,19 @@ LOGS_DIR = ROOT_DIR / "logs"
 # Ensure logs directory exists
 LOGS_DIR.mkdir(exist_ok=True)
 
+# Check if Ollama is already running
+def is_ollama_running():
+    """Check if Ollama is already running on port 11434."""
+    import socket
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        result = sock.connect_ex(('localhost', 11434))
+        sock.close()
+        return result == 0
+    except:
+        return False
+
 # Service configurations
 SERVICES = {
     "api": {
@@ -35,48 +48,57 @@ SERVICES = {
         "log": LOGS_DIR / "api.log",
         "delay": 0,
     },
+    "ollama": {
+        "name": "Ollama LLM Server",
+        "cmd": ["ollama", "serve"],
+        "cwd": str(ROOT_DIR),
+        "log": LOGS_DIR / "ollama.log",
+        "delay": 3,
+        "skip_if": is_ollama_running,  # Don't start if already running
+    },
     "voice_service": {
         "name": "Voice Service (Whisper)",
         "cmd": [sys.executable, str(BACKEND_DIR / "voice_service.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "voice.log",
-        "delay": 2,
+        "delay": 5,
     },
     "websocket": {
         "name": "WebSocket Server",
         "cmd": [sys.executable, str(BACKEND_DIR / "ws_server.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "ws.log",
-        "delay": 4,
+        "delay": 15,  # Give time for ChromaDB to fully load
     },
-    "watcher": {
-        "name": "File Watcher",
-        "cmd": [sys.executable, str(BACKEND_DIR / "watcher.py")],
-        "cwd": str(BACKEND_DIR),
-        "log": LOGS_DIR / "watcher.log",
-        "delay": 6,
-    },
-    "project_launcher": {
-        "name": "Project Launcher",
-        "cmd": [sys.executable, str(BACKEND_DIR / "project_launcher.py")],
-        "cwd": str(BACKEND_DIR),
-        "log": LOGS_DIR / "project_launcher.log",
-        "delay": 6,
-    },
-    "sleep_manager": {
-        "name": "Sleep Manager",
-        "cmd": [sys.executable, str(BACKEND_DIR / "sleep_manager.py")],
-        "cwd": str(BACKEND_DIR),
-        "log": LOGS_DIR / "sleep.log",
-        "delay": 7,
-    },
+    # DISABLED - non-essential services consuming RAM
+    # "watcher": {
+    #     "name": "File Watcher",
+    #     "cmd": [sys.executable, str(BACKEND_DIR / "watcher.py")],
+    #     "cwd": str(BACKEND_DIR),
+    #     "log": LOGS_DIR / "watcher.log",
+    #     "delay": 6,
+    # },
+    # "project_launcher": {
+    #     "name": "Project Launcher",
+    #     "cmd": [sys.executable, str(BACKEND_DIR / "project_launcher.py")],
+    #     "cwd": str(BACKEND_DIR),
+    #     "log": LOGS_DIR / "project_launcher.log",
+    #     "delay": 6,
+    # },
+    # "sleep_manager": {
+    #     "name": "Sleep Manager",
+    #     "cmd": [sys.executable, str(BACKEND_DIR / "sleep_manager.py")],
+    #     "cwd": str(BACKEND_DIR),
+    #     "log": LOGS_DIR / "sleep.log",
+    #     "delay": 7,
+    # },
     "frontend": {
         "name": "Frontend (Vite)",
         # Use cmd.exe /c to run npm without spawning PowerShell window
         "cmd": ["cmd.exe", "/c", "npm", "run", "dev"],
         "cwd": str(FRONTEND_DIR),
         "log": LOGS_DIR / "frontend.log",
-        "delay": 10,  # Wait for all backend services to be ready
+        "delay": 60,  # Wait for ws_server RAG indexing to finish
     },
 }
 
@@ -313,6 +335,15 @@ def main():
         log_message("\nStarting services...")
 
         for service_id, config in SERVICES.items():
+            # Check skip_if condition
+            if "skip_if" in config:
+                try:
+                    if config["skip_if"]():
+                        log_message(f"[SKIP] {config['name']} is already running")
+                        continue
+                except Exception as e:
+                    log_message(f"[WARN] Error checking skip_if for {config['name']}: {e}")
+
             # Wait for specified delay before starting
             if config["delay"] > 0:
                 log_message(f"Waiting {config['delay']}s before starting {config['name']}...")

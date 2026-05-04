@@ -6,6 +6,7 @@ Runs on port 8766 alongside the WebSocket server.
 
 import json
 import logging
+from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
@@ -55,7 +56,7 @@ class SkillsAPIHandler(BaseHTTPRequestHandler):
                 self._handle_dashboard(query.get('range', ['7d'])[0])
 
             elif path == '/skills/analytics':
-                self._handle_analytics()
+                self._handle_analytics(query.get('range', ['7d'])[0])
 
             elif path == '/skills/schedules':
                 self._handle_list_schedules()
@@ -71,6 +72,9 @@ class SkillsAPIHandler(BaseHTTPRequestHandler):
 
             elif path == '/health':
                 self._send_json({"status": "healthy", "service": "skills-api"})
+
+            elif path == '/health/detailed':
+                self._handle_detailed_health()
 
             else:
                 self._send_error("Not found", 404)
@@ -163,7 +167,7 @@ class SkillsAPIHandler(BaseHTTPRequestHandler):
         except ImportError:
             self._send_json({"error": "Analytics not available"})
 
-    def _handle_analytics(self):
+    def _handle_analytics(self, time_range: str = '7d'):
         """Get detailed analytics."""
         try:
             from skill_analytics import (
@@ -171,7 +175,7 @@ class SkillsAPIHandler(BaseHTTPRequestHandler):
                 get_recent_executions, get_failure_analysis
             )
 
-            days = int(time_range.replace('d', '')) if (time_range := '7d') else 7
+            days = int(time_range.replace('d', '')) if time_range else 7
 
             self._send_json({
                 "stats": get_skill_stats(),
@@ -379,6 +383,44 @@ class SkillsAPIHandler(BaseHTTPRequestHandler):
 
         except Exception as e:
             self._send_error(str(e))
+
+    def _handle_detailed_health(self):
+        """Return detailed health status for all services."""
+        import socket
+        import subprocess
+
+        def check_port(host: str, port: int) -> bool:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                result = sock.connect_ex((host, port))
+                sock.close()
+                return result == 0
+            except:
+                return False
+
+        def check_ollama() -> bool:
+            try:
+                import urllib.request
+                req = urllib.request.Request('http://localhost:11434/api/tags', method='GET')
+                req.add_header('Accept', 'application/json')
+                with urllib.request.urlopen(req, timeout=2) as response:
+                    return response.status == 200
+            except:
+                return False
+
+        health_data = {
+            "status": "healthy",
+            "services": {
+                "api": True,  # We're responding, so API is up
+                "websocket": check_port('localhost', 8765),
+                "voice": check_port('localhost', 8766),
+                "ollama": check_ollama(),
+                "frontend": True,  # Frontend is always 'up' if it's calling us
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        self._send_json(health_data)
 
     def log_message(self, format, *args):
         """Suppress default logging."""

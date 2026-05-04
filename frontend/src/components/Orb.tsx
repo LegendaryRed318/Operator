@@ -7,7 +7,7 @@ interface OrbProps {
 }
 
 const Orb: React.FC<OrbProps> = ({ onClick }) => {
-  const { state, manualWake } = useVoice();
+  const { state, manualWake, audioLevel } = useVoice();
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -18,6 +18,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
   const pulseRef = useRef<THREE.Mesh | null>(null);
   const frameIdRef = useRef<number>(0);
   const timeRef = useRef(0);
+  const audioLevelRef = useRef(0); // For smooth interpolation
 
   const getColor = useCallback(() => {
     switch(state) {
@@ -146,20 +147,26 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       timeRef.current += 0.016;
       const time = timeRef.current;
 
-      // Core rotation
-      particles.rotation.y += 0.003;
-      particles.rotation.x += 0.002;
-      glowParticles.rotation.y -= 0.001;
+      // Smooth audio level interpolation
+      audioLevelRef.current += (audioLevel - audioLevelRef.current) * 0.2;
+      const audioPulse = audioLevelRef.current;
+
+      // Core rotation - speeds up with audio
+      const rotationSpeed = 0.003 + audioPulse * 0.01;
+      particles.rotation.y += rotationSpeed;
+      particles.rotation.x += 0.002 + audioPulse * 0.005;
+      glowParticles.rotation.y -= 0.001 + audioPulse * 0.003;
       glowParticles.rotation.x -= 0.0005;
 
       // State-based animations
       if (state === 'listening' && pulseRef.current) {
-        // Pulse effect
-        const pulseScale = 1 + Math.sin(time * 4) * 0.15;
-        pulseRef.current.scale.set(pulseScale, pulseScale, 1);
-        (pulseRef.current.material as THREE.MeshBasicMaterial).opacity = 
-          0.3 + Math.sin(time * 4) * 0.2;
-        pulseRef.current.rotation.z += 0.01;
+        // Audio-reactive pulse effect
+        const basePulse = Math.sin(time * 4) * 0.15;
+        const audioScale = 1 + basePulse + audioPulse * 0.5;
+        pulseRef.current.scale.set(audioScale, audioScale, 1);
+        (pulseRef.current.material as THREE.MeshBasicMaterial).opacity =
+          0.3 + Math.sin(time * 4) * 0.2 + audioPulse * 0.5;
+        pulseRef.current.rotation.z += 0.01 + audioPulse * 0.05;
       } else if (pulseRef.current) {
         (pulseRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
       }
@@ -196,27 +203,32 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
         (trailsRef.current.material as THREE.LineBasicMaterial).opacity = 0;
       }
 
-      // Particle breathing effect
+      // Particle breathing effect - audio reactive
       if (particlesRef.current) {
         const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
         const velocities = (particlesRef.current as any).velocities;
         const color = getColor();
-        
+
+        // Expand particle size with audio
+        (particlesRef.current.material as THREE.PointsMaterial).size = 0.04 + audioPulse * 0.08;
+
         for (let i = 0; i < particleCount; i++) {
           const idx = i * 3;
           const v = velocities[i];
-          
-          // Apply velocity with breathing
-          positions[idx] += v.x + Math.sin(time + i * 0.1) * 0.001;
-          positions[idx+1] += v.y + Math.cos(time + i * 0.1) * 0.001;
-          positions[idx+2] += v.z;
-          
-          // Keep within bounds
+
+          // Apply velocity with breathing - audio reactive intensity
+          const audioIntensity = 1 + audioPulse * 3;
+          positions[idx] += (v.x + Math.sin(time + i * 0.1) * 0.001) * audioIntensity;
+          positions[idx+1] += (v.y + Math.cos(time + i * 0.1) * 0.001) * audioIntensity;
+          positions[idx+2] += v.z * audioIntensity;
+
+          // Keep within bounds - expand bounds with audio
+          const maxDist = 1.5 + audioPulse * 0.5;
           const dist = Math.sqrt(positions[idx]**2 + positions[idx+1]**2 + positions[idx+2]**2);
-          if (dist > 1.5) {
-            positions[idx] *= 0.9;
-            positions[idx+1] *= 0.9;
-            positions[idx+2] *= 0.9;
+          if (dist > maxDist) {
+            positions[idx] *= 0.95;
+            positions[idx+1] *= 0.95;
+            positions[idx+2] *= 0.95;
           }
         }
         particlesRef.current.geometry.attributes.position.needsUpdate = true;
@@ -246,7 +258,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       pulseMaterial.dispose();
       renderer.dispose();
     };
-  }, [state, getColor]);
+  }, [state, getColor, audioLevel]);
 
   const handleClick = () => {
     // Call optional external onClick handler

@@ -210,8 +210,8 @@ def select_model_by_ram() -> str | None:
             fallback = "qwen2.5-coder:7b"
             tier = "> 6GB"
         elif available_gb > 4:
-            preferred = "qwen2.5-coder:7b"
-            fallback = "llama3.2:3b"
+            preferred = "llama3.2:3b"
+            fallback = "qwen2.5-coder:7b"
             tier = "> 4GB"
         elif available_gb > 2:
             preferred = "llama3.2:3b"

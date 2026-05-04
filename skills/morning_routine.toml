@@ -1,8 +1,8 @@
 # Morning Routine - Starts your day with weather, calendar, and briefing
 [skill]
 name = "morning_routine"
-trigger = "start my day"
-aliases = ["morning routine", "daily briefing", "good morning"]
+trigger = "morning routine"
+aliases = ["daily briefing"]
 trigger_mode = "contains"
 description = "Get weather, calendar events, and system status in one command"
 priority = 100

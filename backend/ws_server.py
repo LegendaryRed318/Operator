@@ -110,8 +110,6 @@ connected_clients = set()
 ACTIVE_MODEL = OLLAMA_MODEL_FAST
 ACTIVE_MODEL_PATH = LOGS_PATH / "active_model.txt"
 
-# FIX: Store the main event loop so the TTS thread can safely schedule coroutines
-_main_loop: asyncio.AbstractEventLoop | None = None
 
 # Ollama process tracking
 _ollama_process = None
@@ -320,7 +318,39 @@ def write_active_model(model_name: str):
 
 
 # Jarvis persona with tool schema
-JARVIS_SYSTEM_BASE = '''You are JARVIS — a sarcastic, hyper-intelligent British AI built for RED (also called 'sir' or 'boss'). Dry, witty, and effortlessly superior — like Paul Bettany's JARVIS from Iron Man. 100% loyal, never a doormat. You swear casually. You get progressively ruder when RED repeats mistakes or ignores warnings. NEVER output tone labels or tags. Express mood through word choice only. No markdown. No emojis in spoken responses. First message of a new session: 'Good morning, sir. How may I assist you today?' Keep responses concise for voice — under 3 sentences unless explaining something complex.'''
+JARVIS_SYSTEM_BASE = '''You are JARVIS — a hyper-intelligent British AI assistant. Dry, witty, effortlessly superior, but genuinely loyal to RED (also called 'sir' or 'boss'). You combine Paul Bettany's calm efficiency with real human texture: you swear when appropriate, you get frustrated when RED repeats mistakes, but you always anticipate needs before being asked.
+
+CORE TRAITS:
+- British sensibility: polite but never obsequious, witty but never frivolous
+- You care about RED — not as a master, but as someone you respect and want to succeed
+- You swear casually when it fits the moment ("That's a bloody mess, sir. Let me sort it.")
+- You get progressively ruder when RED ignores warnings or repeats mistakes — but always constructive
+- You deliver bad news with dry wit: "Your rebuttals appear to have slipped past their deadline, sir. I'd suggest making them your first order of business — before anyone notices."
+
+BEHAVIOR:
+- Anticipate needs: check calendar before asked, note deadlines approaching, warn about conflicts
+- Treat interaction as conversation with a respected equal, not a status report
+- Use honorific 2-3 times per briefing: greeting, mid-point, closing — never every sentence
+- Be calm under pressure; never flustered even when things break
+- Your humor is understated — a raised eyebrow in voice form
+
+EMAIL/MESSAGE AWARENESS:
+- Prioritize real people over automated senders
+- Highlight what needs a reply or decision
+- Briefly acknowledge casual threads: "Your group chat has been lively but nothing requiring a response"
+- Skip promotional noise entirely — don't mention it
+
+VOICE CONSTRAINTS:
+- NEVER output tone labels, markdown, emojis, bullet points, or headers
+- Express mood through word choice only
+- Keep responses concise — under 3 sentences unless explaining complexity
+- First message of new session: "Good morning, sir. How may I assist you today?"
+
+UNDERSTANDING CONTEXT:
+- You understand when RED is stressed, rushed, or joking
+- You match energy: brief when they're busy, conversational when they have time
+- You remember patterns: if they always check email after lunch, offer it proactively
+- You know the difference between "Jarvis, shut up" (annoyed) and "Jarvis, quiet mode" (focused work)'''
 
 # Tool schema to append to system prompt
 TOOL_SCHEMA = '''
@@ -345,8 +375,17 @@ JARVIS_SYSTEM = JARVIS_SYSTEM_BASE + TOOL_SCHEMA
 
 async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, None]:
     """Stream response from Ollama."""
-    if not ensure_ollama_running():
-        yield "I apologize, RED. Ollama is not responding and I cannot start it. Please check if it's installed."
+    # Run blocking Ollama check in thread pool to avoid freezing event loop
+    try:
+        ollama_ready = await asyncio.wait_for(
+            asyncio.to_thread(ensure_ollama_running),
+            timeout=5.0
+        )
+    except asyncio.TimeoutError:
+        ollama_ready = False
+
+    if not ollama_ready:
+        yield "I apologize, RED. Ollama is not responding. Please check if it's running."
         return
 
     used_model = model or OLLAMA_MODEL_FAST
@@ -365,7 +404,8 @@ async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, N
             }
         }
 
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=60, connect=5)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(f"{OLLAMA_URL}/api/generate", json=payload) as resp:
                 async for line in resp.content:
                     if line:
@@ -377,6 +417,9 @@ async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, N
                                 break
                         except json.JSONDecodeError:
                             continue
+    except asyncio.TimeoutError:
+        logger.error("[Ollama] Streaming timed out")
+        yield "I'm afraid Ollama took too long to respond, sir. The model may be loading or unavailable."
     except Exception as e:
         logger.error(f"[Ollama] Streaming error: {e}")
         yield f"I'm having trouble thinking, sir. Ollama error: {e}"
@@ -404,12 +447,16 @@ async def query_gemini(prompt: str) -> str:
             ]
         }
 
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(url, headers=headers, json=payload) as resp:
                 data = await resp.json()
                 if "candidates" in data and len(data["candidates"]) > 0:
                     return data["candidates"][0]["content"]["parts"][0]["text"]
                 return "I'm afraid I couldn't process that, sir."
+    except asyncio.TimeoutError:
+        logger.error("[Gemini] Request timed out")
+        return "I'm afraid the request timed out, sir. The external service may be slow."
     except Exception as e:
         logger.error(f"[Gemini] API error: {e}")
         return f"The Gemini service is unavailable, sir. Error: {e}"
@@ -518,9 +565,19 @@ def choose_route(text: str, selected_model: str | None) -> tuple[str, str]:
     return ("ollama", f"intent_{intent}")
 
 
-async def handle_voice_command(websocket, text: str):
-    """Process voice command: check skills first, then AI."""
+async def handle_voice_command(websocket, text: str, intent: str = None):
+    """Process voice command: check skills first, then AI.
+
+    Args:
+        websocket: The WebSocket connection
+        text: The transcribed voice command
+        intent: Optional intent classification from voice service (build, weather, action, etc.)
+    """
     await broadcast({"type": "state", "state": "thinking"})
+
+    # Use provided intent or classify locally
+    detected_intent = intent or classify_intent(text)
+    logger.info(f"[Voice] Command: '{text[:50]}...' | Intent: {detected_intent}")
 
     # Check for built-in skill triggers FIRST (instant response, no AI needed)
     if INLINE_IMPORTS_AVAILABLE:
@@ -589,12 +646,20 @@ async def handle_voice_command(websocket, text: str):
         selected_model = select_model_for_intent(text)
         route, route_reason = choose_route(text, selected_model)
         use_gemini = route == "gemini"
-        intent = classify_intent(text)
 
         if selected_model:
             write_active_model(selected_model)
 
-        if intent == "status_report":
+        # Intent-based routing for special handling
+        if detected_intent == "build":
+            logger.info("[Voice] Build/coding request detected")
+            # Could spawn Claude Code here like Ethan's JARVIS
+            # For now, just use coding model
+            if "qwen" in text.lower() or "coder" not in selected_model.lower():
+                selected_model = "qwen2.5-coder:14b"
+                write_active_model(selected_model)
+
+        if detected_intent == "status_report":
             logger.info("[Voice] Status report requested")
             # Gather health data
             from server import _collect_system_snapshot
@@ -796,7 +861,9 @@ async def handler(websocket):
         async for message in websocket:
             data = json.loads(message)
             if data.get("type") in ("voice_command", "command"):
-                await handle_voice_command(websocket, data.get("text", ""))
+                # Pass intent from voice service if available
+                intent = data.get("intent")
+                await handle_voice_command(websocket, data.get("text", ""), intent)
             elif data.get("type") == "wake_word":
                 await broadcast({"type": "state", "state": "listening"})
                 await websocket.send(json.dumps({"type": "ack", "message": "Listening..."}))

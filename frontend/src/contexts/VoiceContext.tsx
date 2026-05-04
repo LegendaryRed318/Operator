@@ -14,6 +14,7 @@ interface VoiceContextType {
   wsConnected: boolean;
   isConversationMode: boolean;
   toggleConversationMode: () => void;
+  audioLevel: number; // 0-1 for orb visualization
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -50,6 +51,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const [wsConnected, setWsConnected] = useState(false);
   const [interimText, setInterimText] = useState('');
   const [isConversationMode, setIsConversationMode] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0); // 0-1 for orb visualization
 
   // Main JARVIS WebSocket (port 8765)
   const ws = useRef<WebSocket | null>(null);
@@ -169,6 +171,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             if (state === 'idle') {
               setVoiceState('listening');
             }
+          } else if (data.type === 'audio_level') {
+            // Real-time audio amplitude for orb visualization
+            setAudioLevel(data.level || 0);
           } else if (data.type === 'vad_end') {
             // Speech ended, will get transcript shortly
           } else if (data.type === 'transcript') {
@@ -177,13 +182,17 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             setTimeout(() => setInterimText(''), 3000);
           } else if (data.type === 'wake_word') {
             // Wake word detected!
-            console.log('[Voice] Wake word detected:', data.wake_word);
+            console.log('[Voice] Wake word detected:', data.wake_word, 'intent:', data.intent);
             setInterimText(data.transcript);
-            
-            // Send command to main JARVIS
+
+            // Send command to main JARVIS with intent for routing
             if (ws.current?.readyState === WebSocket.OPEN) {
               setVoiceState('thinking');
-              ws.current.send(JSON.stringify({ type: 'voice_command', text: data.transcript }));
+              ws.current.send(JSON.stringify({
+                type: 'voice_command',
+                text: data.transcript,
+                intent: data.intent || 'conversation'
+              }));
             }
           }
         } catch (e) {
@@ -419,7 +428,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       messages,
       wsConnected,
       isConversationMode,
-      toggleConversationMode
+      toggleConversationMode,
+      audioLevel
     }}>
       {children}
     </VoiceContext.Provider>

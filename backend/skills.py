@@ -761,7 +761,7 @@ class SkillExecutor:
                 lon = loc.get("longitude")
                 
                 # Use Open-Meteo API (free, no key needed)
-                weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=fahrenheit"
+                weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=celsius"
                 w_res = requests.get(weather_url, timeout=5)
                 if w_res.status_code == 200:
                     w = w_res.json()
@@ -781,7 +781,7 @@ class SkillExecutor:
                     }
                     condition = weather_codes.get(code, "unknown conditions")
                     
-                    return f"Currently in {city}, it's {temp}°F with {condition}. Humidity at {humidity}% and wind speed of {wind} mph."
+                    return f"Currently in {city}, it's {temp}°C with {condition}. Humidity at {humidity}% and wind speed of {wind} km/h."
         except Exception as e:
             logger.error(f"[Skills] Weather fetch error: {e}")
         return "I apologize, RED. I'm unable to retrieve weather data at the moment."
@@ -1424,8 +1424,7 @@ def validate_skills_files() -> dict:
             if TOML_LOADER is None:
                 issues.append({"file": skill_file.name, "level": "error", "message": "No TOML parser installed"})
                 continue
-            with open(skill_file, "rb") as f:
-                data = TOML_LOADER(f)
+            data = TOML_LOADER(skill_file)
             if "skill" not in data or not isinstance(data["skill"], dict):
                 issues.append({"file": skill_file.name, "level": "error", "message": "Missing [skill] section"})
                 continue

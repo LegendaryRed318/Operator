@@ -63,7 +63,7 @@ const AppContent: React.FC = () => {
   // Check API and Ollama health
   useEffect(() => {
     const abortController = new AbortController();
-    
+
     const checkServices = async () => {
       // Check API with retry
       let retries = 0;
@@ -90,8 +90,26 @@ const AppContent: React.FC = () => {
           }
         }
       }
+    };
 
-      // Check Ollama
+    checkServices();
+    const interval = setInterval(checkServices, 10000); // Reduced from 5s to 10s
+    return () => {
+      abortController.abort();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Check Ollama separately - only when API is connected, and much less frequently
+  useEffect(() => {
+    if (!_apiConnected) {
+      setOllamaConnected(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    const checkOllama = async () => {
       try {
         const res = await fetch('http://localhost:11434/api/tags', {
           signal: abortController.signal,
@@ -105,13 +123,13 @@ const AppContent: React.FC = () => {
       }
     };
 
-    checkServices();
-    const interval = setInterval(checkServices, 5000);
+    checkOllama();
+    const interval = setInterval(checkOllama, 30000); // Only check every 30 seconds
     return () => {
       abortController.abort();
       clearInterval(interval);
     };
-  }, []);
+  }, [_apiConnected]);
 
   // Process WebSocket messages
   useEffect(() => {

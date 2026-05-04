@@ -10,7 +10,6 @@ from pathlib import Path
 from datetime import datetime
 
 # Config paths
-TELEGRAM_CONFIG_PATH = Path(__file__).parent / "telegram_config.json"
 DASHBOARD_URL = "http://localhost:8080"
 
 
@@ -36,29 +35,22 @@ def send_windows_alert(project_name, error_summary, timestamp):
 
 def send_telegram_alert(project_name, error_summary, timestamp, dashboard_url=DASHBOARD_URL):
     """Send a Telegram alert for a new error."""
-    # Check if config exists
-    if not TELEGRAM_CONFIG_PATH.exists():
-        print("[NOTIFIER] Telegram config not found, skipping")
-        return
+    import os
+    from dotenv import load_dotenv
+    import logging
     
-    # Load config
-    try:
-        with open(TELEGRAM_CONFIG_PATH, "r") as f:
-            config = json.load(f)
-    except Exception as e:
-        print(f"[NOTIFIER] Failed to read Telegram config: {e}")
-        return
+    logger = logging.getLogger(__name__)
+    load_dotenv(Path(__file__).parent / ".env")
     
-    bot_token = config.get("bot_token", "")
-    chat_id = config.get("chat_id", "")
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
     
-    # Skip if not configured (still using placeholder)
-    if bot_token == "YOUR_BOT_TOKEN_HERE" or not bot_token:
-        print("[NOTIFIER] Telegram not configured, skipping")
+    if not bot_token:
+        logger.warning("TELEGRAM_BOT_TOKEN not set - Telegram notifications disabled")
         return
     
     if not chat_id:
-        print("[NOTIFIER] Telegram chat_id not set, skipping")
+        logger.warning("TELEGRAM_CHAT_ID not set - Telegram notifications disabled")
         return
     
     # Build message

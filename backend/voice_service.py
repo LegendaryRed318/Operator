@@ -81,6 +81,28 @@ WAKE_WORDS = [
 ]
 WAKE_WORD_THRESHOLD = 0.7  # Difflib ratio threshold
 
+# Intent classification patterns for voice routing
+INTENT_PATTERNS = {
+    "build": ["build", "create", "make", "generate", "code", "write", "develop", "implement"],
+    "weather": ["weather", "temperature", "forecast", "rain", "sunny", "cloudy"],
+    "search": ["search", "find", "look up", "google", "what is", "who is", "how to"],
+    "action": ["open", "close", "launch", "start", "stop", "run", "kill", "end"],
+    "note": ["note", "remember", "save", "write down", "record", "capture"],
+    "task": ["task", "todo", "remind", "schedule", "deadline", "reminder"],
+    "status": ["status", "check", "health", "system", "cpu", "memory", "ram"],
+    "greeting": ["hello", "hi", "good morning", "good evening", "hey"],
+    "farewell": ["goodbye", "bye", "see you", "later", "good night"],
+}
+
+def classify_intent(text: str) -> str:
+    """Classify intent from transcribed speech for routing."""
+    lowered = text.lower()
+    scores = {}
+    for intent, patterns in INTENT_PATTERNS.items():
+        scores[intent] = sum(1 for p in patterns if p in lowered)
+    best = max(scores, key=scores.get) if scores else "conversation"
+    return best if scores[best] > 0 else "conversation"
+
 class VoiceService:
     """Local voice recognition service using Whisper and Silero VAD."""
     
@@ -185,6 +207,19 @@ class VoiceService:
                 
                 self.silence_start = None
                 self.audio_buffer.extend(chunk)
+
+                # Send audio amplitude for orb visualization (throttled to ~10fps)
+                if len(self.audio_buffer) % (SAMPLE_RATE // 10) < CHUNK_SAMPLES:
+                    amplitude = float(np.sqrt(np.mean(np.square(chunk))))
+                    if self.loop and self.loop.is_running():
+                        self.loop.call_soon_threadsafe(
+                            self.loop.create_task,
+                            self.broadcast({
+                                "type": "audio_level",
+                                "level": min(1.0, amplitude * 5),  # Normalize to 0-1
+                                "timestamp": datetime.now().isoformat()
+                            })
+                        )
             else:
                 if self.is_recording:
                     self.audio_buffer.extend(chunk)
@@ -272,18 +307,22 @@ class VoiceService:
                         
                         if has_wake:
                             logger.info(f"Wake word detected: '{wake_word}'")
+                            intent = classify_intent(after_wake or transcript)
                             await self.broadcast({
                                 "type": "wake_word",
                                 "transcript": after_wake or transcript,
                                 "full_text": transcript,
                                 "wake_word": wake_word,
-                                "confidence": confidence
+                                "confidence": confidence,
+                                "intent": intent
                             })
                         else:
+                            intent = classify_intent(transcript)
                             await self.broadcast({
                                 "type": "transcript",
                                 "transcript": transcript,
-                                "confidence": confidence
+                                "confidence": confidence,
+                                "intent": intent
                             })
                 finally:
                     # Clean up temp file
@@ -333,7 +372,7 @@ class VoiceService:
                 "type": "connected",
                 "message": "Voice service connected",
                 "sample_rate": SAMPLE_RATE,
-                "vad_aggressiveness": VAD_AGGRESSIVENESS
+                "vad_aggressiveness": 3
             }))
             
             # Keep connection alive and handle any client messages
