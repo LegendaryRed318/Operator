@@ -8,6 +8,7 @@ interface Vitals { cpu: number; memory: number; tempCPU?: number | null; tempGPU
 interface OperatorHUDProps {
   vitals: Vitals;
   activeModel?: string;
+  mobileMode?: boolean;
 }
 
 const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
@@ -47,7 +48,7 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />;
 };
 
-export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel }) => {
+export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel, mobileMode = false }) => {
   const { state: voiceState, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode, wsConnected } = useVoice();
   const inputRef = useRef<HTMLInputElement>(null);
   const [aiText, setAiText] = useState('Operator Online');

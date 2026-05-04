@@ -16,6 +16,7 @@ const AppContent: React.FC = () => {
   const { messages, wsConnected: _wsConnected } = useVoice();
   const [isLoading, setIsLoading] = useState(true);
   const [locked, setLocked] = useState(true);
+  const [mobileMode, setMobileMode] = useState(false);
   useState('dashboard');
   const [activeModel, setActiveModel] = useState('qwen2.5-coder');
   const [_errors, setErrors] = useState<ErrorItem[]>(mockErrors);
@@ -307,16 +308,57 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Check if on mobile device on load
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+      if (isMobile) {
+        setMobileMode(true);
+      }
+    };
+    checkMobile();
+  }, []);
+
   return (
     <>
       {locked && <LockScreen onUnlock={() => setLocked(false)} />}
       <LoadingScreen isLoading={isLoading} />
+
+      {/* Mobile Mode Toggle Button - Floating */}
+      {!isLoading && !locked && (
+        <button
+          onClick={() => setMobileMode(!mobileMode)}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            zIndex: 9999,
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            background: mobileMode ? '#00ff96' : '#00b4ff',
+            border: '2px solid rgba(255,255,255,0.3)',
+            color: '#fff',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+          title={mobileMode ? 'Exit Mobile Mode' : 'Enter Mobile Mode'}
+        >
+          {mobileMode ? '📱' : '🖥️'}
+        </button>
+      )}
 
       {/* HUD only mounts after login — no network calls leak through the lock screen */}
       {!isLoading && !locked && (
         <OperatorHUD
           vitals={vitals}
           activeModel={activeModel}
+          mobileMode={mobileMode}
         />
       )}
 
