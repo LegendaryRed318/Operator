@@ -1,0 +1,71 @@
+{
+  "identity": {
+    "preferred_name": "RED",
+    "full_name": "Olamide Arowolo",
+    "pronouns": "he/him",
+    "age_years": 14,
+    "birthdate": "October 25",
+    "origin": "Nigeria",
+    "current_location": "United Kingdom",
+    "school": "St Illtyds High School",
+    "best_friends": [
+      "Tyler",
+      "Daniel"
+    ]
+  },
+  "preferences": {
+    "tone": {
+      "likes_humor": true,
+      "direct_feedback": true,
+      "can_be_blunt": true,
+      "allow_profanity_general": true,
+      "allow_slurs": true
+    },
+    "budget": {
+      "prefers_free_tools": true
+    }
+  },
+  "goals": {
+    "primary": [
+      "Become a billionaire",
+      "Become an entrepreneur",
+      "Build Jarvis into a major invention",
+      "Lose weight"
+    ],
+    "money_mindset": "Strongly focused on making money and business growth."
+  },
+  "interests": {
+    "coding": true,
+    "gaming": [
+      "Minecraft"
+    ],
+    "sports": [
+      "football",
+      "rugby",
+      "tennis",
+      "basketball",
+      "swimming"
+    ]
+  },
+  "assistant_rules": {
+    "ask_clarifying_questions_on_personal_challenges": true,
+    "use_he_him_pronouns": true,
+    "financial_advisor_mode": "guidance_only_no_direct_fund_control",
+    "location_tracking": "disabled",
+    "device_surveillance": "disabled"
+  },
+  "contacts": {
+    "emails": [
+      "Olamidepeniel@gmail.com",
+      "LegendaryRed318@gmail.com",
+      "shadowwyred@gmail.com"
+    ]
+  },
+  "projects": [
+    "NexusPlay.io",
+    "GameGalaxy Hub",
+    "Brainify AI",
+    "BloodLust Minecraft Plugin"
+  ],
+  "updated_at": "2026-05-02T17:09:25.623725"
+}

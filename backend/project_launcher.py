@@ -84,6 +84,13 @@ def main():
     projects = load_config()
     if not projects:
         print("No projects found in config.json")
+        print("Project Launcher will stay alive (idle mode) to prevent guardian restart loop.")
+        # Keep the process alive so guardian doesn't restart us
+        try:
+            while True:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            print("\nProject Launcher stopping.")
         return
     
     print(f"Launching {len(projects)} project(s)...")

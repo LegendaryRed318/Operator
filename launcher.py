@@ -10,7 +10,6 @@ import sys
 import os
 import time
 import signal
-import webbrowser
 from pathlib import Path
 from datetime import datetime
 
@@ -36,33 +35,40 @@ SERVICES = {
         "log": LOGS_DIR / "api.log",
         "delay": 0,
     },
+    "voice_service": {
+        "name": "Voice Service (Whisper)",
+        "cmd": [sys.executable, str(BACKEND_DIR / "voice_service.py")],
+        "cwd": str(BACKEND_DIR),
+        "log": LOGS_DIR / "voice.log",
+        "delay": 2,
+    },
     "websocket": {
         "name": "WebSocket Server",
         "cmd": [sys.executable, str(BACKEND_DIR / "ws_server.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "ws.log",
-        "delay": 2,
+        "delay": 4,
     },
     "watcher": {
         "name": "File Watcher",
         "cmd": [sys.executable, str(BACKEND_DIR / "watcher.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "watcher.log",
-        "delay": 2,
+        "delay": 6,
     },
     "project_launcher": {
         "name": "Project Launcher",
         "cmd": [sys.executable, str(BACKEND_DIR / "project_launcher.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "project_launcher.log",
-        "delay": 2,
+        "delay": 6,
     },
     "sleep_manager": {
         "name": "Sleep Manager",
         "cmd": [sys.executable, str(BACKEND_DIR / "sleep_manager.py")],
         "cwd": str(BACKEND_DIR),
         "log": LOGS_DIR / "sleep.log",
-        "delay": 3,
+        "delay": 7,
     },
     "frontend": {
         "name": "Frontend (Vite)",
@@ -70,7 +76,7 @@ SERVICES = {
         "cmd": ["cmd.exe", "/c", "npm", "run", "dev"],
         "cwd": str(FRONTEND_DIR),
         "log": LOGS_DIR / "frontend.log",
-        "delay": 8,  # Wait for WebSocket to be ready
+        "delay": 10,  # Wait for all backend services to be ready
     },
 }
 
@@ -113,7 +119,8 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
     creationflags = subprocess.CREATE_NO_WINDOW
     
     try:
-        # FIX: No shell=True needed — cmd.exe /c handles it without PowerShell window
+        # Merge service env with parent env
+        service_env = {**os.environ, **(config.get("env", {}) or {})}
         process = subprocess.Popen(
             config["cmd"],
             cwd=config["cwd"],
@@ -122,7 +129,8 @@ def start_service(service_id: str, config: dict) -> subprocess.Popen:
             stdin=subprocess.DEVNULL,
             creationflags=creationflags,
             start_new_session=False,
-            shell=False
+            shell=False,
+            env=service_env
         )
         
         processes[service_id] = {
@@ -292,6 +300,15 @@ def main():
                 if service["cmd"][0] == sys.executable:
                     service["cmd"][0] = str(venv_python)
 
+        # FIX: Add PYTHONPATH so backend modules can find each other
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(BACKEND_DIR)
+        for service in SERVICES.values():
+            if "env" not in service:
+                service["env"] = env
+            else:
+                service["env"]["PYTHONPATH"] = str(BACKEND_DIR)
+
         # Start services in order
         log_message("\nStarting services...")
 
@@ -307,7 +324,7 @@ def main():
         log_message(f"|     JARVIS SYSTEM GUARDIAN v{mode_label}    |")
         log_message("|          OPERATOR ONLINE             |")
         log_message("+--------------------------------------+")
-        log_message("|  Dashboard: http://localhost:8080    |")
+        log_message("|  Dashboard: http://localhost:8081    |")
         log_message("|  API:       http://localhost:5050    |")
         log_message("|  WebSocket: ws://localhost:8765      |")
         log_message("+--------------------------------------+")
@@ -315,12 +332,19 @@ def main():
         log_message("Press Ctrl+C to stop all services gracefully.")
 
         # Auto-open dashboard once the frontend dev server is ready
-        log_message("Waiting for frontend to initialise (port 8080)...")
-        if wait_for_port(8080, timeout=45):
-            webbrowser.open("http://localhost:8080")
-            log_message("Browser opened -> http://localhost:8080")
+        log_message("Waiting for frontend to initialise (port 8081)...")
+        if wait_for_port(8081, timeout=45):
+            # Force Brave browser instead of system default
+            brave_path = os.path.expandvars(r"C:\Users\%USERNAME%\AppData\Local\BraveSoftware\Brave-Browser\Application\brave.exe")
+            if os.path.exists(brave_path):
+                subprocess.Popen([brave_path, "http://localhost:8081"])
+                log_message("Browser opened (Brave) -> http://localhost:8081")
+            else:
+                log_message("[WARN] Brave not found, falling back to system default")
+                import webbrowser
+                webbrowser.open("http://localhost:8081")
         else:
-            log_message("[WARN] Frontend did not respond on port 8080 after 45s")
+            log_message("[WARN] Frontend did not respond on port 8081 after 45s")
 
         # Monitor services
         while True:

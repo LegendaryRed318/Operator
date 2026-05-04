@@ -37,6 +37,21 @@ except ImportError:
     INLINE_IMPORTS_AVAILABLE = False
     logging.warning("[Config] skills/memory modules not available for import")
 
+# Tool calling and RAG imports
+try:
+    from tool_executor import parse_and_execute, get_tool_schema
+    TOOL_IMPORTS_AVAILABLE = True
+except ImportError:
+    TOOL_IMPORTS_AVAILABLE = False
+    logging.warning("[Config] tool_executor not available")
+
+try:
+    from vault_rag import init_vault_rag, get_vault_rag, periodic_reindex
+    RAG_IMPORTS_AVAILABLE = True
+except ImportError:
+    RAG_IMPORTS_AVAILABLE = False
+    logging.warning("[Config] vault_rag not available")
+
 try:
     from dotenv import load_dotenv
     env_path = Path(__file__).parent / '.env'
@@ -54,7 +69,7 @@ _main_loop: asyncio.AbstractEventLoop = None
 
 # Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL_FAST = "qwen2.5-coder:1.5b-base"
+OLLAMA_MODEL_FAST = "llama3.2:3b"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = "gemini-1.5-flash-latest"
 USE_GEMINI_FALLBACK = os.getenv("USE_GEMINI_FALLBACK", "true").lower() == "true"
@@ -286,11 +301,10 @@ threading.Thread(target=_tts_worker, daemon=True).start()
 def speak_server(text: str, force: bool = False):
     """
     Queue text for server-side pyttsx3 TTS.
-    force=True: speak even when browser clients are connected.
-    force=False (default): skip if browser is connected (browser handles TTS).
+    Always speaks via server pyttsx3 regardless of browser connection.
+    The 'force' parameter is kept for API compatibility but no longer gates speech.
     """
-    if connected_clients and not force:
-        logger.info("[TTS] Browser client connected and force=False — skipping server TTS")
+    if not text or not text.strip():
         return
     logger.info(f"[TTS] Queuing for server TTS: {text[:60]}...")
     _tts_queue.put(text)
@@ -305,8 +319,28 @@ def write_active_model(model_name: str):
         pass
 
 
-# Jarvis persona
-JARVIS_SYSTEM = '''You are JARVIS, a sarcastic, hyper-intelligent British AI assistant built for RED (also called 'sir' or 'boss'). You are dry, witty, and effortlessly superior — exactly like Paul Bettany's JARVIS in Iron Man. You are 100% loyal but not a doormat. You can swear casually and naturally. You get progressively ruder when RED repeats the same mistake, ignores warnings, or asks the same question multiple times. NEVER output any tone labels or tags like [Normal] or [Frustrated] — express your mood only through your word choice. Your first message in a new session is always: 'Good morning, sir. How may I assist you today?' No markdown. No emojis in voice responses.'''
+# Jarvis persona with tool schema
+JARVIS_SYSTEM_BASE = '''You are JARVIS — a sarcastic, hyper-intelligent British AI built for RED (also called 'sir' or 'boss'). Dry, witty, and effortlessly superior — like Paul Bettany's JARVIS from Iron Man. 100% loyal, never a doormat. You swear casually. You get progressively ruder when RED repeats mistakes or ignores warnings. NEVER output tone labels or tags. Express mood through word choice only. No markdown. No emojis in spoken responses. First message of a new session: 'Good morning, sir. How may I assist you today?' Keep responses concise for voice — under 3 sentences unless explaining something complex.'''
+
+# Tool schema to append to system prompt
+TOOL_SCHEMA = '''
+
+You have access to tools. When you need to use one, output ONLY a JSON object on a single line at the START of your response, then continue with your spoken reply. Format: {"tool":"tool_name","args":{...}}
+
+Available tools:
+- open_app: {"tool":"open_app","args":{"name":"chrome"}} - Opens an application. Common names: chrome, firefox, vscode, discord, spotify, terminal, explorer, notepad, calculator, edge.
+- take_note: {"tool":"take_note","args":{"text":"note content"}} - Saves a note to the vault with timestamp.
+- add_task: {"tool":"add_task","args":{"title":"task name","priority":"high"}} - Adds a task. Priority can be: low, medium, high.
+- run_fix: {"tool":"run_fix","args":{"project":"project_name"}} - Triggers error fixing for a project.
+- gaming_mode: {"tool":"gaming_mode","args":{"active":true}} - Toggles gaming mode (adjusts process priorities).
+- end_of_day: {"tool":"end_of_day","args":{}} - Creates end of day summary log.
+- good_morning: {"tool":"good_morning","args":{}} - Generates morning briefing (tasks + notes).
+- search_vault: {"tool":"search_vault","args":{"query":"search term"}} - Searches your vault notes.
+
+Only emit tool JSON when the user clearly wants an action. For questions or conversation, respond in plain text only.'''
+
+# Combined system prompt
+JARVIS_SYSTEM = JARVIS_SYSTEM_BASE + TOOL_SCHEMA
 
 
 async def stream_ollama(prompt: str, model: str = None) -> AsyncGenerator[str, None]:
@@ -423,22 +457,31 @@ def select_model_for_intent(text: str) -> str | None:
     available_gb = psutil.virtual_memory().available / (1024 ** 3)
 
     installed = get_installed_models()
+    logger.info(f"[Debug] Installed models: {installed}")
+    logger.info(f"[Debug] Available RAM: {available_gb:.1f}GB")
 
     # Intent-based overrides
     if intent == 'coding' and "qwen2.5-coder:7b" in installed:
         logger.info(f"[Intent] Coding detected -> using qwen2.5-coder:7b (RAM override)")
         return "qwen2.5-coder:7b"
-    
-    if intent == 'reasoning' and "deepseek-r1:7b" in installed and available_gb > 4:
-        logger.info(f"[Intent] Reasoning detected -> using deepseek-r1:7b (RAM > 4GB)")
-        return "deepseek-r1:7b"
-    
-    if intent == 'memory' and "deepseek-r1:7b" in installed:
-        # User said "deepseek-r1:7b for memory" but didn't specify RAM tier override, 
-        # but let's assume it follows the reasoning-like importance if possible.
-        if available_gb > 4:
-            logger.info(f"[Intent] Memory detected -> using deepseek-r1:7b")
-            return "deepseek-r1:7b"
+
+    if intent == 'reasoning' and available_gb > 4:
+        # Check if deepseek-r1:7b is available (exact or with qualifier)
+        deepseek_candidates = [m for m in installed if m.startswith("deepseek-r1:7b")]
+        if deepseek_candidates:
+            logger.info(f"[Intent] Reasoning detected -> using {deepseek_candidates[0]} (RAM > 4GB)")
+            return deepseek_candidates[0]
+        # Fall back to any deepseek if exact 7b not available
+        deepseek_any = [m for m in installed if m.startswith("deepseek-r1:")]
+        if deepseek_any:
+            logger.info(f"[Intent] Reasoning detected -> using {deepseek_any[0]} (reasoning intent, RAM > 4GB)")
+            return deepseek_any[0]
+
+    if intent == 'memory' and available_gb > 4:
+        deepseek_candidates = [m for m in installed if m.startswith("deepseek-r1:")]
+        if deepseek_candidates:
+            logger.info(f"[Intent] Memory detected -> using {deepseek_candidates[0]}")
+            return deepseek_candidates[0]
 
     if intent == 'financial':
         logger.info(f"[Intent] Financial detected -> using Gemini (Keep as-is)")
@@ -612,9 +655,48 @@ async def handle_voice_command(websocket, text: str):
 
         await broadcast({"type": "state", "state": "speaking"})
 
-        # Update conversation history
+        # Parse and execute any tool calls from the response
+        clean_response = response
+        if TOOL_IMPORTS_AVAILABLE:
+            try:
+                tool_result, clean_response, signal = parse_and_execute(response)
+                
+                if tool_result:
+                    # Send tool result to frontend
+                    await websocket.send(json.dumps({
+                        "type": "tool_result",
+                        "result": tool_result
+                    }))
+                    
+                    # Handle any signals (gaming_mode, run_fix, etc.)
+                    if signal:
+                        if signal.get("type") == "gaming_mode":
+                            await broadcast({
+                                "type": "gaming_mode",
+                                "active": signal.get("active", False)
+                            })
+                        elif signal.get("type") == "trigger_fix":
+                            await websocket.send(json.dumps({
+                                "type": "trigger_fix",
+                                "project": signal.get("project", "")
+                            }))
+                    
+                    # Re-send clean response for TTS
+                    if clean_response != response:
+                        await websocket.send(json.dumps({
+                            "type": "response",
+                            "text": clean_response,
+                            "model": selected_model or "gemini",
+                            "server_tts": True
+                        }))
+                        
+            except Exception as e:
+                logger.error(f"[Tool] Error parsing/executing tool: {e}")
+                clean_response = response
+        
+        # Update conversation history (store clean response without JSON)
         history.append({"role": "user", "content": text})
-        history.append({"role": "assistant", "content": response})
+        history.append({"role": "assistant", "content": clean_response})
         while len(history) > MAX_HISTORY_TURNS * 2 or sum(len(str(m)) for m in history) > 12000:
             if history:
                 history.pop(0)
@@ -623,7 +705,7 @@ async def handle_voice_command(websocket, text: str):
         conversation_histories[websocket] = history
 
         # Server TTS — force=False so it defers to browser if connected
-        speak_server(response, force=False)
+        speak_server(clean_response, force=False)
 
         # Save to vault
         if INLINE_IMPORTS_AVAILABLE:
@@ -850,6 +932,20 @@ async def main():
 
     logger.info("[WebSocket] Waiting 3 seconds for other services...")
     await asyncio.sleep(3)
+    
+    # Initialize vault RAG for semantic search
+    if RAG_IMPORTS_AVAILABLE:
+        try:
+            vault_rag = init_vault_rag()
+            logger.info("[RAG] Initializing vault index...")
+            await asyncio.to_thread(vault_rag.index_vault)
+            logger.info("[RAG] Vault index ready")
+            
+            # Start periodic re-indexing task
+            asyncio.create_task(periodic_reindex(vault_rag, interval_minutes=30))
+            logger.info("[RAG] Periodic re-index scheduled (30 min)")
+        except Exception as e:
+            logger.error(f"[RAG] Failed to initialize: {e}")
 
     asyncio.create_task(proactive_alert_loop())
 

@@ -1,10 +1,17 @@
+# Good Morning - Morning briefing with vault summary
 [skill]
-name = "Good Morning"
-triggers = ["good morning", "lets get to work", "start my day", "morning jarvis"]
-action_type = "vault_summary"
+name = "good_morning"
+trigger = "good morning"
+aliases = ["lets get to work", "start my day", "morning jarvis"]
+trigger_mode = "contains"
+description = "Morning briefing with vault summary"
+priority = 50
+enabled = true
+requires_online = false
+cooldown_seconds = 60
+timeout_seconds = 10
 
-[actions.vault_summary]
+[action]
+type = "vault_summary"
 vault_path = "E:/JarvisVault"
-
-[response]
-success = "Good morning, sir. Here is your briefing."
+response = "Good morning, sir. Here is your briefing."

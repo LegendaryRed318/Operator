@@ -15,7 +15,11 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
-from paths import DB_PATH, LOGS_PATH, SKILLS_PATH
+# Import paths - handle both running from backend/ and project root
+try:
+    from paths import DB_PATH, LOGS_PATH, SKILLS_PATH
+except ImportError:
+    from backend.paths import DB_PATH, LOGS_PATH, SKILLS_PATH
 
 # Try to import requests for weather API
 try:
@@ -30,11 +34,17 @@ import psutil
 # Import toml - try stdlib first (Python 3.11+), then fallback
 try:
     import tomllib  # Python 3.11+
-    TOML_LOADER = lambda f: tomllib.load(f)
+    def load_toml(path):
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    TOML_LOADER = load_toml
 except ImportError:
     try:
         import toml
-        TOML_LOADER = lambda f: toml.load(f)
+        def load_toml(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return toml.load(f)
+        TOML_LOADER = load_toml
     except ImportError:
         TOML_LOADER = None
 
@@ -89,7 +99,8 @@ BUILT_IN_SKILLS = {
     "sleep": {
         "triggers": ["go to sleep", "sleep now", "goodnight", "good night"],
         "handler": "handle_sleep",
-        "description": "Enter sleep mode"
+        "description": "Enter sleep mode",
+        "no_questions": True,  # Don't trigger on questions like 'should I sleep now?'
     },
     "weather": {
         "triggers": ["weather", "temperature outside", "is it raining", "what's the forecast", "will it rain", "how cold is it", "how hot is it"],
@@ -152,6 +163,27 @@ BUILT_IN_SKILLS = {
         "description": "Generate a random number"
     },
 }
+
+
+# Question-word prefixes that indicate the user is asking, not commanding.
+_QUESTION_STARTERS = (
+    "what", "why", "how", "when", "where", "who", "which",
+    "is", "are", "was", "were", "does", "do", "did",
+    "can", "will", "would", "could", "should", "have", "has",
+)
+
+
+def _is_question(text: str) -> bool:
+    """
+    Return True if text looks like an informational question rather than a command.
+    Used to prevent action-type skills (e.g. 'sleep') from firing on queries like
+    'should I sleep now?' or 'how does sleep work?'.
+    """
+    stripped = text.strip().rstrip(".")
+    if stripped.endswith("?"):
+        return True
+    first_word = stripped.split()[0] if stripped else ""
+    return first_word in _QUESTION_STARTERS
 
 
 class SkillExecutor:
@@ -232,6 +264,15 @@ class SkillExecutor:
             text = re.sub(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", "[redacted-email]", text)
             redacted["command_text"] = text
             LOGS_PATH.mkdir(parents=True, exist_ok=True)
+            
+            # Rotate log if it exceeds 5MB
+            if AUDIT_LOG_PATH.exists() and AUDIT_LOG_PATH.stat().st_size > 5 * 1024 * 1024:
+                backup_path = LOGS_PATH / f"skills_audit_{int(time.time())}.jsonl"
+                try:
+                    AUDIT_LOG_PATH.rename(backup_path)
+                except OSError:
+                    pass
+
             with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(redacted, ensure_ascii=True) + "\n")
         except Exception as e:
@@ -271,28 +312,51 @@ class SkillExecutor:
             return True, 0.0
 
     def _normalize_loaded_skill(self, skill_file: Path, data: dict[str, Any]) -> Optional[dict[str, Any]]:
-        if "skill" in data:
-            skill_def = data.get("skill", {})
-            action_def = data.get("action", {})
-        else:
-            # OpenJarvis schema
-            skill_def = data
-            steps = data.get("steps", [])
-            action_def = steps[0] if isinstance(steps, list) and len(steps) > 0 else {}
+        # Detect schema: Schema 1 has [skill] with triggers/aliases arrays + [actions.<type>]
+        # Schema 2 has [skill] with singular trigger/string aliases + [action]
+        has_skill_section = "skill" in data
+        skill_def = data.get("skill", {}) if has_skill_section else data
 
         if not isinstance(skill_def, dict):
             return None
-        if not isinstance(action_def, dict):
+
+        # Schema 1: has triggers (plural array), aliases (plural array), action_type at top level
+        # Schema 2: has trigger (singular string), aliases (array), type in [action]
+        is_schema1 = has_skill_section and "triggers" in skill_def
+        is_schema2 = has_skill_section and "trigger" in skill_def
+
+        # Get action def based on schema
+        if is_schema1:
+            # Schema 1: [skill] + [actions.<type>]
+            action_def = {}
+        elif has_skill_section and "action" in data and isinstance(data["action"], dict):
+            # Schema 2: [skill] + [action]
+            action_def = data.get("action", {})
+        else:
             action_def = {}
 
         skill_name = str(skill_def.get("name", skill_file.stem)).strip()
-        trigger_text = str(skill_def.get("trigger", "")).strip().lower()
-        aliases_raw = skill_def.get("aliases", [])
-        aliases: list[str] = []
-        if isinstance(aliases_raw, list):
-            aliases = [str(x).strip().lower() for x in aliases_raw if str(x).strip()]
-        elif isinstance(aliases_raw, str) and aliases_raw.strip():
-            aliases = [aliases_raw.strip().lower()]
+
+        # Handle triggers/aliases for both schemas
+        if is_schema1:
+            # Schema 1: triggers is a list, aliases is a list
+            triggers_raw = skill_def.get("triggers", [])
+            trigger_text = ""
+            aliases: list[str] = []
+            if isinstance(triggers_raw, list):
+                aliases = [str(x).strip().lower() for x in triggers_raw if str(x).strip()]
+            aliases_raw = skill_def.get("aliases", [])
+            if isinstance(aliases_raw, list):
+                aliases.extend(str(x).strip().lower() for x in aliases_raw if str(x).strip())
+        else:
+            # Schema 2: trigger is a string, aliases is a list
+            trigger_text = str(skill_def.get("trigger", "")).strip().lower()
+            aliases_raw = skill_def.get("aliases", [])
+            aliases: list[str] = []
+            if isinstance(aliases_raw, list):
+                aliases = [str(x).strip().lower() for x in aliases_raw if str(x).strip()]
+            elif isinstance(aliases_raw, str) and aliases_raw.strip():
+                aliases = [aliases_raw.strip().lower()]
 
         trigger_mode = self._normalize_mode(skill_def.get("trigger_mode", "contains"))
         enabled = self._coerce_bool(skill_def.get("enabled", True), True)
@@ -302,10 +366,31 @@ class SkillExecutor:
         timeout_s = self._coerce_float(skill_def.get("timeout_seconds", 8), 8.0)
         response = str(skill_def.get("response", "")).strip()
 
-        # In OpenJarvis, action type is action_def.get("action", "response") rather than "type"
-        action_type = str(action_def.get("type", action_def.get("action", "response"))).strip().lower()
-        action_command = str(action_def.get("command", "")).strip()
-        action_response = str(action_def.get("response", response)).strip()
+        # Get action_type and action params based on schema
+        if is_schema1:
+            # Schema 1: action_type at top level
+            action_type = str(skill_def.get("action_type", "response")).strip().lower()
+            actions_section = data.get("actions", {})
+            action_params = actions_section.get(action_type, {}) if isinstance(actions_section, dict) else {}
+            action_command = str(action_params.get("vault_path", "")).strip()
+            response_section = data.get("response", {})
+            if isinstance(response_section, dict):
+                action_response = str(response_section.get("success", response)).strip()
+            else:
+                action_response = str(response_section).strip() or response
+        elif action_def:
+            # Schema 2: action type in action_def
+            action_type = str(action_def.get("type", action_def.get("action", "response"))).strip().lower()
+            action_command = str(action_def.get("command", "")).strip()
+            action_response = str(action_def.get("response", response)).strip()
+            action_params = action_def
+        else:
+            # Fallback
+            action_type = "response"
+            action_command = ""
+            action_response = response
+            action_params = {}
+
         action_timeout = self._coerce_float(action_def.get("timeout_seconds", timeout_s), timeout_s)
 
         return {
@@ -339,8 +424,7 @@ class SkillExecutor:
             SKILLS_PATH.mkdir(parents=True, exist_ok=True)
             for skill_file in SKILLS_PATH.glob("*.toml"):
                 try:
-                    with open(skill_file, "rb") as f:
-                        data = TOML_LOADER(f)
+                    data = TOML_LOADER(skill_file)
                     normalized = self._normalize_loaded_skill(skill_file, data)
                     if normalized:
                         skill_name = normalized["name"]
@@ -363,9 +447,13 @@ class SkillExecutor:
         All handlers accept (text: str) as their argument.
         """
         text_lower = text.lower().strip()
-        
+        text_is_question = _is_question(text_lower)
+
         # Check built-in skills first
         for skill_id, skill_info in BUILT_IN_SKILLS.items():
+            # Skip action-type skills when the input is clearly a question
+            if skill_info.get("no_questions", False) and text_is_question:
+                continue
             for trigger in skill_info["triggers"]:
                 if trigger in text_lower:
                     handler_name = skill_info["handler"]
@@ -459,6 +547,79 @@ class SkillExecutor:
                 if out:
                     return out[:300]
                 return skill_data.get("action_response") or f"Skill '{skill_name}' executed successfully."
+
+            elif action_type == "voice_capture_then_write":
+                # Signal ws_server to start VAD capture, return the prompt response
+                with self._runtime_lock:
+                    self.skill_runtime_state[skill_name] = {"awaiting_capture": True}
+                return skill_data.get("action_response") or skill_data.get("response") or "Go ahead, sir."
+
+            elif action_type == "vault_summary":
+                # Scan vault for briefing
+                from paths import VAULT_PATH as DEFAULT_VAULT_PATH
+                vault_path_str = skill_data.get("action_command", "") or os.getenv("VAULT_PATH", str(DEFAULT_VAULT_PATH))
+                vault_path = Path(vault_path_str)
+                file_count = 0
+                recent = []
+                if vault_path.exists():
+                    for item in vault_path.rglob("*"):
+                        if item.is_file():
+                            file_count += 1
+                            try:
+                                recent.append((item.name, item.stat().st_mtime))
+                            except Exception:
+                                pass
+                    recent.sort(key=lambda x: x[1], reverse=True)
+                    recent = recent[:5]
+                response = skill_data.get("action_response") or "Good morning, sir. "
+                if file_count > 0:
+                    response += f"Your vault contains {file_count} files."
+                    if recent:
+                        names = ", ".join(n for n, _ in recent[:3])
+                        response += f" Recent: {names}."
+                return response
+
+            elif action_type == "vault_log":
+                # Log session end to vault
+                from paths import VAULT_PATH as DEFAULT_VAULT_PATH
+                vault_path_str = skill_data.get("action_command", "") or os.getenv("VAULT_PATH", str(DEFAULT_VAULT_PATH))
+                vault_path = Path(vault_path_str)
+                log_dir = vault_path / "logs"
+                try:
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    log_file = log_dir / f"{today}.md"
+                    timestamp = datetime.now().strftime("%H:%M")
+                    entry = f"\n## {timestamp} — End of Day\nSession ended.\n"
+                    with open(log_file, "a", encoding="utf-8") as f:
+                        f.write(entry)
+                except Exception as e:
+                    logger.warning(f"[Skills] vault_log failed: {e}")
+                return skill_data.get("action_response") or "Session logged, sir."
+
+            elif action_type == "open_application":
+                # Extract app name from text and launch
+                app_name = None
+                text_lower = text.lower()
+                app_map = {
+                    "chrome": "start chrome", "firefox": "start firefox",
+                    "discord": "start discord:", "spotify": "start spotify:",
+                    "code": "code", "vs code": "code",
+                    "notepad": "notepad", "calculator": "calc",
+                    "file explorer": "explorer", "explorer": "explorer",
+                    "terminal": "wt", "cmd": "cmd",
+                }
+                for name, cmd in app_map.items():
+                    if name in text_lower:
+                        app_name = name
+                        try:
+                            subprocess.Popen(cmd, shell=True,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0)
+                            return f"Opening {name}, sir."
+                        except Exception as e:
+                            return f"Couldn't open {name}, sir. {e}"
+                return f"I don't see an app I can open in that command, sir."
 
             # default response action
             return skill_data.get("action_response") or skill_data.get("response") or f"Skill '{skill_name}' executed."
@@ -1107,7 +1268,7 @@ def dispatch_skill_command(
             # Log trace for skill discovery
             _log_skill_trace(trace_id, str(resolved_name), command_text, response, ok, time.time() - started_at)
             _log_skill_analytics(trace_id, str(resolved_name), command_text, response, ok, duration_ms, source, matched_by)
-            return {
+            result = {
                 "success": True,
                 "response": response,
                 "skill": resolved_name,
@@ -1116,6 +1277,14 @@ def dispatch_skill_command(
                 "duration_ms": duration_ms,
                 "trace_id": trace_id,
             }
+            # Check if this TOML skill is awaiting voice capture
+            if resolved_name in executor.loaded_skills:
+                state = executor.skill_runtime_state.get(resolved_name, {})
+                if state.get("awaiting_capture"):
+                    result["awaiting_capture"] = True
+                    # Clear the flag
+                    state.pop("awaiting_capture", None)
+            return result
         logger.error(f"[Skills] Execution error for {resolved_name}: {err}")
         audit_entry["error"] = err
         executor._append_audit_log(audit_entry)

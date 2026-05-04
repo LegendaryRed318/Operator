@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class DecisionEngine:
-    def __init__(self, model="qwen2.5-coder:1.5b-base", base_url="http://localhost:11434"):
+    def __init__(self, model="llama3.2:3b", base_url="http://localhost:11434"):
         logger.info(f"Initializing DecisionEngine with model {model}")
         self.model = model
         self.base_url = base_url.rstrip('/')
@@ -146,8 +146,10 @@ def get_installed_models() -> set:
         resp = requests.get(f"{ollama_url}/api/tags", timeout=3)
         if resp.status_code == 200:
             data = resp.json()
-            _installed_models_cache = {m["name"] for m in data.get("models", [])}
+            model_names = [m["name"] for m in data.get("models", [])]
+            _installed_models_cache = set(model_names)
             _installed_models_cache_time = now
+            logger.info(f"[AI] Fetched installed models: {model_names}")
             return _installed_models_cache
     except Exception as e:
         logger.warning(f"[AI] Failed to fetch installed models from {ollama_url}: {e}")
@@ -216,8 +218,9 @@ def select_model_by_ram() -> str | None:
             fallback = "qwen2.5-coder:1.5b-base"
             tier = "> 2GB"
         else:
-            preferred = "qwen2.5-coder:1.5b-base"
-            fallback = None
+            # For very low RAM, prefer llama3.2:3b (conversation) over qwen2.5-coder:1.5b-base (code-only)
+            preferred = "llama3.2:3b"
+            fallback = "qwen2.5-coder:1.5b-base"
             tier = "<= 2GB"
         
         # 1. Try preferred
@@ -232,7 +235,12 @@ def select_model_by_ram() -> str | None:
             pull_model_in_background(preferred)
             return fallback
             
-        # 3. Next tier down logic (Manual fallback sequence)
+        # 3. Check for alternative smart small models (Claude_Sonnet_4.6_Reduced is qwen2.5:1.5b based but smarter)
+        if "guzesqdro/Claude_Sonnet_4.6_Reduced:latest" in installed:
+            logger.info(f"[AI] Selected guzesqdro/Claude_Sonnet_4.6_Reduced:latest (Smart small model, RAM: {available_gb:.1f}GB)")
+            return "guzesqdro/Claude_Sonnet_4.6_Reduced:latest"
+        
+        # 4. Next tier down logic (Manual fallback sequence)
         fallback_sequence = ["deepseek-r1:7b", "qwen2.5-coder:7b", "llama3.2:3b", "qwen2.5-coder:1.5b-base"]
         try:
             start_idx = fallback_sequence.index(preferred)
@@ -248,7 +256,13 @@ def select_model_by_ram() -> str | None:
             
     except Exception as e:
         logger.error(f"[AI] Error selecting model: {e}")
-        return "qwen2.5-coder:1.5b-base" if "qwen2.5-coder:1.5b-base" in (get_installed_models() or []) else None
+        # Prefer llama3.2:3b for conversation, fallback to qwen2.5-coder:1.5b-base only as last resort
+        installed = get_installed_models() or []
+        if "llama3.2:3b" in installed:
+            return "llama3.2:3b"
+        elif "qwen2.5-coder:1.5b-base" in installed:
+            return "qwen2.5-coder:1.5b-base"
+        return None
 
 
 

@@ -27,7 +27,15 @@
       "Bash(python -c \"from backend.skills import dispatch_skill_command; r = dispatch_skill_command\\(command_text='what time is it'\\); print\\(r\\)\")",
       "Bash(python -c \"from skills import dispatch_skill_command; r = dispatch_skill_command\\(command_text='what time is it'\\); print\\(r\\)\")",
       "Bash(python -c ' *)",
-      "Bash(python -c \"from skills import list_skills_snapshot; print\\(list_skills_snapshot\\(\\)\\)\")"
+      "Bash(python -c \"from skills import list_skills_snapshot; print\\(list_skills_snapshot\\(\\)\\)\")",
+      "Bash(dir *)",
+      "Bash(python *)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(OPERATOR_SKILLS_PATH=\"C:/Projects/Operator/skills\" python *)",
+      "Bash(cp \"/c/Projects/Operator/skills/good_morning.toml\" \"E:/JarvisVault/skills/good_morning.toml\")",
+      "Bash(cp \"/c/Projects/Operator/skills/end_of_day.toml\" \"E:/JarvisVault/skills/end_of_day.toml\")",
+      "Bash(cp \"/c/Projects/Operator/skills/add_to_notes.toml\" \"E:/JarvisVault/skills/add_to_notes.toml\")",
+      "Bash(cp \"/c/Projects/Operator/skills/open_app.toml\" \"E:/JarvisVault/skills/open_app.toml\")"
     ]
   }
 }

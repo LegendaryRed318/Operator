@@ -601,10 +601,12 @@ async def transcribe(audio: UploadFile = File(...)):
                 language="en"
             )
             text = " ".join([seg.text for seg in segments]).strip()
-            return text
+            # Whisper returns confidence as language_probability
+            confidence = getattr(info, 'language_probability', 0.95)
+            return text, confidence
 
         loop = asyncio.get_event_loop()
-        text = await asyncio.wait_for(
+        text, confidence = await asyncio.wait_for(
             loop.run_in_executor(None, do_transcribe),
             timeout=30.0
         )
@@ -616,8 +618,8 @@ async def transcribe(audio: UploadFile = File(...)):
         except:
             pass
 
-        logger.info(f"[Whisper] Transcribed: {text[:80]}...")
-        return {"text": text, "confidence": 0.95}
+        logger.info(f"[Whisper] Transcribed: {text[:80]}... (confidence: {confidence:.2f})")
+        return {"text": text, "confidence": confidence}
 
     except HTTPException:
         raise
@@ -648,7 +650,7 @@ async def clear_errors(request: Request):
 async def get_models():
     """Return available Ollama models and the currently active model."""
     models = []
-    active = "qwen2.5-coder:1.5b-base"
+    active = "llama3.2:3b"
 
     # Read active model from file
     try:

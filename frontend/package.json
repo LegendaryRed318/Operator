@@ -27,11 +27,11 @@
     "@types/three": "^0.183.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "three": "^0.183.2",
-    "typescript": "^6.0.2"
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "workbox-window": "^7.0.0"
   }

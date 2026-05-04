@@ -148,7 +148,7 @@ export const SkillDashboard: React.FC = () => {
                 {(data.summary.top_skills || []).map((skill, idx) => (
                   <tr key={idx}>
                     <td className="skill-name">{skill.skill_name}</td>
-                    <td>{skill.executions || skill.total_executions}</td>
+                    <td>{skill.total_executions}</td>
                     <td>
                       <div className="progress-bar">
                         <div
@@ -158,7 +158,7 @@ export const SkillDashboard: React.FC = () => {
                         <span>{skill.success_rate?.toFixed(1) || 0}%</span>
                       </div>
                     </td>
-                    <td>{(skill.avg_duration || 0).toFixed(0)}ms</td>
+                    <td>{(skill.avg_duration_ms || 0).toFixed(0)}ms</td>
                   </tr>
                 ))}
               </tbody>

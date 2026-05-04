@@ -1,9 +1,16 @@
+# Open App - Application launcher
 [skill]
-name = "Open App"
-triggers = ["open", "launch", "start"]
-action_type = "open_application"
+name = "open_app"
+trigger = "open"
+aliases = ["launch", "start"]
+trigger_mode = "contains"
+description = "Launch applications by name"
+priority = 50
+enabled = true
+requires_online = false
+cooldown_seconds = 10
+timeout_seconds = 5
 
-[actions.open_application]
-
-[response]
-success = "Opening {app_name}, sir."
+[action]
+type = "open_application"
+response = "Opening {app_name}, sir."

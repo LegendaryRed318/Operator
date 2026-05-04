@@ -3,11 +3,6 @@
 :: Unlocks full features: GPU acceleration, large models, remote access
 :: Usage: Double-click this file or run from terminal
 
-echo ================================================
-echo   JARVIS Operator - HOMELAB MODE
-echo   Full Power Configuration
-echo ================================================
-echo.
 
 :: Set mode to homelab
 set JARVIS_MODE=homelab
@@ -25,6 +20,17 @@ set ENABLE_REMOTE_ACCESS=true
 :: Tailscale VPN (optional - set your auth key)
 :: set TAILSCALE_AUTHKEY=tskey-auth-xxxxx
 
+:: Use D: drive for Ollama models (where your models are installed)
+set OLLAMA_MODELS=D:\OllamaModels\.ollama\models
+set OLLAMA_HOST=127.0.0.1:11434
+
+:: Use E: drive for HuggingFace cache (Whisper needs ~500MB)
+set HF_HOME=E:\.huggingface
+set TRANSFORMERS_CACHE=E:\.cache\transformers
+
+:: Use E: drive for JARVIS Vault (notes, memory, skills)
+set OPERATOR_VAULT_EXTERNAL=E:\JarvisVault
+
 :: Python path (use venv if available)
 set PYTHON_PATH=%~dp0backend\venv\Scripts\python.exe
 if not exist "%PYTHON_PATH%" set PYTHON_PATH=python
@@ -35,6 +41,8 @@ echo   Mode: %JARVIS_MODE%
 echo   AI Model: %OLLAMA_MODEL%
 echo   Max RAM: %MAX_RAM_FOR_OLLAMA%MB
 echo   GPU Acceleration: %OLLAMA_ACCELERATE%
+echo   Ollama Models: D:\OllamaModels\.ollama\models
+echo   Vault: E:\JarvisVault
 echo.
 echo Starting all services...
 python "%~dp0launcher.py"

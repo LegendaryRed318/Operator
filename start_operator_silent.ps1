@@ -14,6 +14,20 @@ Set-Location -Path "C:\Projects\Operator"
 # Environment Configuration for Ollama
 $env:OLLAMA_MODELS = "D:\OllamaModels\.ollama\models"
 $env:OLLAMA_URL = "http://localhost:11434"
+$env:OLLAMA_HOST = "127.0.0.1:11434"
+$env:OLLAMA_MODEL = "llama3.2:3b"
+$env:MAX_RAM_FOR_OLLAMA = "1500"
+$env:OLLAMA_ACCELERATE = "off"
+
+# Use E: drive for HuggingFace cache (Whisper needs ~500MB)
+$env:HF_HOME = "E:\.huggingface"
+$env:TRANSFORMERS_CACHE = "E:\.cache\transformers"
+
+# Use E: drive for JARVIS Vault (notes, memory, skills)
+$env:OPERATOR_VAULT_EXTERNAL = "E:\JarvisVault"
+
+# Disable remote access features
+$env:ENABLE_REMOTE_ACCESS = "false"
 
 # Get pythonw path
 $pythonw = "C:\Projects\Operator\backend\venv\Scripts\pythonw.exe"

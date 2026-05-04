@@ -34,8 +34,16 @@ WMI>=1.5.1; platform_system == "Windows"
 watchdog>=3.0.0
 
 # Obsidian vault integration
-# chromadb>=0.4.0  # Uncomment if using ChromaDB for RAG
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
 python-dotenv>=1.0.0
+
+# Voice Service (Whisper VAD)
+sounddevice>=0.4.6
+silero-vad>=5.1
+openai-whisper>=20231117
+scipy>=1.10.0
+numpy>=1.24.0
 
 # Image processing (for screenshots)
 Pillow>=10.0.0

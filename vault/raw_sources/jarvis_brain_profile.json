@@ -19,7 +19,7 @@
       "direct_feedback": true,
       "can_be_blunt": true,
       "allow_profanity_general": true,
-      "allow_slurs": false
+      "allow_slurs": true
     },
     "budget": {
       "prefers_free_tools": true
@@ -67,5 +67,5 @@
     "Brainify AI",
     "BloodLust Minecraft Plugin"
   ],
-  "updated_at": "2026-04-26T08:35:44.120295"
+  "updated_at": "2026-05-02T17:09:25.623725"
 }

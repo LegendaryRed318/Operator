@@ -10,6 +10,14 @@ WshShell.CurrentDirectory = "C:\Projects\Operator"
 Set colEnv = WshShell.Environment("PROCESS")
 colEnv("OLLAMA_MODELS") = "D:\OllamaModels\.ollama\models"
 colEnv("OLLAMA_URL") = "http://localhost:11434"
+colEnv("OLLAMA_HOST") = "127.0.0.1:11434"
+
+' Use E: drive for HuggingFace cache (Whisper models ~500MB)
+colEnv("HF_HOME") = "E:\.huggingface"
+colEnv("TRANSFORMERS_CACHE") = "E:\.cache\transformers"
+
+' Use E: drive for JARVIS Vault (notes, memory, skills)
+colEnv("OPERATOR_VAULT_EXTERNAL") = "E:\JarvisVault"
 
 ' Create required directories
 CreateDir("database")
