@@ -534,3 +534,133 @@ source: speech-to-text
     except Exception as e:
         logger.error(f"[Memory] Failed to save voice note: {e}")
         return False
+
+
+def summarize_conversations_for_date(date_str: str = None) -> str:
+    """
+    Summarize all conversations from a specific date.
+    Returns the summary text or empty string if no conversations.
+    """
+    if not ensure_vault():
+        return ""
+
+    if date_str is None:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+
+    conv_file = FOLDERS["conversations"] / f"{date_str}.md"
+    if not conv_file.exists():
+        return ""
+
+    try:
+        content = conv_file.read_text(encoding="utf-8")
+        # Count conversation turns
+        turns = content.count("**RED:**")
+        if turns < 3:
+            return ""  # Not enough to summarize
+
+        # Extract just the conversation (skip header)
+        lines = content.split("\n")
+        conversation_lines = []
+        for line in lines:
+            if line.startswith("**RED:**") or line.startswith("**JARVIS:**"):
+                conversation_lines.append(line)
+
+        # Simple extraction of topics (look for key terms)
+        topics = set()
+        topic_keywords = ["code", "build", "project", "error", "bug", "fix", "weather", "schedule", "reminder", "note", "idea", "question"]
+        content_lower = content.lower()
+        for keyword in topic_keywords:
+            if keyword in content_lower:
+                topics.add(keyword)
+
+        summary_topics = ", ".join(sorted(topics)) if topics else "general conversation"
+
+        summary = f"""---
+date: {date_str}
+type: conversation_summary
+topics: {summary_topics}
+---
+
+# Conversation Summary — {date_str}
+
+**Total exchanges:** {turns}
+**Topics discussed:** {summary_topics}
+
+## Key Points
+"""
+
+        # Extract key exchanges (first and last few)
+        key_exchanges = conversation_lines[:4] + (["..."] if turns > 8 else []) + conversation_lines[-4:]
+        summary += "\n".join(key_exchanges)
+        summary += f"\n\n*Full log: [[conversations/{date_str}]]*\n"
+
+        return summary
+    except Exception as e:
+        logger.error(f"[Memory] Failed to summarize conversations: {e}")
+        return ""
+
+
+def save_conversation_summary(date_str: str = None) -> bool:
+    """Generate and save a summary of today's conversations to the wiki."""
+    summary = summarize_conversations_for_date(date_str)
+    if not summary:
+        return False
+
+    try:
+        if date_str is None:
+            date_str = datetime.now().strftime("%Y-%m-%d")
+
+        summary_file = FOLDERS["wiki"] / "conversation-summaries" / f"{date_str}-summary.md"
+        summary_file.parent.mkdir(parents=True, exist_ok=True)
+
+        summary_file.write_text(summary, encoding="utf-8")
+        logger.info(f"[Memory] Saved conversation summary: {summary_file.name}")
+        return True
+    except Exception as e:
+        logger.error(f"[Memory] Failed to save conversation summary: {e}")
+        return False
+
+
+def query_memory(query: str) -> str:
+    """
+    Answer 'do you remember' type queries by searching conversation history.
+    Returns a response string or empty string if nothing found.
+    """
+    query_lower = query.lower()
+
+    # Check if it's a memory query
+    memory_phrases = ["do you remember", "did i say", "did i ask", "what did i say", "when did we talk about", "have we discussed"]
+    is_memory_query = any(phrase in query_lower for phrase in memory_phrases)
+
+    if not is_memory_query:
+        return ""
+
+    # Search conversations
+    results = search_vault(query.replace("do you remember", "").replace("did i say", "").replace("did i ask", "").strip())
+
+    if not results:
+        return "I don't recall us discussing that, sir. It may have been in a previous session that wasn't saved to the vault."
+
+    # Format the response
+    memories = []
+    for r in results[:3]:
+        file_name = r['file']
+        excerpt = r['excerpt'][:200]  # Limit excerpt length
+
+        # Determine context from file path
+        if 'conversations' in file_name:
+            context = f"conversation on {file_name.split('/')[-1].replace('.md', '')}"
+        elif 'voice_notes' in file_name:
+            context = f"voice note from {file_name.split('/')[-1][:10]}"
+        elif 'wiki' in file_name:
+            context = f"wiki entry '{file_name.split('/')[-1].replace('.md', '')}'"
+        else:
+            context = f"vault file '{file_name}'"
+
+        memories.append(f"From our {context}: '{excerpt}...'")
+
+    if memories:
+        response = "Yes, sir. " + " ".join(memories)
+        return response
+
+    return ""

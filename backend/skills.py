@@ -627,45 +627,123 @@ class SkillExecutor:
         return _handler
     
     def _handle_good_morning(self, text: str = "") -> str:
-        """Good morning briefing for RED."""
+        """Good morning briefing for RED with weather, system status, and overnight summary."""
         hour = datetime.now().hour
-        if hour < 12:
+        if hour < 5:
+            greeting = "You're up early"
+        elif hour < 12:
             greeting = "Good morning"
         elif hour < 17:
             greeting = "Good afternoon"
         else:
             greeting = "Good evening"
-        
-        # Get system status
+
+        briefing_parts = [f"{greeting}, sir."]
+
+        # 1. Weather (if available)
+        try:
+            if REQUESTS_AVAILABLE:
+                weather = self._get_weather_brief()
+                if weather:
+                    briefing_parts.append(weather)
+        except Exception:
+            pass
+
+        # 2. System status
         try:
             cpu = psutil.cpu_percent(interval=0.1)
             mem = psutil.virtual_memory()
             ram_gb = round(mem.used / (1024**3), 1)
-            ram_total = round(mem.total / (1024**3), 1)
-            
-            # Check for errors
-            error_count = 0
+            ram_percent = mem.percent
+
+            # Check disk space on C:
+            disk = psutil.disk_usage('C:\\')
+            disk_percent = disk.percent
+
+            # Build system message
+            if ram_percent > 85 or disk_percent > 90:
+                status_msg = f"⚠️ System under pressure: {ram_percent:.0f}% RAM, {disk_percent:.0f}% disk."
+            elif cpu > 70:
+                status_msg = f"System active at {cpu:.0f}% CPU, {ram_gb}GB RAM in use."
+            else:
+                status_msg = "All systems nominal."
+
+            briefing_parts.append(status_msg)
+
+            # Disk warning
+            if disk_percent > 85:
+                briefing_parts.append(f"⚠️ C: drive is {disk_percent:.0f}% full — consider cleanup.")
+
+        except Exception:
+            briefing_parts.append("System status temporarily unavailable.")
+
+        # 3. Overnight errors summary
+        try:
             if DB_PATH.exists():
                 import sqlite3
-                try:
-                    conn = sqlite3.connect(str(DB_PATH), timeout=2.0)
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT COUNT(*) FROM errors WHERE fixed = 0 OR fixed IS NULL")
-                    error_count = cursor.fetchone()[0]
-                    conn.close()
-                except:
-                    pass
-            
-            status_msg = f"System is at {cpu:.0f}% CPU, {ram_gb}GB RAM in use."
-            if error_count > 0:
-                status_msg += f" There are {error_count} unresolved errors."
-            else:
-                status_msg += " All systems nominal."
-            
-        except Exception as e:
-            status_msg = "System status currently unavailable."
-        
-        return f"{greeting}, RED. {status_msg} How can I assist you today?"
+                conn = sqlite3.connect(str(DB_PATH), timeout=2.0)
+                cursor = conn.cursor()
+
+                # Get errors from last 8 hours
+                from datetime import datetime, timedelta
+                cutoff = (datetime.now() - timedelta(hours=8)).isoformat()
+                cursor.execute(
+                    "SELECT COUNT(*), project_name FROM errors WHERE timestamp > ? AND (fixed = 0 OR fixed IS NULL) GROUP BY project_name",
+                    (cutoff,)
+                )
+                recent_errors = cursor.fetchall()
+                conn.close()
+
+                if recent_errors:
+                    total_errors = sum(row[0] for row in recent_errors)
+                    projects = [row[1] for row in recent_errors]
+                    briefing_parts.append(f"⚠️ {total_errors} new errors overnight in: {', '.join(projects)}.")
+                else:
+                    briefing_parts.append("No new errors overnight.")
+        except Exception:
+            pass
+
+        # 4. Check for conversation summary from yesterday
+        try:
+            from datetime import datetime, timedelta
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            summary_path = Path("E:\\JarvisVault\\wiki\\conversation-summaries") / f"{yesterday}-summary.md"
+            if summary_path.exists():
+                briefing_parts.append(f"Yesterday's conversation summary available in the vault.")
+        except Exception:
+            pass
+
+        briefing_parts.append("How may I assist you today?")
+        return " ".join(briefing_parts)
+
+    def _get_weather_brief(self) -> str:
+        """Get brief weather for Cardiff. Returns empty string on failure."""
+        try:
+            import requests
+            # Open-Meteo free API - no key required
+            url = "https://api.open-meteo.com/v1/forecast?latitude=51.48&longitude=-3.18&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Europe/London"
+            resp = requests.get(url, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                current = data.get("current_weather", {})
+                temp = current.get("temperature", 0)
+                code = current.get("weathercode", 0)
+
+                # Simple weather code interpretation
+                weather_desc = "clear"
+                if code in [1, 2, 3]:
+                    weather_desc = "partly cloudy"
+                elif code in [45, 48]:
+                    weather_desc = "foggy"
+                elif code in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
+                    weather_desc = "rainy"
+                elif code in [71, 73, 75, 77, 85, 86]:
+                    weather_desc = "snowy"
+
+                return f"Weather in Cardiff: {temp:.0f}°C and {weather_desc}."
+        except Exception:
+            pass
+        return ""
     
     def _handle_time(self, text: str = "") -> str:
         """Tell current time."""

@@ -31,7 +31,7 @@ from paths import DB_PATH, LOGS_PATH
 
 try:
     from skills import dispatch_skill_command
-    from memory import save_conversation, save_to_wiki, get_context_for_query
+    from memory import save_conversation, save_to_wiki, get_context_for_query, query_memory
     INLINE_IMPORTS_AVAILABLE = True
 except ImportError:
     INLINE_IMPORTS_AVAILABLE = False
@@ -611,7 +611,25 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
     detected_intent = intent or classify_intent(text)
     logger.info(f"[Voice] Command: '{text[:50]}...' | Intent: {detected_intent}")
 
-    # Check for built-in skill triggers FIRST (instant response, no AI needed)
+    # Check for memory queries FIRST (do you remember, did I say, etc.)
+    if INLINE_IMPORTS_AVAILABLE:
+        try:
+            memory_response = await asyncio.to_thread(query_memory, text)
+            if memory_response:
+                logger.info("[Voice] Memory query answered from vault")
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "text": memory_response,
+                    "model": "memory:vault",
+                    "server_tts": True
+                }))
+                await broadcast({"type": "state", "state": "speaking"})
+                speak_server(memory_response, force=False)
+                return
+        except Exception as e:
+            logger.debug(f"[Voice] Memory query error: {e}")
+
+    # Check for built-in skill triggers (instant response, no AI needed)
     if INLINE_IMPORTS_AVAILABLE:
         try:
             skill_result = await asyncio.to_thread(dispatch_skill_command, None, text, {}, "voice_ws")
@@ -965,6 +983,8 @@ async def proactive_alert_loop():
     """Poll DB every 10s for new errors and broadcast voice alerts."""
     last_known_id = 0
     last_connectivity_check = 0
+    last_health_check = 0
+    last_health_warning = {}  # Track when we last warned about each metric
 
     try:
         if DB_PATH.exists():
@@ -982,9 +1002,43 @@ async def proactive_alert_loop():
         await asyncio.sleep(10)
         if not connected_clients:
             continue
-        
-        # Check connectivity every 60 seconds
+
         now = time.time()
+
+        # Health check every 60 seconds
+        if now - last_health_check > 60:
+            last_health_check = now
+            try:
+                import psutil
+                mem = psutil.virtual_memory()
+                disk = psutil.disk_usage('C:\\')
+
+                # Check RAM
+                if mem.percent > 90:
+                    if now - last_health_warning.get('ram', 0) > 300:  # Warn every 5 min
+                        alert = f"⚠️ RED, system RAM is at {mem.percent:.0f}%. Consider closing applications."
+                        speak_server(alert, force=True)
+                        last_health_warning['ram'] = now
+
+                # Check disk
+                if disk.percent > 90:
+                    if now - last_health_warning.get('disk', 0) > 600:  # Warn every 10 min
+                        alert = f"⚠️ RED, C: drive is {disk.percent:.0f}% full. Free space recommended."
+                        speak_server(alert, force=True)
+                        last_health_warning['disk'] = now
+
+                # Check CPU sustained high usage
+                cpu = psutil.cpu_percent(interval=1)
+                if cpu > 85:
+                    if now - last_health_warning.get('cpu', 0) > 300:
+                        alert = f"⚠️ RED, CPU is at {cpu:.0f}%. Something may be overloading the system."
+                        speak_server(alert, force=True)
+                        last_health_warning['cpu'] = now
+
+            except Exception:
+                pass
+
+        # Check connectivity every 60 seconds
         if now - last_connectivity_check > 60:
             last_connectivity_check = now
             was_offline = OFFLINE_MODE
@@ -994,7 +1048,7 @@ async def proactive_alert_loop():
                     "type": "connectivity",
                     "online": not OFFLINE_MODE
                 })
-        
+
         try:
             if not DB_PATH.exists():
                 continue
@@ -1025,6 +1079,27 @@ async def proactive_alert_loop():
             logger.error(f"[Alert] Loop error: {e}")
 
 
+async def auto_summarize_loop():
+    """Periodically summarize conversations and save to wiki. Runs every 6 hours."""
+    await asyncio.sleep(60)  # Wait for startup to complete
+
+    while True:
+        try:
+            if INLINE_IMPORTS_AVAILABLE:
+                # Try to import here to avoid issues at module level
+                from memory import save_conversation_summary
+                result = save_conversation_summary()
+                if result:
+                    logger.info("[AutoSummarize] Daily conversation summary saved")
+                else:
+                    logger.debug("[AutoSummarize] No conversations to summarize yet")
+        except Exception as e:
+            logger.error(f"[AutoSummarize] Error: {e}")
+
+        # Sleep for 6 hours
+        await asyncio.sleep(6 * 60 * 60)
+
+
 async def main():
     global _main_loop
     _main_loop = asyncio.get_running_loop()
@@ -1050,6 +1125,9 @@ async def main():
 
     # Pre-warm Ollama model to avoid first-query delay
     asyncio.create_task(prewarm_ollama_model())
+
+    # Start auto-summarization task (runs every 6 hours)
+    asyncio.create_task(auto_summarize_loop())
 
     logger.info("[WebSocket] Starting server on ws://localhost:8765")
     for attempt in range(3):
