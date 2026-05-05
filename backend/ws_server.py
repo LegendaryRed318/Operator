@@ -761,12 +761,25 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                     "partial": full_response
                 }))
             response = full_response
-            await websocket.send(json.dumps({
-                "type": "response",
-                "text": response,
-                "model": model_name,
-                "server_tts": True
-            }))
+            
+            # Fallback to Gemini if Ollama returned empty response
+            if not response.strip() and use_gemini:
+                logger.warning("[Voice] Ollama returned empty response, falling back to Gemini")
+                write_active_model("gemini-flash")
+                response = await query_gemini(prompt_text)
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "text": response,
+                    "model": GEMINI_MODEL,
+                    "server_tts": True
+                }))
+            else:
+                await websocket.send(json.dumps({
+                    "type": "response",
+                    "text": response,
+                    "model": model_name,
+                    "server_tts": True
+                }))
 
         await broadcast({"type": "state", "state": "speaking"})
 
