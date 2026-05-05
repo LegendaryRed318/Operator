@@ -19,9 +19,13 @@ export default defineConfig({
       'dry-handcraft-dusk.ngrok-free.dev',   // Your exact domain
       '.ngrok-free.dev',                     // Allows ALL ngrok domains
       '.ngrok-free.app',
+      '.ts.net',                             // Tailscale MagicDNS domains
+      '100.0.0.0',                           // Tailscale IP range (allows 100.x.x.x)
       'localhost',
       '127.0.0.1'
     ]
+    // NOTE: For full Tailscale IP range (100.64.0.0/10), you may need to use
+    // host: true instead of specific allowedHosts, or configure via hmr: { host: '0.0.0.0' }
   },
 
   preview: {

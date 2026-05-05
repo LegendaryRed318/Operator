@@ -106,6 +106,41 @@ http://localhost:8080
 - Falls back to local Ollama when offline
 - Visual indicator in UI when disconnected
 
+## Remote Access (Tailscale)
+
+Access JARVIS from anywhere in the world using Tailscale's free tier.
+
+### Setup
+
+1. **Install Tailscale:**
+   - On your PC (Jarvis host): https://tailscale.com/download
+   - On your phone: App Store / Play Store
+
+2. **Get your auth key:**
+   - Go to https://login.tailscale.com/admin/settings/keys
+   - Click "Generate auth key..."
+   - Copy the key (starts with `tskey-auth-`)
+
+3. **Configure JARVIS:**
+   Edit `backend/.env`:
+   ```env
+   ENABLE_REMOTE_ACCESS=true
+   TAILSCALE_AUTHKEY=tskey-auth-your-key-here
+   ```
+
+4. **Start JARVIS:**
+   ```bash
+   python launcher.py
+   ```
+   The launcher will auto-start Tailscale if configured.
+
+5. **Access from your phone:**
+   - Open the Tailscale app on your phone
+   - Note the IP address shown for your PC (e.g., `100.x.x.x`)
+   - Open browser and go to: `http://100.x.x.x:8081`
+
+**Note:** Both devices must have Tailscale running. The connection is private and encrypted - no port forwarding or public IPs required.
+
 ## Environment Variables
 
 Create `backend/.env`:

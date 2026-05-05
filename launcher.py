@@ -39,6 +39,71 @@ def is_ollama_running():
     except:
         return False
 
+
+def is_tailscale_running():
+    """Check if Tailscale is running by checking if the daemon responds."""
+    try:
+        result = subprocess.run(
+            ["tailscale", "status"],
+            capture_output=True,
+            timeout=5,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        return result.returncode == 0
+    except:
+        return False
+
+
+def start_tailscale():
+    """Start Tailscale if not already running and authkey is configured."""
+    auth_key = os.getenv("TAILSCALE_AUTHKEY", "").strip()
+    enable_remote = os.getenv("ENABLE_REMOTE_ACCESS", "false").lower() == "true"
+    
+    if not enable_remote:
+        log_message("[INFO] Remote access disabled (ENABLE_REMOTE_ACCESS=false)")
+        return
+    
+    if not auth_key or auth_key == "tskey-auth-xxxxx":
+        log_message("[WARN] TAILSCALE_AUTHKEY not configured. Remote access unavailable.")
+        log_message("[INFO] Get your auth key from https://login.tailscale.com/admin/settings/keys")
+        return
+    
+    if is_tailscale_running():
+        log_message("[OK] Tailscale is already running")
+        return
+    
+    log_message("[INFO] Starting Tailscale...")
+    try:
+        # Start tailscaled with auth key
+        subprocess.run(
+            ["tailscale", "up", "--authkey", auth_key, "--accept-routes"],
+            capture_output=True,
+            timeout=30,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        
+        if is_tailscale_running():
+            # Get Tailscale IP
+            result = subprocess.run(
+                ["tailscale", "ip", "-4"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            if result.returncode == 0:
+                tailscale_ip = result.stdout.strip().split('\n')[0]
+                log_message(f"[OK] Tailscale started - IP: {tailscale_ip}")
+                log_message(f"[INFO] Access JARVIS remotely at http://{tailscale_ip}:8081")
+            else:
+                log_message("[OK] Tailscale started")
+        else:
+            log_message("[WARN] Tailscale may not have started properly")
+            
+    except Exception as e:
+        log_message(f"[WARN] Failed to start Tailscale: {e}")
+        log_message("[INFO] Make sure Tailscale is installed: https://tailscale.com/download")
+
 # Service configurations
 SERVICES = {
     "api": {
@@ -313,6 +378,9 @@ def main():
             config_file.write_text('{"watched_folders": ["' + str(ROOT_DIR / "test_logs") + '"]}')
             log_message("Created default config.json")
 
+        # Start Tailscale for remote access (if configured)
+        start_tailscale()
+
         # Activate virtual environment if it exists
         venv_python = BACKEND_DIR / "venv" / "Scripts" / "python.exe"
         if venv_python.exists():
@@ -351,11 +419,29 @@ def main():
 
             start_service(service_id, config)
 
+        # Get Tailscale IP for display if available
+        tailscale_ip = None
+        if is_tailscale_running():
+            try:
+                result = subprocess.run(
+                    ["tailscale", "ip", "-4"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                if result.returncode == 0:
+                    tailscale_ip = result.stdout.strip().split('\n')[0]
+            except:
+                pass
+
         log_message("\n+--------------------------------------+")
         log_message(f"|     JARVIS SYSTEM GUARDIAN v{mode_label}    |")
         log_message("|          OPERATOR ONLINE             |")
         log_message("+--------------------------------------+")
-        log_message("|  Dashboard: http://localhost:8081    |")
+        log_message("|  Local:      http://localhost:8081   |")
+        if tailscale_ip:
+            log_message(f"|  Remote:     http://{tailscale_ip}:8081 |")
         log_message("|  API:       http://localhost:5050    |")
         log_message("|  WebSocket: ws://localhost:8765      |")
         log_message("+--------------------------------------+")

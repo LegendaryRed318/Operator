@@ -18,6 +18,14 @@ DEFAULT_VAULT_PATH = REPO_ROOT / "vault"
 PREFERRED_EXTERNAL_VAULT = Path(os.getenv("OPERATOR_VAULT_EXTERNAL", "E:/JarvisVault"))
 ALLOW_LOCAL_FALLBACK = os.getenv("OPERATOR_ALLOW_LOCAL_FALLBACK", "false").strip().lower() == "true"
 
+# =============================================================================
+# USER LOCATION CONFIGURATION (for weather, local services, etc.)
+# =============================================================================
+# Override with USER_CITY_OVERRIDE env var, or change defaults here
+USER_CITY = os.getenv("USER_CITY_OVERRIDE", "Rochdale")
+USER_CITY_LAT = float(os.getenv("USER_LAT_OVERRIDE", "53.61"))  # Rochdale
+USER_CITY_LON = float(os.getenv("USER_LON_OVERRIDE", "-2.16"))  # Rochdale
+
 
 def _env_path(env_key: str, default: Path) -> Path:
     value = os.getenv(env_key, "").strip()
@@ -43,3 +51,9 @@ _default_skills = (_default_vault / "skills") if _default_vault == PREFERRED_EXT
 
 SKILLS_PATH = _env_path("OPERATOR_SKILLS_PATH", _default_skills)
 VAULT_PATH = _env_path("OPERATOR_VAULT_PATH", _default_vault)
+
+
+# Location helper for weather/timezone services
+def get_user_location():
+    """Return user location as dict with city, lat, lon."""
+    return {"city": USER_CITY, "lat": USER_CITY_LAT, "lon": USER_CITY_LON}
