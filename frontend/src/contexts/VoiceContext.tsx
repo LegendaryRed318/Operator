@@ -270,9 +270,10 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
               if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
 
               ttsDurationTimeout.current = setTimeout(() => {
-                console.warn('[Voice] tts_done never arrived — recovering after safety timeout (12s)');
-                onSpeechFinished();
-              }, 12000);
+                console.warn('[Voice] tts_done never arrived — using browser fallback TTS');
+                const fallbackText = cleanTextForSpeech(responseText);
+                speak(fallbackText, onSpeechFinished);
+              }, 8000);  
 
             } else {
               const cleanText = cleanTextForSpeech(responseText);
