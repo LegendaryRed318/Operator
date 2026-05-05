@@ -717,11 +717,12 @@ class SkillExecutor:
         return " ".join(briefing_parts)
 
     def _get_weather_brief(self) -> str:
-        """Get brief weather for Cardiff. Returns empty string on failure."""
+        """Get brief weather for Rochdale. Returns empty string on failure."""
         try:
             import requests
             # Open-Meteo free API - no key required
-            url = "https://api.open-meteo.com/v1/forecast?latitude=51.48&longitude=-3.18&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Europe/London"
+            # Rochdale coordinates: 53.61, -2.16
+            url = "https://api.open-meteo.com/v1/forecast?latitude=53.61&longitude=-2.16&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Europe/London"
             resp = requests.get(url, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
@@ -740,7 +741,7 @@ class SkillExecutor:
                 elif code in [71, 73, 75, 77, 85, 86]:
                     weather_desc = "snowy"
 
-                return f"Weather in Cardiff: {temp:.0f}°C and {weather_desc}."
+                return f"Weather in Rochdale: {temp:.0f}°C and {weather_desc}."
         except Exception:
             pass
         return ""

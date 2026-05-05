@@ -18,6 +18,9 @@ _MODE = os.getenv("JARVIS_MODE", "small").lower()
 IS_HOMELAB = _MODE == "homelab"
 IS_SMALL = _MODE == "small"
 
+# Remote access override (can be set in .env or shell)
+_REMOTE_ENABLED = os.getenv("ENABLE_REMOTE_ACCESS", "false").lower() == "true"
+
 
 @dataclass
 class AIModelConfig:
@@ -140,8 +143,8 @@ _SMALL_MODE_CONFIG = {
         ollama_num_predict=4096,
     ),
     "network": NetworkConfig(
-        enable_remote_access=False,
-        tailscale_vpn=False,
+        enable_remote_access=_REMOTE_ENABLED,
+        tailscale_auth_key=os.getenv("TAILSCALE_AUTHKEY"),
         ngrok_enabled=False,
     ),
 }

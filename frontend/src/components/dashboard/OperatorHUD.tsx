@@ -324,7 +324,8 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
           </div>
         </div>
 
-        {/* FLOATING GAUGES */}
+        {/* FLOATING GAUGES - Hidden in mobile mode */}
+        {!mobileMode && (
         <div style={{
           position: 'absolute', left: 40, top: '20%', display: 'flex', flexDirection: 'column', gap: 20, zIndex: 5,
           background: 'rgba(3,5,8,0.4)', padding: 20, borderRadius: 16, border: '1px solid rgba(0,180,255,0.1)', backdropFilter: 'blur(8px)', width: 180
@@ -396,8 +397,10 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
             </div>
           </div>
         </div>
+        )}
 
-        {/* HISTORY PANEL */}
+        {/* HISTORY PANEL - Hidden in mobile mode */}
+        {!mobileMode && (
         <div style={{
           position: 'absolute', left: 280, top: '20%', zIndex: 6,
           background: 'rgba(3,5,8,0.4)', padding: 16, borderRadius: 16,
@@ -415,8 +418,10 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
             ))}
           </div>
         </div>
+        )}
 
-        {/* SKILLS ADMIN PANEL */}
+        {/* SKILLS ADMIN PANEL - Hidden in mobile mode */}
+        {!mobileMode && (
         <div style={{
           position: 'absolute', right: 40, top: '20%', zIndex: 6,
           background: 'rgba(3,5,8,0.4)', padding: 16, borderRadius: 16,
@@ -449,8 +454,10 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
             </button>
           </div>
         </div>
+        )}
 
-        {/* ERROR MONITORING PANEL */}
+        {/* ERROR MONITORING PANEL - Hidden in mobile mode */}
+        {!mobileMode && (
         <div style={{
           position: 'absolute', left: 40, bottom: 40, zIndex: 6,
           background: 'rgba(20,5,5,0.4)', padding: 16, borderRadius: 16,
@@ -493,8 +500,10 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
             </div>
           )}
         </div>
+        )}
 
-        {/* BRAIN EDITOR PANEL */}
+        {/* BRAIN EDITOR PANEL - Hidden in mobile mode */}
+        {!mobileMode && (
         <div style={{
           position: 'absolute', right: 40, bottom: 130, zIndex: 6,
           background: 'rgba(3,5,8,0.45)', padding: 14, borderRadius: 16,
@@ -567,10 +576,11 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
             </button>
           </div>
         </div>
+        )}
 
-        {/* ORB CENTRE */}
+        {/* ORB CENTRE - Enlarged in mobile mode */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-          <div style={{ transform: 'scale(1.8)', transition: 'transform 0.5s ease' }}>
+          <div style={{ transform: mobileMode ? 'scale(2.8)' : 'scale(1.8)', transition: 'transform 0.5s ease' }}>
             <Orb />
           </div>
           {/* Interim speech recognition feedback */}
@@ -587,8 +597,8 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
           )}
         </div>
 
-        {/* FLOATING CHAT INPUT */}
-        <div style={{ position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '40%', minWidth: 400 }}>
+        {/* FLOATING CHAT INPUT - Full width in mobile mode */}
+        <div style={{ position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: mobileMode ? '90%' : '40%', minWidth: mobileMode ? 'unset' : 400, maxWidth: mobileMode ? '500px' : 'unset' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,180,255,0.3)', borderRadius: 24, padding: '12px 20px', backdropFilter: 'blur(10px)' }}>
             <div 
               onClick={toggleConversationMode}

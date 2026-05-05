@@ -34,8 +34,8 @@ set TRANSFORMERS_CACHE=E:\.cache\transformers
 :: Use E: drive for JARVIS Vault (notes, memory, skills)
 set OPERATOR_VAULT_EXTERNAL=E:\JarvisVault
 
-:: Disable remote access features
-set ENABLE_REMOTE_ACCESS=false
+:: Enable remote access features
+set ENABLE_REMOTE_ACCESS=true
 
 :: Python path (use venv if available)
 set PYTHON_PATH=%~dp0backend\venv\Scripts\python.exe

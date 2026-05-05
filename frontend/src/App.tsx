@@ -308,16 +308,26 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Check if on mobile device on load
+  // Check if on mobile device on load + load saved preference
   useEffect(() => {
     const checkMobile = () => {
-      const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad/i.test(navigator.userAgent);
-      if (isMobile) {
-        setMobileMode(true);
+      // First check localStorage for saved preference
+      const savedMode = localStorage.getItem('jarvis_mobile_mode');
+      if (savedMode !== null) {
+        setMobileMode(savedMode === 'true');
+      } else {
+        // Auto-detect on first visit
+        const isMobile = window.innerWidth < 768 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+        setMobileMode(isMobile);
       }
     };
     checkMobile();
   }, []);
+
+  // Save mobile mode preference when it changes
+  useEffect(() => {
+    localStorage.setItem('jarvis_mobile_mode', String(mobileMode));
+  }, [mobileMode]);
 
   return (
     <>
