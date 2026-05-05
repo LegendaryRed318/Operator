@@ -23,6 +23,10 @@ backend/venv/
 
 # Database (runtime data)
 database/*.db
+*.sqlite3
+*.sqlite3-journal
+.chromadata/
+chromadata/
 
 # GitNexus index
 .gitnexus/
