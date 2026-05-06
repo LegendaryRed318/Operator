@@ -1013,7 +1013,7 @@ async def proactive_alert_loop():
 
     while True:
         await asyncio.sleep(10)
-        if not connected_clients:
+        if not list(connected_clients):
             continue
 
         now = time.time()
