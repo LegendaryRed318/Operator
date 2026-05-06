@@ -25,7 +25,7 @@ _REMOTE_ENABLED = os.getenv("ENABLE_REMOTE_ACCESS", "false").lower() == "true"
 @dataclass
 class AIModelConfig:
     """AI model selection based on mode and available RAM."""
-    fast_model: str = "qwen2.5-coder:1.5b-base"
+    fast_model: str = "llama3.2:3b"
     large_model: str = "qwen2.5-coder:7b"
     reasoning_model: str = "deepseek-r1:7b"
     fallback_model: str = "llama3.2:3b"
@@ -113,13 +113,13 @@ class PathsConfig:
 
 _SMALL_MODE_CONFIG = {
     "ai": AIModelConfig(
-        fast_model="qwen2.5-coder:1.5b-base",
-        large_model="qwen2.5-coder:1.5b-base",  # Can't run large on small machine
-        reasoning_model="qwen2.5-coder:1.5b-base",
-        fallback_model="qwen2.5-coder:1.5b-base",
-        large_model_ram_gb=999,  # Never trigger
-        medium_model_ram_gb=999,
-        small_model_ram_gb=0,
+        fast_model="llama3.2:3b",           # Default: good general conversation
+        large_model="qwen2.5-coder:7b",      # Coding tasks (>6GB RAM)
+        reasoning_model="deepseek-r1:7b",    # Reasoning tasks (>6GB RAM)
+        fallback_model="llama3.2:3b",        # Fallback when preferred unavailable
+        large_model_ram_gb=6.0,
+        medium_model_ram_gb=4.0,
+        small_model_ram_gb=2.0,
     ),
     "resources": ResourceConfig(
         max_history_turns=4,
