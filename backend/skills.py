@@ -73,6 +73,10 @@ APP_REGISTRY = {
     "outlook": "start outlook:",
     "word": "start winword",
     "excel": "start excel",
+    "youtube": "start chrome https://youtube.com",
+    "youtube music": "start chrome https://music.youtube.com",
+    "google": "start chrome https://google.com",
+    "github": "start chrome https://github.com",
 }
 
 BUILT_IN_SKILLS = {

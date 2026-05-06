@@ -65,7 +65,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Reference to the main asyncio event loop (set in main())
-_main_loop: asyncio.AbstractEventLoop = None
+_main_loop: asyncio.AbstractEventLoop | None = None
 
 # Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
@@ -591,7 +591,7 @@ def choose_route(text: str, selected_model: str | None) -> tuple[str, str]:
     if intent in ("coding", "reasoning", "memory"):
         score += 2
         
-    if USE_GEMINI_FALLBACK and score >= 3: # Bumped score since intents are more specific now
+    if USE_GEMINI_FALLBACK and score >= 4: # Bumped score since intents are more specific now
         return ("gemini", f"complexity_score_{score}_intent_{intent}")
         
     return ("ollama", f"intent_{intent}")
