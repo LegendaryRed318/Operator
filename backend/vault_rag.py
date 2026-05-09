@@ -26,6 +26,15 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 
 from paths import VAULT_PATH
 
+# Standard ignore patterns
+IGNORE_DIRS = {
+    "node_modules", ".git", ".svn", ".vscode", ".idea", "__pycache__",
+    "System32", "Program Files", "Program Files (x86)", "Windows",
+    "$RECYCLE.BIN", "System Volume Information", "AppData", "Temp"
+}
+IGNORE_EXTENSIONS = {".exe", ".dll", ".so", ".bin", ".zip", ".tar", ".gz", ".7z", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mp3", ".wav"}
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".py", ".js", ".ts", ".html", ".css", ".json", ".toml", ".yaml", ".yml"}
+
 logger = logging.getLogger(__name__)
 
 # Chunk settings
@@ -36,14 +45,18 @@ CHUNK_OVERLAP_WORDS = 50
 class VaultRAG:
     """ChromaDB-based RAG system for JARVIS vault."""
     
-    def __init__(self, vault_path: str = str(VAULT_PATH)):
-        self.vault_path = Path(vault_path)
+    def __init__(self, search_paths: List[str] = None):
+        if search_paths is None:
+            # Default to Vault + D: + E: and specific C: folders
+            search_paths = [str(VAULT_PATH), "D:/", "E:/", os.path.expanduser("~/Documents"), os.path.expanduser("~/Desktop")]
+        
+        self.search_paths = [Path(p) for p in search_paths]
         
         # Create persistent directory for ChromaDB
         persist_dir = "C:/Projects/Operator/data/chroma_db"
         os.makedirs(persist_dir, exist_ok=True)
         
-        # Use persistent client (saves to disk instead of memory)
+        # Use persistent client
         self.client = chromadb.PersistentClient(path=persist_dir)
         
         # Use all-MiniLM-L6-v2 - tiny (~80MB), fast, offline model
@@ -54,13 +67,61 @@ class VaultRAG:
         self.collection = self.client.get_or_create_collection(
             name="jarvis_vault",
             embedding_function=self.embedding_func,
-            metadata={"description": "JARVIS vault notes and documents"}
+            metadata={"description": "JARVIS multi-drive knowledge base"}
         )
         
-        # Track indexed files: {filepath: hash} to detect changes
-        self._indexed_hashes: dict = {}
+        # Track indexed files: {filepath: hash}
+        self.hashes_file = Path(persist_dir) / "indexed_hashes.json"
+        self._indexed_hashes: dict = self._load_hashes()
         
-        logger.info("[RAG] VaultRAG initialized with persistent ChromaDB")
+        # Limit paths in small mode to avoid CPU/RAM exhaustion
+        mode = os.getenv("JARVIS_MODE", "small").lower()
+        if mode == "small":
+            logger.info("[RAG] SMALL mode detected: Limiting indexing to primary vault")
+            self.search_paths = [Path(VAULT_PATH)]
+        else:
+            self.search_paths = [Path(p) for p in search_paths]
+        
+        logger.info(f"[RAG] VaultRAG initialized with {len(self.search_paths)} search roots")
+    
+    def _load_hashes(self) -> dict:
+        """Load indexed file hashes from disk."""
+        import json
+        if self.hashes_file.exists():
+            try:
+                return json.loads(self.hashes_file.read_text(encoding="utf-8"))
+            except Exception as e:
+                logger.warning(f"[RAG] Failed to load hashes: {e}")
+        return {}
+
+    def _save_hashes(self):
+        """Save indexed file hashes to disk."""
+        import json
+        try:
+            self.hashes_file.write_text(json.dumps(self._indexed_hashes), encoding="utf-8")
+        except Exception as e:
+            logger.error(f"[RAG] Failed to save hashes: {e}")
+    
+    def _should_ignore(self, path: Path) -> bool:
+        """Check if a path should be ignored by the indexer."""
+        # Check hidden files/folders
+        if path.name.startswith("."):
+            return True
+        
+        # Check standard ignore names
+        if path.name in IGNORE_DIRS:
+            return True
+        
+        # Check extension
+        if path.suffix in IGNORE_EXTENSIONS:
+            return True
+        
+        # Check parent folders for ignored names
+        for parent in path.parents:
+            if parent.name in IGNORE_DIRS:
+                return True
+                
+        return False
     
     def _file_hash(self, filepath: Path) -> str:
         """Generate hash of file content for change detection."""
@@ -95,27 +156,9 @@ class VaultRAG:
     
     def index_vault(self, force_reindex: bool = False) -> dict:
         """
-        Index all .md files in the vault.
-        
-        Args:
-            force_reindex: If True, re-index all files regardless of changes
-            
-        Returns:
-            Stats dict with files_indexed, chunks_added, etc.
+        Index all supported files in the search paths.
         """
-        logger.info("[RAG] Starting vault indexing...")
-        
-        # Check if we already have indexed documents (persistent storage)
-        existing_count = self.collection.count()
-        if existing_count > 0 and not force_reindex:
-            logger.info(f"[RAG] Using existing index with {existing_count} documents, skipping re-index")
-            return {
-                "files_indexed": 0,
-                "chunks_added": 0,
-                "files_skipped": existing_count,
-                "errors": [],
-                "using_existing": True
-            }
+        logger.info("[RAG] Starting multi-drive indexing...")
         
         stats = {
             "files_indexed": 0,
@@ -124,63 +167,79 @@ class VaultRAG:
             "errors": []
         }
         
-        # Find all .md files in vault
-        md_files = list(self.vault_path.rglob("*.md"))
-        
-        for filepath in md_files:
-            try:
-                # Check if file has changed
-                current_hash = self._file_hash(filepath)
-                file_id = str(filepath.relative_to(self.vault_path))
+        for root in self.search_paths:
+            if not root.exists():
+                logger.warning(f"[RAG] Search root {root} does not exist, skipping")
+                continue
                 
-                if not force_reindex and file_id in self._indexed_hashes:
-                    if self._indexed_hashes[file_id] == current_hash:
+            logger.info(f"[RAG] Indexing root: {root}")
+            
+            # Walk the directory
+            for root_dir, dirs, files in os.walk(root):
+                # Filter out ignored directories in-place to stop os.walk from entering them
+                dirs[:] = [d for d in dirs if not self._should_ignore(Path(root_dir) / d)]
+                
+                for filename in files:
+                    filepath = Path(root_dir) / filename
+                    
+                    if filepath.suffix not in SUPPORTED_EXTENSIONS or self._should_ignore(filepath):
                         stats["files_skipped"] += 1
                         continue
-                
-                # Read and chunk file
-                content = filepath.read_text(encoding="utf-8")
-                chunks = self._chunk_text(content)
-                
-                if not chunks:
-                    continue
-                
-                # Delete existing chunks for this file (if re-indexing)
-                if file_id in self._indexed_hashes:
-                    self.collection.delete(
-                        where={"source": file_id}
-                    )
-                
-                # Add new chunks
-                date_str = self._extract_date_from_filename(filepath)
-                
-                for i, chunk in enumerate(chunks):
-                    chunk_id = f"{file_id}_chunk_{i}"
-                    
-                    self.collection.add(
-                        documents=[chunk],
-                        ids=[chunk_id],
-                        metadatas=[{
-                            "source": file_id,
-                            "file": filepath.name,
-                            "chunk_index": i,
-                            "date": date_str,
-                            "total_chunks": len(chunks)
-                        }]
-                    )
-                
-                self._indexed_hashes[file_id] = current_hash
-                stats["files_indexed"] += 1
-                stats["chunks_added"] += len(chunks)
-                
-                logger.debug(f"[RAG] Indexed {filepath.name}: {len(chunks)} chunks")
-                
-            except Exception as e:
-                logger.error(f"[RAG] Error indexing {filepath}: {e}")
-                stats["errors"].append(str(filepath))
+                        
+                    try:
+                        # Check if file has changed
+                        current_hash = self._file_hash(filepath)
+                        file_id = str(filepath)
+                        
+                        if not force_reindex and file_id in self._indexed_hashes:
+                            if self._indexed_hashes[file_id] == current_hash:
+                                stats["files_skipped"] += 1
+                                continue
+                        
+                        # Read and chunk file
+                        try:
+                            content = filepath.read_text(encoding="utf-8", errors="ignore")
+                        except Exception:
+                            continue # Skip files that can't be read as text
+                            
+                        chunks = self._chunk_text(content)
+                        
+                        if not chunks:
+                            continue
+                        
+                        # Delete existing chunks for this file
+                        if file_id in self._indexed_hashes:
+                            self.collection.delete(
+                                where={"source": file_id}
+                            )
+                        
+                        # Add new chunks
+                        for i, chunk in enumerate(chunks):
+                            chunk_id = f"{file_id}_chunk_{i}"
+                            
+                            self.collection.add(
+                                documents=[chunk],
+                                ids=[chunk_id],
+                                metadatas=[{
+                                    "source": file_id,
+                                    "file": filename,
+                                    "root": str(root),
+                                    "chunk_index": i,
+                                    "total_chunks": len(chunks)
+                                }]
+                            )
+                        
+                        self._indexed_hashes[file_id] = current_hash
+                        stats["files_indexed"] += 1
+                        stats["chunks_added"] += len(chunks)
+                        
+                    except Exception as e:
+                        logger.debug(f"[RAG] Error indexing {filepath}: {e}")
+                        stats["errors"].append(str(filepath))
         
+        self._save_hashes()
         logger.info(f"[RAG] Indexing complete: {stats['files_indexed']} files, "
-                   f"{stats['chunks_added']} chunks, {stats['files_skipped']} skipped")
+                   f"{stats['chunks_added']} chunks")
         
         return stats
     
@@ -296,8 +355,8 @@ def get_vault_rag() -> Optional[VaultRAG]:
     return _vault_rag
 
 
-def init_vault_rag(vault_path: str = str(VAULT_PATH)) -> VaultRAG:
+def init_vault_rag(search_paths: List[str] = None) -> VaultRAG:
     """Initialize the global VaultRAG instance."""
     global _vault_rag
-    _vault_rag = VaultRAG(vault_path)
+    _vault_rag = VaultRAG(search_paths)
     return _vault_rag

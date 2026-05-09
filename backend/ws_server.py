@@ -77,6 +77,13 @@ USE_GEMINI_FALLBACK = os.getenv("USE_GEMINI_FALLBACK", "true").lower() == "true"
 # Offline mode tracking
 OFFLINE_MODE = False
 
+# RAG Configuration
+RAG_INDEX_PATHS = os.getenv("RAG_INDEX_PATHS", "").split(";")
+if not RAG_INDEX_PATHS or RAG_INDEX_PATHS == [""]:
+    RAG_INDEX_PATHS = None
+else:
+    RAG_INDEX_PATHS = [p.strip() for p in RAG_INDEX_PATHS if p.strip()]
+
 def check_internet() -> bool:
     """Check if internet is available."""
     try:
@@ -255,24 +262,25 @@ def _tts_worker():
         engine = pyttsx3.init()
         voices = engine.getProperty('voices')
 
-        # Prefer British male voice for Jarvis
+        # Prefer British voice for Jarvis
         preferred = None
+        # First pass: look for specific UK names
         for v in voices:
             name_lower = v.name.lower()
-            if any(n in name_lower for n in ['george', 'david', 'hazel', 'james', 'mark']):
+            if any(n in name_lower for n in ['george', 'hazel', 'susan', 'james', 'daniel']):
                 preferred = v.id
                 break
-
+        
+        # Second pass: strictly en-GB
         if not preferred:
-            # Try any en-GB voice
             for v in voices:
-                if 'en_gb' in v.id.lower() or 'en-gb' in v.id.lower():
+                if 'en-gb' in v.id.lower() or 'en_gb' in v.id.lower():
                     preferred = v.id
                     break
 
         if preferred:
             engine.setProperty('voice', preferred)
-            logger.info(f"[TTS] Using voice: {preferred}")
+            logger.info(f"[TTS] Using server voice: {preferred}")
         else:
             logger.warning("[TTS] No British voice found, using default")
 
@@ -331,11 +339,17 @@ threading.Thread(target=_tts_worker, daemon=True).start()
 def speak_server(text: str, force: bool = False):
     """
     Queue text for server-side pyttsx3 TTS.
-    Always speaks via server pyttsx3 regardless of browser connection.
-    The 'force' parameter is kept for API compatibility but no longer gates speech.
+    If clients are connected, we skip this to avoid "double speech",
+    unless 'force' is True (for critical system alerts).
     """
     if not text or not text.strip():
         return
+        
+    # Skip server speech if browser is connected, unless forced
+    if len(connected_clients) > 0 and not force:
+        logger.debug(f"[TTS] Skipping server speech (browser active): {text[:30]}...")
+        return
+        
     logger.info(f"[TTS] Queuing for server TTS: {text[:60]}...")
     _tts_queue.put(text)
 
@@ -621,7 +635,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                     "type": "response",
                     "text": memory_response,
                     "model": "memory:vault",
-                    "server_tts": True
+                    "server_tts": False # Default to browser
                 }))
                 await broadcast({"type": "state", "state": "speaking"})
                 speak_server(memory_response, force=False)
@@ -652,7 +666,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                     "type": "response",
                     "text": skill_response,
                     "model": f"skill:{skill_result.get('skill', 'unknown')}",
-                    "server_tts": True
+                    "server_tts": False # Default to browser
                 }))
                 await broadcast({"type": "state", "state": "speaking"})
 
@@ -736,7 +750,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                 "type": "response",
                 "text": summary,
                 "model": "internal:guardian",
-                "server_tts": True
+                "server_tts": False # Default to browser
             }))
             response = summary
         elif use_gemini:
@@ -747,20 +761,43 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                 "type": "response",
                 "text": response,
                 "model": GEMINI_MODEL,
-                "server_tts": True
+                "server_tts": False # Default to browser
             }))
         else:
             model_name = selected_model or OLLAMA_MODEL_FAST
-            logger.info(f"[Voice] Streaming from Ollama ({model_name}, {route_reason}): {text[:50]}...")
-            full_response = ""
-            async for chunk in stream_ollama(prompt_text, model=model_name):
-                full_response += chunk
+            model_name = selected_model or OLLAMA_MODEL_FAST
+            
+            # Proactive check: Is Ollama responding?
+            ollama_ready = False
+            try:
+                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2)) as session:
+                    async with session.get(f"{OLLAMA_URL}/api/tags") as r:
+                        ollama_ready = r.status == 200
+            except Exception:
+                ollama_ready = False
+
+            if not ollama_ready and USE_GEMINI_FALLBACK:
+                logger.warning(f"[Voice] Ollama is unreachable at {OLLAMA_URL}, falling back to Gemini")
+                route_reason = "ollama_unreachable"
+                write_active_model("gemini-flash")
+                response = await query_gemini(prompt_text)
                 await websocket.send(json.dumps({
-                    "type": "stream_chunk",
-                    "chunk": chunk,
-                    "partial": full_response
+                    "type": "response",
+                    "text": response,
+                    "model": GEMINI_MODEL,
+                    "server_tts": False
                 }))
-            response = full_response
+            else:
+                logger.info(f"[Voice] Streaming from Ollama ({model_name}, {route_reason}): {text[:50]}...")
+                full_response = ""
+                async for chunk in stream_ollama(prompt_text, model=model_name):
+                    full_response += chunk
+                    await websocket.send(json.dumps({
+                        "type": "stream_chunk",
+                        "chunk": chunk,
+                        "partial": full_response
+                    }))
+                response = full_response
             
             # Fallback to Gemini if Ollama returned empty response
             if not response.strip() and use_gemini:
@@ -771,14 +808,14 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                     "type": "response",
                     "text": response,
                     "model": GEMINI_MODEL,
-                    "server_tts": True
+                    "server_tts": False # Default to browser
                 }))
             else:
                 await websocket.send(json.dumps({
                     "type": "response",
                     "text": response,
                     "model": model_name,
-                    "server_tts": True
+                    "server_tts": False # Default to browser
                 }))
 
         await broadcast({"type": "state", "state": "speaking"})
@@ -815,7 +852,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                             "type": "response",
                             "text": clean_response,
                             "model": selected_model or "gemini",
-                            "server_tts": True
+                            "server_tts": False # Default to browser
                         }))
                         
             except Exception as e:
@@ -956,9 +993,26 @@ async def handler(websocket):
                     "type": "response",
                     "text": result["message"],
                     "model": "system",
-                    "server_tts": True
+                    "server_tts": False # Default to browser
                 }))
                 speak_server(result["message"], force=False)
+            elif data.get("type") == "vision_event":
+                event = data.get("event")
+                if event == "face_detected" and data.get("data", {}).get("new_arrival"):
+                    # Only greet if they just arrived after being gone a while
+                    greeting = "Welcome back, sir. I've been monitoring the system while you were away."
+                    await broadcast({"type": "state", "state": "speaking"})
+                    await broadcast({
+                        "type": "response",
+                        "text": greeting,
+                        "model": "system:vision",
+                        "server_tts": False
+                    })
+                    # Also speak via server TTS if browser isn't talking
+                    speak_server(greeting, force=False)
+            elif data.get("type") == "system_identify":
+                client_name = data.get("client")
+                logger.info(f"[WebSocket] System component identified: {client_name}")
             elif data.get("type") == "note_capture_done":
                 transcript = data.get("transcript", "")
                 if transcript and INLINE_IMPORTS_AVAILABLE:
@@ -976,7 +1030,7 @@ async def handler(websocket):
                             "type": "response",
                             "text": confirmation,
                             "model": "system",
-                            "server_tts": True
+                            "server_tts": False # Default to browser
                         }))
                         speak_server(confirmation, force=False)
                         await broadcast({"type": "state", "state": "idle"})
@@ -1123,14 +1177,22 @@ async def main():
     # Initialize vault RAG for semantic search
     if RAG_IMPORTS_AVAILABLE:
         try:
-            vault_rag = init_vault_rag()
-            logger.info("[RAG] Initializing vault index...")
-            await asyncio.to_thread(vault_rag.index_vault)
-            logger.info("[RAG] Vault index ready")
+            mode = os.getenv("JARVIS_MODE", "small").lower()
+            vault_rag = init_vault_rag(RAG_INDEX_PATHS)
             
-            # Start periodic re-indexing task
-            asyncio.create_task(periodic_reindex(vault_rag, interval_minutes=30))
-            logger.info("[RAG] Periodic re-index scheduled (30 min)")
+            # Skip heavy initial indexing in small mode to save CPU during startup
+            if mode == "small":
+                logger.info("[RAG] SMALL mode: Skipping initial full index (will index incrementally)")
+                # Run a light scan in background instead
+                asyncio.create_task(asyncio.to_thread(vault_rag.index_vault))
+            else:
+                logger.info("[RAG] Initializing multi-drive index...")
+                await asyncio.to_thread(vault_rag.index_vault)
+            
+            # Start periodic re-indexing task (longer interval in small mode)
+            interval = 60 if mode == "small" else 30
+            asyncio.create_task(periodic_reindex(vault_rag, interval_minutes=interval))
+            logger.info(f"[RAG] Periodic re-index scheduled ({interval} min)")
         except Exception as e:
             logger.error(f"[RAG] Failed to initialize: {e}")
 
@@ -1142,10 +1204,10 @@ async def main():
     # Start auto-summarization task (runs every 6 hours)
     asyncio.create_task(auto_summarize_loop())
 
-    logger.info("[WebSocket] Starting server on ws://localhost:8765")
+    logger.info("[WebSocket] Starting server on ws://0.0.0.0:8765")
     for attempt in range(3):
         try:
-            async with websockets.serve(handler, "localhost", 8765, reuse_address=True):
+            async with websockets.serve(handler, "0.0.0.0", 8765, reuse_address=True):
                 logger.info("[WebSocket] Server ready and accepting connections")
                 await asyncio.Future()
             break

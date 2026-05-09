@@ -49,7 +49,11 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => {
 };
 
 export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _activeModel, mobileMode = false }) => {
-  const { state: voiceState, interimText, manualWake, sendTextCommand, messages, isConversationMode, toggleConversationMode, wsConnected } = useVoice();
+  const { 
+    state: voiceState, interimText, manualWake, sendTextCommand, 
+    messages, isConversationMode, toggleConversationMode, 
+    wsConnected, ttsSource, setTtsSource 
+  } = useVoice();
   const inputRef = useRef<HTMLInputElement>(null);
   const [aiText, setAiText] = useState('Operator Online');
   const [clock, setClock] = useState('');
@@ -327,7 +331,7 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
         {/* FLOATING GAUGES - Hidden in mobile mode */}
         {!mobileMode && (
         <div style={{
-          position: 'absolute', left: 40, top: '20%', display: 'flex', flexDirection: 'column', gap: 20, zIndex: 5,
+          position: 'absolute', left: 40, top: 80, display: 'flex', flexDirection: 'column', gap: 20, zIndex: 5,
           background: 'rgba(3,5,8,0.4)', padding: 20, borderRadius: 16, border: '1px solid rgba(0,180,255,0.1)', backdropFilter: 'blur(8px)', width: 180
         }}>
           <div style={{ fontSize: 10, letterSpacing: '0.2em', color: '#00b4ff', fontFamily: "'Share Tech Mono', monospace" }}>SYSTEM DIAGNOSTICS</div>
@@ -392,6 +396,31 @@ export const OperatorHUD: React.FC<OperatorHUDProps> = ({ vitals, activeModel: _
                   }}
                 >
                   {level}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>TTS SOURCE</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['browser', 'server'] as const).map(source => (
+                <div 
+                  key={source} 
+                  //@ts-ignore - setTtsSource exists in context now
+                  onClick={() => setTtsSource(source)}
+                  style={{ 
+                    flex: 1, textAlign: 'center', fontSize: 10, padding: '4px 0', cursor: 'pointer',
+                    //@ts-ignore
+                    background: ttsSource === source ? 'rgba(0,255,150,0.25)' : 'rgba(255,255,255,0.05)',
+                    //@ts-ignore
+                    border: `1px solid ${ttsSource === source ? '#00ff96' : 'transparent'}`,
+                    //@ts-ignore
+                    borderRadius: 4, color: ttsSource === source ? '#fff' : 'rgba(255,255,255,0.5)',
+                    textTransform: 'uppercase'
+                  }}
+                >
+                  {source}
                 </div>
               ))}
             </div>

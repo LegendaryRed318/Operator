@@ -33,7 +33,13 @@ import websockets
 import whisper
 from scipy import signal
 
-# Configure logging FIRST (before any logger calls)
+# Force UTF-8 for stdout/stderr to prevent Unicode errors on Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+# Configure logging
 LOGS_DIR = Path(__file__).parent.parent / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
@@ -72,6 +78,9 @@ CHUNK_SAMPLES = int(SAMPLE_RATE * FRAME_DURATION_MS / 1000)
 WAKE_WORDS = [
     "jarvis",
     "hey jarvis",
+    "jarvis.",
+    "jarvis,",
+    "hey, jarvis",
     "oi jarvis",
     "yo jarvis",
     "ok jarvis",
@@ -131,39 +140,46 @@ class VoiceService:
         
     async def load_model(self):
         """Load Whisper model once at startup."""
-        logger.info("Loading Whisper model (small)...")
+        mode = os.getenv("JARVIS_MODE", "small").lower()
+        model_name = "tiny" if mode == "small" else "small"
+        
+        logger.info(f"Loading Whisper model ({model_name})...")
         try:
-            self.model = whisper.load_model("small")
-            logger.info("Whisper model loaded successfully")
+            self.model = whisper.load_model(model_name)
+            logger.info(f"Whisper {model_name} model loaded successfully")
         except Exception as e:
             logger.error(f"Failed to load Whisper model: {e}")
-            # Fallback to tiny if small fails
-            logger.info("Falling back to tiny model...")
-            self.model = whisper.load_model("tiny")
-            logger.info("Whisper tiny model loaded successfully")
+            if model_name != "tiny":
+                logger.info("Falling back to tiny model...")
+                self.model = whisper.load_model("tiny")
+                logger.info("Whisper tiny model loaded successfully")
     
     def fuzzy_contains_wake_word(self, text: str) -> tuple[bool, str, str]:
         """
-        Check if text contains wake word using fuzzy matching.
+        Check if text contains wake word using improved fuzzy matching.
         Returns: (has_wake_word, wake_word_found, text_after_wake_word)
         """
-        text_lower = text.lower().strip()
+        text_lower = text.lower().strip().replace(",", "").replace(".", "")
+        words = text_lower.split()
         
+        if not words:
+            return False, "", text
+
         for wake_word in WAKE_WORDS:
-            # Try exact match first
-            if wake_word in text_lower:
-                idx = text_lower.find(wake_word)
-                after = text[idx + len(wake_word):].strip()
+            clean_wake = wake_word.replace(",", "").replace(".", "").lower()
+            wake_words_list = clean_wake.split()
+            wake_len = len(wake_words_list)
+            
+            # Check for exact match in first few words
+            potential_match = " ".join(words[:wake_len])
+            if clean_wake == potential_match:
+                after = " ".join(words[wake_len:]).strip()
                 return True, wake_word, after
             
-            # Try fuzzy match on the first few words
-            words = text_lower.split()
-            first_words = ' '.join(words[:3])  # Check first 3 words
-            
-            ratio = SequenceMatcher(None, wake_word, first_words).ratio()
+            # Fuzzy match on the first word or phrase
+            ratio = SequenceMatcher(None, clean_wake, potential_match).ratio()
             if ratio >= WAKE_WORD_THRESHOLD:
-                # Found fuzzy match - return everything after the wake word
-                after = ' '.join(words[2:]) if len(words) > 2 else ''
+                after = " ".join(words[wake_len:]).strip()
                 return True, wake_word, after
                 
         return False, "", text
@@ -265,6 +281,10 @@ class VoiceService:
             return
         
         try:
+            # Check if JARVIS is in sleep mode
+            sleep_flag = LOGS_DIR / "sleep.flag"
+            is_sleeping = sleep_flag.exists()
+            
             # Convert buffer to numpy array (already float32 from Silero VAD)
             audio_float = np.array(audio_buffer, dtype=np.float32)
             
@@ -289,7 +309,7 @@ class VoiceService:
                         lambda: self.model.transcribe(
                             temp_path,
                             language="en",
-                            initial_prompt="Jarvis computer assistant commands:",
+                            initial_prompt="Jarvis, hey Jarvis. Assistant commands:",
                             fp16=False
                         )
                     )
@@ -305,6 +325,24 @@ class VoiceService:
                         # Check for wake word
                         has_wake, wake_word, after_wake = self.fuzzy_contains_wake_word(transcript)
                         
+                        # If sleeping, only wake up on "wake up" or "jarvis wake up"
+                        if is_sleeping:
+                            if "wake up" in transcript.lower() or "i'm back" in transcript.lower():
+                                logger.info("[Sleep] Wake command detected - removing sleep flag")
+                                try:
+                                    sleep_flag.unlink()
+                                except:
+                                    pass
+                                # Broadcast wake event
+                                self.broadcast_event('wake_word', {
+                                    'wake_word': 'wake up',
+                                    'transcript': transcript,
+                                    'intent': 'action'
+                                })
+                            else:
+                                logger.debug("[Sleep] JARVIS is sleeping - ignoring transcript")
+                            return
+
                         if has_wake:
                             logger.info(f"Wake word detected: '{wake_word}'")
                             intent = classify_intent(after_wake or transcript)
@@ -444,14 +482,14 @@ async def main():
     logger.info(f"Starting WebSocket server on port {WEBSOCKET_PORT}")
     server = await websockets.serve(
         service.handle_client,
-        "localhost",
+        "0.0.0.0",
         WEBSOCKET_PORT,
         ping_interval=20,
         ping_timeout=10,
         process_request=process_request
     )
     
-    logger.info(f"Voice service ready on ws://localhost:{WEBSOCKET_PORT}")
+    logger.info(f"Voice service ready on ws://0.0.0.0:{WEBSOCKET_PORT}")
     logger.info("Listening for voice commands...")
     
     try:

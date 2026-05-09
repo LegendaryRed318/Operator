@@ -12,6 +12,11 @@ import time
 import signal
 from pathlib import Path
 from datetime import datetime
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # If dotenv is missing, we'll try to continue without it
+    def load_dotenv(*args, **kwargs): pass
 
 # Detect mode before anything else
 _JARVIS_MODE = os.getenv("JARVIS_MODE", "small").lower()
@@ -22,6 +27,9 @@ ROOT_DIR = Path(__file__).parent.resolve()
 BACKEND_DIR = ROOT_DIR / "backend"
 FRONTEND_DIR = ROOT_DIR / "frontend"
 LOGS_DIR = ROOT_DIR / "logs"
+
+# Load environment variables from backend/.env
+load_dotenv(BACKEND_DIR / ".env")
 
 # Ensure logs directory exists
 LOGS_DIR.mkdir(exist_ok=True)
@@ -38,6 +46,29 @@ def is_ollama_running():
         return result == 0
     except:
         return False
+
+def find_ollama_executable():
+    """Search for the Ollama executable in common locations."""
+    import shutil
+    # 1. Check if it's already in the PATH
+    cmd = shutil.which("ollama")
+    if cmd:
+        return cmd
+    
+    # 2. Check common installation paths
+    common_paths = [
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Ollama\ollama.exe"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Ollama\ollama.exe"),
+        r"C:\Program Files\Ollama\ollama.exe",
+        r"D:\Ollama\ollama.exe",
+        r"E:\Ollama\ollama.exe"
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+            
+    return "ollama" # Fallback to just the command name
 
 
 def is_tailscale_running():
@@ -115,11 +146,12 @@ SERVICES = {
     },
     "ollama": {
         "name": "Ollama LLM Server",
-        "cmd": ["ollama", "serve"],
+        "cmd": [find_ollama_executable(), "serve"],
         "cwd": str(ROOT_DIR),
         "log": LOGS_DIR / "ollama.log",
         "delay": 3,
         "skip_if": is_ollama_running,  # Don't start if already running
+        "optional": True,              # Continue if this service fails to start
     },
     "voice_service": {
         "name": "Voice Service (Whisper)",
@@ -135,6 +167,13 @@ SERVICES = {
         "log": LOGS_DIR / "ws.log",
         "delay": 15,  # Give time for ChromaDB to fully load
     },
+    # "vision_service": {
+    #     "name": "Vision Service (Eyes)",
+    #     "cmd": [sys.executable, str(BACKEND_DIR / "vision_service.py")],
+    #     "cwd": str(BACKEND_DIR),
+    #     "log": LOGS_DIR / "vision.log",
+    #     "delay": 5,
+    # },
     # DISABLED - non-essential services consuming RAM
     # "watcher": {
     #     "name": "File Watcher",
@@ -417,7 +456,13 @@ def main():
                 log_message(f"Waiting {config['delay']}s before starting {config['name']}...")
                 time.sleep(config["delay"])
 
-            start_service(service_id, config)
+            try:
+                start_service(service_id, config)
+            except Exception as e:
+                if config.get("optional", False):
+                    log_message(f"[WARN] Optional service {config['name']} failed to start, but continuing: {e}")
+                else:
+                    raise
 
         # Get Tailscale IP for display if available
         tailscale_ip = None
@@ -473,8 +518,13 @@ def main():
         stop_all_services()
         
     except Exception as e:
-        log_message(f"\nLauncher error: {e}")
+        log_message(f"\n[CRITICAL] Launcher error: {e}")
         stop_all_services()
+        print("\n" + "="*50)
+        print("JARVIS encountered a critical error during startup.")
+        print(f"Error: {e}")
+        print("="*50)
+        input("\nPress ENTER to close this window...")
         sys.exit(1)
 
 

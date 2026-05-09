@@ -19,6 +19,7 @@ FOLDERS = {
     "wiki": VAULT_ROOT / "wiki",
     "conversations": VAULT_ROOT / "conversations",
     "errors": VAULT_ROOT / "errors",
+    "daily": VAULT_ROOT / "daily",
 }
 PROFILE_JSON_PATH = FOLDERS["raw_sources"] / "jarvis_brain_profile.json"
 PROFILE_MD_PATH = FOLDERS["wiki"] / "user-profile" / "RED_Profile.md"
@@ -664,3 +665,68 @@ def query_memory(query: str) -> str:
         return response
 
     return ""
+
+def append_to_daily_note(content: str, section: str = "Log", tags: list = None) -> bool:
+    """
+    Append content to the Obsidian Daily Note (daily/YYYY-MM-DD.md) under a specific section heading.
+    Creates the note with YAML frontmatter if it does not exist.
+    """
+    if not ensure_vault():
+        return False
+        
+    try:
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        daily_file = FOLDERS["daily"] / f"{date_str}.md"
+        
+        # Check if file exists, if not, create with Obsidian frontmatter
+        if not daily_file.exists():
+            tags_str = f"\ntags: {tags}" if tags else ""
+            frontmatter = f"---\ndate: {date_str}\ntype: daily_note{tags_str}\n---\n\n# {date_str}\n\n"
+            daily_file.write_text(frontmatter, encoding="utf-8")
+        
+        # Read current content to see if section exists
+        current_content = daily_file.read_text(encoding="utf-8")
+        section_heading = f"## {section}"
+        
+        # If section doesn't exist, append the section heading to the end
+        if section_heading not in current_content:
+            with open(daily_file, "a", encoding="utf-8") as f:
+                f.write(f"\n{section_heading}\n")
+        
+        # We need to insert the content right below the section heading.
+        # Simplest approach for appending is to just add it at the end of the file if the section is the last one,
+        # but to be robust, we'll split by lines and insert after the section heading.
+        lines = current_content.splitlines()
+        new_lines = []
+        section_found = False
+        inserted = False
+        
+        # If we just created the section (it wasn't in current_content), we just append.
+        if section_heading not in current_content:
+            with open(daily_file, "a", encoding="utf-8") as f:
+                f.write(f"{content}\n")
+            logger.info(f"[Memory] Appended to daily note: {daily_file.name} [{section}]")
+            return True
+            
+        # Re-read if we modified it
+        current_content = daily_file.read_text(encoding="utf-8")
+        lines = current_content.split("\n")
+        
+        for idx, line in enumerate(lines):
+            new_lines.append(line)
+            if line.strip() == section_heading:
+                new_lines.append(content)
+                inserted = True
+                
+        if not inserted:
+            # Fallback
+            new_lines.append(f"\n{section_heading}")
+            new_lines.append(content)
+            
+        daily_file.write_text("\n".join(new_lines), encoding="utf-8")
+        logger.info(f"[Memory] Appended to daily note: {daily_file.name} [{section}]")
+        return True
+    except Exception as e:
+        logger.error(f"[Memory] Failed to append to daily note: {e}")
+        return False

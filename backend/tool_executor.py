@@ -93,45 +93,43 @@ def open_app(name: str) -> Dict[str, Any]:
 
 
 def take_note(text: str) -> Dict[str, Any]:
-    """Append a note to today's vault notes file."""
+    """Append a note to today's vault daily note."""
     try:
-        notes_dir = Path(VAULT_PATH) / "notes"
-        notes_dir.mkdir(parents=True, exist_ok=True)
+        from memory import append_to_daily_note
+        success = append_to_daily_note(text, section="Log")
         
-        today = datetime.now().strftime("%Y-%m-%d")
-        note_file = notes_dir / f"{today}.md"
-        
-        time_str = datetime.now().strftime("%H:%M")
-        entry = f"\n## {time_str}\n{text}\n\n"
-        
-        with open(note_file, "a", encoding="utf-8") as f:
-            f.write(entry)
-        
-        logger.info(f"[Tool] Note saved to {note_file}")
-        return {"status": "noted", "file": str(note_file), "text": text}
-        
+        if success:
+            logger.info(f"[Tool] Note saved to daily log.")
+            return {"status": "noted", "text": text}
+        else:
+            return {"status": "error", "error": "Failed to write to memory module"}
+            
     except Exception as e:
         logger.error(f"[Tool] Failed to save note: {e}")
         return {"status": "error", "error": str(e)}
 
 
 def add_task(title: str, priority: str = "medium") -> Dict[str, Any]:
-    """Add a task to the tasks file."""
+    """Add a task to the Obsidian daily note under the Tasks section."""
     try:
-        tasks_file = Path(VAULT_PATH) / "tasks.md"
-        tasks_file.parent.mkdir(parents=True, exist_ok=True)
+        from memory import append_to_daily_note
+        from datetime import datetime
         
-        entry = f"- [ ] {title} [{priority.upper()}]\n"
+        today = datetime.now().strftime("%Y-%m-%d")
+        # Obsidian Tasks Plugin format: ➕ YYYY-MM-DD for creation date
+        task_str = f"- [ ] {title} #priority-{priority.lower()} ➕ {today}"
+        success = append_to_daily_note(task_str, section="Tasks")
         
-        with open(tasks_file, "a", encoding="utf-8") as f:
-            f.write(entry)
-        
-        logger.info(f"[Tool] Task added: {title} [{priority}]")
-        return {"status": "added", "title": title, "priority": priority}
-        
+        if success:
+            logger.info(f"[Tool] Task added: {title} [{priority}]")
+            return {"status": "added", "title": title, "priority": priority}
+        else:
+            return {"status": "error", "error": "Failed to write to memory module"}
+            
     except Exception as e:
         logger.error(f"[Tool] Failed to add task: {e}")
         return {"status": "error", "error": str(e)}
+
 
 
 def run_fix(project: str) -> Dict[str, Any]:

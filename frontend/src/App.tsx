@@ -94,7 +94,7 @@ const AppContent: React.FC = () => {
     };
 
     checkServices();
-    const interval = setInterval(checkServices, 10000); // Reduced from 5s to 10s
+    const interval = setInterval(checkServices, 15000); // Increased to 15s
     return () => {
       abortController.abort();
       clearInterval(interval);
@@ -209,16 +209,15 @@ const AppContent: React.FC = () => {
       }
     };
     fetchProjects();
-    const interval = setInterval(fetchProjects, 10000);
+    const interval = setInterval(fetchProjects, 30000); // Increased from 10s to 30s
     return () => {
       abortController.abort();
       clearInterval(interval);
     };
   }, []);
 
-  // Fetch real system vitals every 5 seconds with error handling and retry
   useEffect(() => {
-    let retryDelay = 5000;
+    let retryDelay = 10000; // Increased from 5s to 10s for stability
     let intervalId: ReturnType<typeof setTimeout> | null = null;
     
     const fetchSystemVitals = async () => {
@@ -229,7 +228,7 @@ const AppContent: React.FC = () => {
         
         if (res.ok) {
           const data = await res.json();
-          retryDelay = 5000; // Reset retry delay on success
+          retryDelay = 10000; // Reset to 10s on success
           
           setVitals({
             cpu: data.cpu_percent ?? 0,
@@ -365,7 +364,7 @@ const AppContent: React.FC = () => {
 
       {/* HUD only mounts after login — no network calls leak through the lock screen */}
       {!isLoading && !locked && (
-        <OperatorHUD
+        <MemoizedHUD
           vitals={vitals}
           activeModel={activeModel}
           mobileMode={mobileMode}
@@ -373,13 +372,16 @@ const AppContent: React.FC = () => {
       )}
 
       {/* HandTracker runs regardless so a wave can unlock from the lock screen */}
-      <HandTracker onWave={() => {
+      <MemoizedHandTracker onWave={() => {
         console.log('[App] Wave detected — entering hotword mode');
         window.dispatchEvent(new CustomEvent('jarvis:wake'));
       }} />
     </>
   );
 };
+
+const MemoizedHUD = React.memo(OperatorHUD);
+const MemoizedHandTracker = React.memo(HandTracker);
 
 // Main App wrapped with VoiceProvider
 const App: React.FC = () => {

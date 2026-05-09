@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode, useEffect } from 'react';
-import { getWebSocketUrl } from '../utils/urls';
+import { getWebSocketUrl, getVoiceServiceUrl } from '../utils/urls';
 
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'offline' | 'hotword';
 
@@ -14,7 +14,8 @@ interface VoiceContextType {
   wsConnected: boolean;
   isConversationMode: boolean;
   toggleConversationMode: () => void;
-  audioLevel: number; // 0-1 for orb visualization
+  ttsSource: 'browser' | 'server';
+  setTtsSource: (source: 'browser' | 'server') => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -24,7 +25,7 @@ interface VoiceProviderProps {
 }
 
 const FOLLOW_UP_WINDOW_MS = 20 * 1000; // 20 second conversation follow-up window
-const VOICE_SERVICE_URL = 'ws://localhost:8766'; // Local Whisper voice service
+const VOICE_SERVICE_URL = getVoiceServiceUrl(); // Local or Remote Whisper voice service
 
 /**
  * Clean markdown/formatting from text before speaking.
@@ -45,13 +46,18 @@ function cleanTextForSpeech(text: string): string {
 
 export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const [state, setState] = useState<VoiceState>('idle');
+  const stateRef = useRef<VoiceState>('idle');
   const [isOffline, setIsOffline] = useState(false);
   const [lastResponse, setLastResponse] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const isRecognitionActive = useRef(false);
   const [interimText, setInterimText] = useState('');
   const [isConversationMode, setIsConversationMode] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0); // 0-1 for orb visualization
+  const [ttsSource, setTtsSourceState] = useState<'browser' | 'server'>(
+    () => (localStorage.getItem('jarvis_tts_source') as 'browser' | 'server') || 'browser'
+  );
 
   // Main JARVIS WebSocket (port 8765)
   const ws = useRef<WebSocket | null>(null);
@@ -78,7 +84,13 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     isConversationModeRef.current = isConversationMode;
   }, [isConversationMode]);
 
+  const setTtsSource = useCallback((source: 'browser' | 'server') => {
+    setTtsSourceState(source);
+    localStorage.setItem('jarvis_tts_source', source);
+  }, []);
+
   const setVoiceState = useCallback((newState: VoiceState, offline = false) => {
+    stateRef.current = newState;
     setState(newState);
     setIsOffline(offline);
     stateWatchdogRef.current = { state: newState, since: Date.now() };
@@ -98,15 +110,40 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       const { state: trackedState, since } = stateWatchdogRef.current;
       const elapsed = Date.now() - since;
       
-      if (trackedState === 'thinking' && elapsed > 15000) {
-        console.warn('[Watchdog] Stuck in thinking state for >15s. Forcing reset.');
+      if (trackedState === 'thinking' && elapsed > 45000) {
+        console.warn('[Watchdog] Stuck in thinking state for >45s. Forcing reset.');
         setVoiceState('idle');
       } else if (trackedState === 'speaking' && elapsed > 20000 && !isSpeakingRef.current) {
         console.warn('[Watchdog] Stuck in speaking state for >20s. Forcing reset.');
         setVoiceState('idle');
       }
     }, 5000);
-    return () => clearInterval(watchdog);
+
+    // Listen for manual wake from hand tracker or other components
+    const handleManualWake = () => {
+      console.log('[Voice] jarvis:wake event received — triggered listening state');
+      setVoiceState('listening');
+    };
+    window.addEventListener('jarvis:wake', handleManualWake);
+
+    // Listen for vision events (face detection) from HandTracker
+    const handleVisionEvent = (e: any) => {
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'vision_event',
+          event: e.detail.event,
+          data: e.detail.data,
+          timestamp: Date.now() / 1000
+        }));
+      }
+    };
+    window.addEventListener('vision:event', handleVisionEvent as EventListener);
+
+    return () => {
+      clearInterval(watchdog);
+      window.removeEventListener('jarvis:wake', handleManualWake);
+      window.removeEventListener('vision:event', handleVisionEvent as EventListener);
+    };
   }, [setVoiceState]);
 
   const onSpeechFinished = useCallback(() => {
@@ -167,22 +204,25 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           if (data.type === 'connected') {
             console.log('[Voice] Voice Service:', data.message);
           } else if (data.type === 'vad_start') {
+            console.log('[Voice] vad_start received');
             // Speech detected, orb shows LISTENING
-            if (state === 'idle') {
+            if (stateRef.current === 'idle' || stateRef.current === 'hotword') {
               setVoiceState('listening');
             }
           } else if (data.type === 'audio_level') {
-            // Real-time audio amplitude for orb visualization
-            setAudioLevel(data.level || 0);
+            // High-frequency update: use Event instead of State to avoid re-render storm
+            window.dispatchEvent(new CustomEvent('jarvis:audio_level', { detail: data.level || 0 }));
           } else if (data.type === 'vad_end') {
+            console.log('[Voice] vad_end received');
             // Speech ended, will get transcript shortly
           } else if (data.type === 'transcript') {
+            console.log('[Voice] Transcript received:', data.transcript);
             // Regular transcript (no wake word) - display as subtitle only
             setInterimText(data.transcript);
             setTimeout(() => setInterimText(''), 3000);
           } else if (data.type === 'wake_word') {
             // Wake word detected!
-            console.log('[Voice] Wake word detected:', data.wake_word, 'intent:', data.intent);
+            console.log('[Voice] Wake word detected:', data.wake_word, 'transcript:', data.transcript);
             setInterimText(data.transcript);
 
             // Send command to main JARVIS with intent for routing
@@ -219,7 +259,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         }
       }, 3000);
     });
-  }, [state, setVoiceState, setInterimText]);
+  }, [setVoiceState, setInterimText]);
 
   // Initialize Main JARVIS WebSocket (port 8765)
   const initWebSocket = useCallback(async (): Promise<boolean> => {
@@ -263,7 +303,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             setLastResponse(responseText);
             setVoiceState('speaking');
 
-            if (data.server_tts) {
+            if (data.server_tts && ttsSource === 'server') {
               console.log(`[Voice] Server TTS active — waiting for tts_done event`);
               isSpeakingRef.current = true;
 
@@ -273,7 +313,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
                 console.warn('[Voice] tts_done never arrived — using browser fallback TTS');
                 const fallbackText = cleanTextForSpeech(responseText);
                 speak(fallbackText, onSpeechFinished);
-              }, 8000);  
+              }, 4000);  
 
             } else {
               const cleanText = cleanTextForSpeech(responseText);
@@ -292,6 +332,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             const cleanText = cleanTextForSpeech(fallbackText);
             setVoiceState('speaking');
             speak(cleanText, onSpeechFinished);
+          } else if (data.type === 'stream_chunk') {
+            // Reset watchdog since we are active
+            stateWatchdogRef.current.since = Date.now();
           } else if (data.type === 'state') {
             if (data.state === 'thinking') setVoiceState('thinking');
           } else if (data.type === 'ack') {
@@ -352,14 +395,24 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
         return;
       }
 
-      const britishMale = voices.find(v =>
-        (v.name.includes('George') || v.name.includes('David') || v.name.includes('James')) &&
-        v.lang.startsWith('en')
-      );
-      const enGB = voices.find(v => v.lang === 'en-GB');
-      const anyEnglish = voices.find(v => v.lang.startsWith('en'));
+      // Diagnostic: Log all available voices once
+      if (!(window as any)._voicesLogged) {
+        console.log('[TTS] Browser Speech Synthesis Diagnostic:');
+        console.log(`- Available voices count: ${voices.length}`);
+        voices.forEach((v, i) => console.log(`  [${i}] ${v.name} | ${v.lang} | Local: ${v.localService}`));
+        (window as any)._voicesLogged = true;
+      }
 
-      const chosen = britishMale || enGB || anyEnglish;
+      const britishVoice = voices.find(v =>
+        (v.lang.startsWith('en-GB') || v.lang.startsWith('en_GB')) ||
+        ((v.name.includes('George') || v.name.includes('Hazel') || v.name.includes('Susan') || 
+          v.name.includes('James') || v.name.includes('Daniel') || v.name.includes('Arthur')) && 
+          !v.name.includes('David'))
+      );
+      const enGB = voices.find(v => v.lang.includes('GB') || v.lang.includes('United Kingdom'));
+      const anyEnglishNotUS = voices.find(v => v.lang.startsWith('en') && !v.lang.includes('US'));
+
+      const chosen = britishVoice || enGB || anyEnglishNotUS || voices[0];
       if (chosen) {
         utterance.voice = chosen;
         console.log(`[TTS] Using voice: ${chosen.name} (${chosen.lang})`);
@@ -411,10 +464,74 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     console.log('[Voice] Text command sent:', text);
   }, [initWebSocket, setVoiceState]);
 
-  // Initialize both WebSockets on mount
+  // Initialize Browser Wake Word (Hybrid Architecture)
+  const initBrowserWakeWord = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.warn('[Voice] Browser does not support SpeechRecognition for Hybrid wake word');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isRecognitionActive.current = true;
+      console.log('[Voice] Browser Wake Word Listening...');
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      console.log('[Voice] Browser heard:', transcript);
+
+      // Fuzzy match for "Jarvis" or "Operator"
+      if (transcript.includes('jarvis') || transcript.includes('operator')) {
+        console.log('[Voice] BROWSER WAKE WORD DETECTED!');
+        manualWake();
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'not-allowed') {
+        console.error('[Voice] Microphone permission denied for Browser Wake Word');
+      } else if (event.error !== 'no-speech') {
+        console.warn('[Voice] Browser recognition error:', event.error);
+      }
+    };
+
+    recognition.onend = () => {
+      isRecognitionActive.current = false;
+      // Restart if we're not speaking or listening
+      if (stateRef.current === 'idle') {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch (e) {}
+        }, 1000);
+      }
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch (e) {}
+  }, [manualWake]);
+
+  // Initialize WebSockets and Browser Wake Word on mount
   useEffect(() => {
     initWebSocket();
     initVoiceService();
+    initBrowserWakeWord();
+    
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -430,7 +547,8 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       wsConnected,
       isConversationMode,
       toggleConversationMode,
-      audioLevel
+      ttsSource,
+      setTtsSource
     }}>
       {children}
     </VoiceContext.Provider>

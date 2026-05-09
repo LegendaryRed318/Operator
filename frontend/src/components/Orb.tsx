@@ -7,7 +7,7 @@ interface OrbProps {
 }
 
 const Orb: React.FC<OrbProps> = ({ onClick }) => {
-  const { state, manualWake, audioLevel } = useVoice();
+  const { state, manualWake } = useVoice();
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -20,6 +20,14 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
   const timeRef = useRef(0);
   const audioLevelRef = useRef(0); // For smooth interpolation
 
+  useEffect(() => {
+    const handleAudioLevel = (e: any) => {
+      audioLevelRef.current = e.detail;
+    };
+    window.addEventListener('jarvis:audio_level', handleAudioLevel);
+    return () => window.removeEventListener('jarvis:audio_level', handleAudioLevel);
+  }, []);
+
   const getColor = useCallback(() => {
     switch(state) {
       case 'listening': return new THREE.Color(0x00aaff); // blue
@@ -29,6 +37,16 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       default: return new THREE.Color(0x88aaff);          // idle pale blue
     }
   }, [state]);
+
+  // Refs for animation loop to avoid re-creating the effect
+  const stateRef = useRef(state);
+  const targetColorRef = useRef(getColor());
+
+  useEffect(() => {
+    stateRef.current = state;
+    targetColorRef.current = getColor();
+  }, [state, getColor]);
+
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -41,7 +59,15 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     camera.position.z = 3;
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Use a single renderer and reuse it
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    } catch (e) {
+      console.error('[Orb] Failed to create WebGL renderer:', e);
+      return;
+    }
+    
     renderer.setSize(300, 300);
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
@@ -72,7 +98,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const material = new THREE.PointsMaterial({
-      color: getColor(),
+      color: targetColorRef.current,
       size: 0.04,
       transparent: true,
       opacity: 0.9,
@@ -96,7 +122,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     }
     glowGeometry.setAttribute('position', new THREE.BufferAttribute(glowPositions, 3));
     const glowMaterial = new THREE.PointsMaterial({ 
-      color: getColor(), 
+      color: targetColorRef.current, 
       size: 0.015, 
       transparent: true, 
       opacity: 0.4, 
@@ -147,8 +173,13 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       timeRef.current += 0.016;
       const time = timeRef.current;
 
-      // Smooth audio level interpolation
-      audioLevelRef.current += (audioLevel - audioLevelRef.current) * 0.2;
+      // Access current reactive state via refs
+      const currentState = stateRef.current;
+      const targetColor = targetColorRef.current;
+      const currentAudioLevel = audioLevelRef.current;
+
+      // Smooth audio level interpolation for visuals
+      audioLevelRef.current += (currentAudioLevel - audioLevelRef.current) * 0.2;
       const audioPulse = audioLevelRef.current;
 
       // Core rotation - speeds up with audio
@@ -159,7 +190,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       glowParticles.rotation.x -= 0.0005;
 
       // State-based animations
-      if (state === 'listening' && pulseRef.current) {
+      if (currentState === 'listening' && pulseRef.current) {
         // Audio-reactive pulse effect
         const basePulse = Math.sin(time * 4) * 0.15;
         const audioScale = 1 + basePulse + audioPulse * 0.5;
@@ -171,10 +202,10 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
         (pulseRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
       }
 
-      if (state === 'thinking' && trailsRef.current) {
+      if (currentState === 'thinking' && trailsRef.current) {
         // Electron trails animation
         const trailData = (trailsRef.current as any).trailData;
-        const positions = trailsRef.current.geometry.attributes.position.array as Float32Array;
+        const trailPos = trailsRef.current.geometry.attributes.position.array as Float32Array;
         
         for (let i = 0; i < trailCount; i++) {
           const data = trailData[i];
@@ -188,12 +219,12 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
           const z2 = Math.sin(data.angle + 0.1) * (data.radius + 0.1);
           const y2 = y1 + 0.05;
           
-          positions[i*6] = x1;
-          positions[i*6+1] = y1;
-          positions[i*6+2] = z1;
-          positions[i*6+3] = x2;
-          positions[i*6+4] = y2;
-          positions[i*6+5] = z2;
+          trailPos[i*6] = x1;
+          trailPos[i*6+1] = y1;
+          trailPos[i*6+2] = z1;
+          trailPos[i*6+3] = x2;
+          trailPos[i*6+4] = y2;
+          trailPos[i*6+5] = z2;
         }
         
         trailsRef.current.geometry.attributes.position.needsUpdate = true;
@@ -207,7 +238,6 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       if (particlesRef.current) {
         const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
         const velocities = (particlesRef.current as any).velocities;
-        const color = getColor();
 
         // Expand particle size with audio
         (particlesRef.current.material as THREE.PointsMaterial).size = 0.04 + audioPulse * 0.08;
@@ -232,11 +262,11 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
           }
         }
         particlesRef.current.geometry.attributes.position.needsUpdate = true;
-        (particlesRef.current.material as THREE.PointsMaterial).color.lerp(color, 0.05);
+        (particlesRef.current.material as THREE.PointsMaterial).color.lerp(targetColor, 0.05);
       }
 
       if (glowParticlesRef.current) {
-        (glowParticlesRef.current.material as THREE.PointsMaterial).color.lerp(getColor(), 0.03);
+        (glowParticlesRef.current.material as THREE.PointsMaterial).color.lerp(targetColor, 0.03);
       }
 
       renderer.render(scene, camera);
@@ -246,7 +276,9 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     return () => {
       cancelAnimationFrame(frameIdRef.current);
       if (rendererRef.current && mountRef.current) {
-        mountRef.current.removeChild(rendererRef.current.domElement);
+        try {
+          mountRef.current.removeChild(rendererRef.current.domElement);
+        } catch (e) { /* ignore */ }
       }
       geometry.dispose();
       material.dispose();
@@ -256,9 +288,13 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       trailMaterial.dispose();
       pulseGeometry.dispose();
       pulseMaterial.dispose();
-      renderer.dispose();
+      if (rendererRef.current) {
+        rendererRef.current.dispose();
+        rendererRef.current.forceContextLoss(); // CRITICAL: Explicitly release the WebGL context
+      }
     };
-  }, [state, getColor, audioLevel]);
+  }, []); // Empty deps — run ONCE only. state/audioLevel handled via refs.
+
 
   const [showHint, setShowHint] = useState(false);
 
