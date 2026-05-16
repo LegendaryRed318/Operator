@@ -4,9 +4,10 @@ import { useVoice } from '../contexts/VoiceContext';
 
 interface OrbProps {
   onClick?: () => void;
+  performanceMode?: 'quality' | 'battery';
 }
 
-const Orb: React.FC<OrbProps> = ({ onClick }) => {
+const Orb: React.FC<OrbProps> = ({ onClick, performanceMode = 'quality' }) => {
   const { state, manualWake } = useVoice();
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -50,6 +51,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
 
   useEffect(() => {
     if (!mountRef.current) return;
+    const isQuality = performanceMode === 'quality';
 
     // Setup scene with transparent background
     const scene = new THREE.Scene();
@@ -62,19 +64,20 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     // Use a single renderer and reuse it
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({ antialias: isQuality, alpha: true, powerPreference: isQuality ? 'high-performance' : 'low-power' });
     } catch (e) {
       console.error('[Orb] Failed to create WebGL renderer:', e);
       return;
     }
     
     renderer.setSize(300, 300);
+    renderer.setPixelRatio(isQuality ? window.devicePixelRatio : 1);
     renderer.setClearColor(0x000000, 0);
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Core particle system
-    const particleCount = 2000;
+    const particleCount = isQuality ? 2000 : 900;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const velocities: THREE.Vector3[] = [];
@@ -99,9 +102,9 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
 
     const material = new THREE.PointsMaterial({
       color: targetColorRef.current,
-      size: 0.04,
+      size: isQuality ? 0.04 : 0.03,
       transparent: true,
-      opacity: 0.9,
+      opacity: isQuality ? 0.9 : 0.65,
       blending: THREE.AdditiveBlending
     });
     const particles = new THREE.Points(geometry, material);
@@ -125,7 +128,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
       color: targetColorRef.current, 
       size: 0.015, 
       transparent: true, 
-      opacity: 0.4, 
+      opacity: isQuality ? 0.4 : 0.18, 
       blending: THREE.AdditiveBlending 
     });
     const glowParticles = new THREE.Points(glowGeometry, glowMaterial);
@@ -133,7 +136,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
     glowParticlesRef.current = glowParticles;
 
     // Electron trails (for thinking state)
-    const trailCount = 20;
+    const trailCount = isQuality ? 20 : 10;
     const trailGeometry = new THREE.BufferGeometry();
     const trailPositions = new Float32Array(trailCount * 6); // 2 points per line
     trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
@@ -293,7 +296,7 @@ const Orb: React.FC<OrbProps> = ({ onClick }) => {
         rendererRef.current.forceContextLoss(); // CRITICAL: Explicitly release the WebGL context
       }
     };
-  }, []); // Empty deps — run ONCE only. state/audioLevel handled via refs.
+}, [performanceMode]); // Rebuild orb when performance mode changes
 
 
   const [showHint, setShowHint] = useState(false);

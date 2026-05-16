@@ -2560,6 +2560,27 @@
         "Full RAG potential for JARVIS memory injected directly into Vault",
         "Secure global access via 100.x.x.x Tailscale IPs"
       ]
+    },
+    "recent_two_weeks_accomplishments": {
+      "period": "May 2026",
+      "achievements": [
+        "System Stabilization & Hardening: Resolved all 18 core priority tasks, deleting duplicate skills_engine.py to solidify skills.py as the central hub.",
+        "Security Enhancements: Migrated hardcoded Telegram tokens and API keys to environment variables and removed them from git history.",
+        "Face Recognition Readiness: Integrated the RED face recognition logic via WebSocket to trigger personalized 'Welcome home' greetings.",
+        "Remote Admin Bridge: Completed backend APIs (/remote/devices, /remote/command) and a WebSocket background loop for managing homelab/mobile devices securely.",
+        "Operator HUD Upgrade: Fixed TypeScript and JSX errors, and wired a brand new Remote Devices monitoring panel directly into the right sidebar.",
+        "Audio/TTS Fixes: Addressed the 'tts_done' sync issues between Pyttsx3 server-side execution and the browser's Web Speech API fallback.",
+        "Advanced Web Search: Made the web search skill more robust, handling user queries perfectly with intelligent AI summarization fallbacks.",
+        "Log & Project Launcher Optimizations: Added rotational limits to the audit log and prevented infinite loops in the guardian process when no projects are listed.",
+        "Voice Note Capture Flow: Implemented voice_capture_then_write TOML action handler and 10-second VAD recording.",
+        "AI Model Selection: Fixed Deepseek RAM logic to properly fall back to qwen2.5-coder:1.5b-base on low RAM systems.",
+        "Voice Recognition: Upgraded Whisper model to small, added transcription confidence threshold, and implemented conversation mode follow-up window.",
+        "Hardcoded Paths: Configured OPERATOR_VAULT_PATH and other key paths via environment variables with E:/JarvisVault fallbacks.",
+        "TOML Standards: Unified all 11 skills to OpenJarvis Schema 2 format and resolved TOML loader mode mismatch (text vs binary) for older Python versions.",
+        "Frontend Issues: Resolved React StrictMode double mount, fixed 'ffftSize' typo for VAD, and corrected launcher port mismatch (8081 vs 8080).",
+        "System Robustness: Prevented Sleep Skill from firing on questions, adjusted Gemini routing threshold, added weather unit preference (Celsius), and added YouTube to app registry.",
+        "Vault Integration: Vault summaries and session logging are now fully operational using E:/JarvisVault paths."
+      ]
     }
   }
 ]

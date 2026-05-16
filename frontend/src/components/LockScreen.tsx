@@ -98,6 +98,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
         <input
           ref={inputRef}
           type="password"
+          autoComplete="current-password"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Enter access code"

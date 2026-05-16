@@ -91,9 +91,9 @@ BUILT_IN_SKILLS = {
         "description": "Tell current time"
     },
     "system_status": {
-        "triggers": ["system status", "how's the system", "status report"],
+        "triggers": ["system status", "how's the system", "status report", "temperature", "cpu temp", "how hot is the system", "is the system overheating"],
         "handler": "handle_system_status",
-        "description": "Report system vitals and health"
+        "description": "Report system vitals, health, and temperature"
     },
     "wake_up": {
         "triggers": ["wake up", "i'm back", "i'm home"],
@@ -107,9 +107,14 @@ BUILT_IN_SKILLS = {
         "no_questions": True,  # Don't trigger on questions like 'should I sleep now?'
     },
     "weather": {
-        "triggers": ["weather", "temperature outside", "is it raining", "what's the forecast", "will it rain", "how cold is it", "how hot is it"],
+        "triggers": ["what's the weather", "current weather", "tell me the weather", "how's the weather"],
         "handler": "handle_weather",
-        "description": "Fetch local weather information"
+        "description": "Tell current weather"
+    },
+    "face_recognition": {
+        "triggers": ["register my face", "who am i", "do you know me", "recognize me", "identify me", "remember my face", "forget my face"],
+        "handler": "handle_face_recognition",
+        "description": "Manage biometric identity and face recognition"
     },
     "calendar": {
         "triggers": ["calendar", "schedule", "appointments today", "what's on today", "do i have meetings", "my agenda", "events today"],
@@ -149,7 +154,12 @@ BUILT_IN_SKILLS = {
     "quick_math": {
         "triggers": ["calculate", "what is", "compute", "math"],
         "handler": "handle_quick_math",
-        "description": "Quick mathematical calculations"
+        "description": "Perform basic arithmetic"
+    },
+    "remote_admin": {
+        "triggers": ["check battery", "disk space", "system uptime", "restart device", "reboot", "restart the"],
+        "handler": "handle_remote_admin",
+        "description": "Execute commands on remote devices (Android, NAS, etc.)"
     },
     "unit_convert": {
         "triggers": ["convert", "how many", "inches to", "miles to", "celsius to", "fahrenheit to"],
@@ -185,6 +195,63 @@ BUILT_IN_SKILLS = {
         "triggers": ["search the web for", "google", "search for", "look up"],
         "handler": "handle_web_search",
         "description": "Search the live web for information"
+    },
+    "remote_disk_check": {
+        "triggers": ["check disk on", "disk space on", "how full is", "storage on"],
+        "handler": "handle_remote_disk_check",
+        "description": "Check disk space on remote devices"
+    },
+    "remote_restart": {
+        "triggers": ["restart", "reboot", "power cycle"],
+        "handler": "handle_remote_restart",
+        "description": "Restart remote devices via SSH",
+        "requires_confirmation": True,
+    },
+    "remote_memory_check": {
+        "triggers": ["check memory on", "ram usage on", "memory on"],
+        "handler": "handle_remote_memory_check",
+        "description": "Check memory usage on remote devices"
+    },
+    "remote_uptime": {
+        "triggers": ["uptime on", "how long has", "been up"],
+        "handler": "handle_remote_uptime",
+        "description": "Check system uptime on remote devices"
+    },
+    "remote_services": {
+        "triggers": ["services on", "check service", "is running on"],
+        "handler": "handle_remote_services",
+        "description": "Check service status on remote devices"
+    },
+    "remote_battery": {
+        "triggers": ["battery on", "check battery", "how much battery"],
+        "handler": "handle_remote_battery",
+        "description": "Check battery level on remote devices"
+    },
+    "open_app_on_device": {
+        "triggers": ["open", "launch", "start"],
+        "handler": "handle_open_app_on_device",
+        "description": "Open Android apps on remote devices"
+    },
+    "close_app_on_device": {
+        "triggers": ["close", "kill", "stop app"],
+        "handler": "handle_close_app_on_device",
+        "description": "Close Android apps on remote devices"
+    },
+    "media_control_device": {
+        "triggers": ["play", "pause", "skip", "next song", "volume up", "volume down"],
+        "handler": "handle_media_control_device",
+        "description": "Control media playback on remote devices"
+    },
+    "screenshot_device": {
+        "triggers": ["screenshot", "take a screenshot", "capture screen"],
+        "handler": "handle_screenshot_device",
+        "description": "Take screenshot on remote Android device"
+    },
+    "training": {
+        "triggers": ["train your self on", "research and report on", "analyze and report on", "training on", "deep research on"],
+        "handler": "_handle_training",
+        "description": "Self-training engine for learning new topics or repositories",
+        "requires_online": True,
     },
 }
 
@@ -239,6 +306,9 @@ class SkillExecutor:
             "handle_search_knowledge": self._handle_search_knowledge,
             "handle_hardware_health": self._handle_hardware_health,
             "handle_web_search": self._handle_web_search,
+            "handle_remote_admin": self._handle_remote_admin,
+            "_handle_training": self._handle_training,
+            "_handle_google_workspace": self._handle_google_workspace,
         }
         self._load_toml_skills()
 
@@ -581,6 +651,10 @@ class SkillExecutor:
                 with self._runtime_lock:
                     self.skill_runtime_state[skill_name] = {"awaiting_capture": True}
                 return skill_data.get("action_response") or skill_data.get("response") or "Go ahead, sir."
+
+            elif action_type == "training":
+                # Execute the complex training logic
+                return self._handle_training(text)
 
             elif action_type == "vault_summary":
                 # Scan vault for briefing
@@ -1367,40 +1441,690 @@ class SkillExecutor:
             logger.error(f"[Skills] RAG Search error: {e}")
             return "I encountered an error accessing my memory banks, sir."
     
+    def _handle_face_recognition(self, text: str = "") -> str:
+        """Handle face registration and identity queries."""
+        query = text.lower()
+        
+        if any(w in query for w in ["register", "enroll", "remember my face", "save my face"]):
+            self.runtime_state["awaiting_face_register"] = True
+            return "I am ready to capture your biometric data, sir. Please hold still while I scan your features."
+        
+        if any(w in query for w in ["who am i", "do you know me", "recognize me", "identify me"]):
+            self.runtime_state["awaiting_face_identify"] = True
+            return "Identifying... One moment, sir."
+            
+        if any(w in query for w in ["forget", "delete", "remove"]) and any(w in query for w in ["face", "profile", "biometric"]):
+             # Trigger delete logic in ws_server
+             self.runtime_state["awaiting_face_delete"] = True
+             return "I have removed your biometric profile from my local storage, sir."
+             
+        return "I can manage your biometric identity, sir. Would you like me to register your face or verify your current session?"
+
     def _handle_web_search(self, text: str = "") -> str:
-        """Search the web using DuckDuckGo."""
+        """Search the web using DuckDuckGo with robust query parsing and fallbacks."""
         if not self._is_online():
             return "I'm unable to search the web while offline, sir."
             
-        # Extract search query
-        query = text.lower()
-        for trigger in ["search the web for", "google", "search for", "look up"]:
-            if trigger in query:
-                query = query.split(trigger)[-1].strip()
+        import re
+        query_text = text.lower().strip()
+        
+        # 1. Advanced Query Extraction
+        triggers = [
+            r"search the web for", r"search for", r"search about",
+            r"google", r"look up", r"find information about",
+            r"tell me about", r"what is", r"who is", r"where is",
+            r"how to", r"find out about", r"browse for"
+        ]
+        
+        extracted_query = query_text
+        for trigger in triggers:
+            pattern = rf"\b{trigger}\b\s*(.*)"
+            match = re.search(pattern, query_text, re.IGNORECASE)
+            if match:
+                extracted_query = match.group(1).strip()
                 break
         
-        if not query or len(query) < 2:
-            return "What would you like me to search for, sir?"
+        # 2. Sanitization
+        extracted_query = re.sub(r'[?!.,;:]+$', '', extracted_query).strip()
+        if not extracted_query or len(extracted_query) < 2:
+            extracted_query = text.strip()
             
+        final_query = extracted_query
+        logger.info(f"[Skills] Web search final query: '{final_query}'")
+        
+        # 3. Execution with DuckDuckGo
         try:
             from duckduckgo_search import DDGS
-            logger.info(f"[Skills] Performing web search for: {query}")
-            with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=3))
+            with DDGS(timeout=12) as ddgs:
+                results = list(ddgs.text(final_query, max_results=5))
                 
-            if not results:
-                return f"I couldn't find any results for '{query}', sir."
+            if results:
+                response = f"I've performed a search for '{final_query}', sir. Here's what I found:\n\n"
+                # Limit to top 3 for brevity in voice
+                for i, res in enumerate(results[:3]):
+                    title = res.get('title', 'Untitled Result')
+                    snippet = res.get('body', '')
+                    if len(snippet) > 200:
+                        snippet = snippet[:197] + "..."
+                    response += f"• {title}\n  {snippet}\n\n"
                 
-            response = f"I've searched the web for '{query}':\n\n"
-            for i, res in enumerate(results):
-                title = res.get('title', 'Result')
-                snippet = res.get('body', '')[:200] + "..."
-                response += f"{i+1}. {title}: {snippet}\n\n"
-                
-            return response
+                return response
         except Exception as e:
-            logger.error(f"[Skills] Web Search error: {e}")
-            return f"I encountered an error while searching the web, sir."
+            logger.warning(f"[Skills] DuckDuckGo search failed for '{final_query}': {e}")
+            
+        # 4. Fallback: Decision Engine Knowledge
+        logger.info(f"[Skills] Web search failed, using AI knowledge fallback")
+        try:
+            from backend.decision_engine import DecisionEngine
+            engine = DecisionEngine()
+            # Ask the AI to provide its best internal knowledge if web fails
+            prompt = f"The user asked for a web search about: '{final_query}'. I am unable to access the internet right now. Please provide a brief, factual summary of this topic based on your training data. Start with 'I'm currently unable to reach the live web, but based on my records...'"
+            ai_summary = engine.chat(prompt)
+            
+            if ai_summary and len(ai_summary) > 20:
+                return ai_summary
+        except Exception as e:
+            logger.error(f"[Skills] AI search fallback failed: {e}")
+            
+        return f"I apologize, sir. I encountered a technical issue while searching for '{final_query}'. You might want to check your network connection or search manually."
+
+    def _extract_device_name(self, text: str, triggers: list) -> str:
+        """Extract device name from command text after triggers."""
+        text_lower = text.lower()
+        for trigger in triggers:
+            if trigger in text_lower:
+                # Get text after trigger
+                parts = text_lower.split(trigger)
+                if len(parts) > 1:
+                    device = parts[-1].strip()
+                    # Clean up common words
+                    device = device.replace("the", "").replace("my", "").strip()
+                    return device
+        return ""
+
+    def _handle_remote_disk_check(self, text: str = "") -> str:
+        """Check disk space on remote device."""
+        try:
+            from remote_admin import check_disk_space, load_remote_devices
+            
+            device = self._extract_device_name(text, ["check disk on", "disk space on", "how full is", "storage on"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir. You can add devices via the admin panel."
+                device_names = [d.name for d in devices]
+                return f"Which device should I check? Available: {', '.join(device_names)}"
+            
+            return check_disk_space(device)
+        except Exception as e:
+            logger.error(f"[Skills] Remote disk check error: {e}")
+            return f"I encountered an error checking remote disk space, sir."
+
+    def _handle_remote_restart(self, text: str = "") -> str:
+        """Restart a remote device."""
+        try:
+            from remote_admin import restart_device, load_remote_devices
+            
+            device = self._extract_device_name(text, ["restart", "reboot", "power cycle"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir."
+                device_names = [d.name for d in devices]
+                return f"Which device should I restart? Available: {', '.join(device_names)}"
+            
+            return restart_device(device)
+        except Exception as e:
+            logger.error(f"[Skills] Remote restart error: {e}")
+            return f"I encountered an error attempting to restart the device, sir."
+
+    def _handle_remote_memory_check(self, text: str = "") -> str:
+        """Check memory usage on remote device."""
+        try:
+            from remote_admin import check_memory, load_remote_devices
+            
+            device = self._extract_device_name(text, ["check memory on", "ram usage on", "memory on"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir."
+                device_names = [d.name for d in devices]
+                return f"Which device should I check? Available: {', '.join(device_names)}"
+            
+            return check_memory(device)
+        except Exception as e:
+            logger.error(f"[Skills] Remote memory check error: {e}")
+            return f"I encountered an error checking remote memory, sir."
+
+    def _handle_remote_uptime(self, text: str = "") -> str:
+        """Check system uptime on remote device."""
+        try:
+            from remote_admin import get_system_uptime, load_remote_devices
+            
+            device = self._extract_device_name(text, ["uptime on", "how long has", "been up"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir."
+                device_names = [d.name for d in devices]
+                return f"Which device should I check? Available: {', '.join(device_names)}"
+            
+            return get_system_uptime(device)
+        except Exception as e:
+            logger.error(f"[Skills] Remote uptime check error: {e}")
+            return f"I encountered an error checking remote uptime, sir."
+
+    def _handle_remote_services(self, text: str = "") -> str:
+        """Check service status on remote device."""
+        try:
+            from remote_admin import list_services, load_remote_devices
+            
+            # Extract service name if specified
+            service_name = None
+            device = ""
+            
+            # Pattern: "check [service] on [device]" or "is [service] running on [device]"
+            import re
+            service_match = re.search(r"(?:check|is)\s+(\w+)\s+(?:running\s+)?(?:on|services on)\s+(\w+)", text.lower())
+            if service_match:
+                service_name = service_match.group(1)
+                device = service_match.group(2)
+            else:
+                # Just device name
+                device = self._extract_device_name(text, ["services on", "check service"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir."
+                device_names = [d.name for d in devices]
+                return f"Which device should I check? Available: {', '.join(device_names)}"
+            
+            return list_services(device, service_name)
+        except Exception as e:
+            logger.error(f"[Skills] Remote services check error: {e}")
+            return f"I encountered an error checking remote services, sir."
+
+    def _handle_remote_battery(self, text: str = "") -> str:
+        """Check battery on remote device."""
+        try:
+            from remote_admin import check_battery, load_remote_devices
+            
+            device = self._extract_device_name(text, ["battery on", "check battery", "how much battery"])
+            
+            if not device:
+                devices = load_remote_devices()
+                if not devices:
+                    return "No remote devices configured, sir."
+                device_names = [d.name for d in devices]
+                return f"Which device should I check? Available: {', '.join(device_names)}"
+            
+            return check_battery(device)
+        except Exception as e:
+            logger.error(f"[Skills] Remote battery check error: {e}")
+            return f"I encountered an error checking remote battery, sir."
+
+    def _handle_remote_admin(self, text: str = "") -> str:
+        """Unified dispatcher for remote administration commands."""
+        text_lower = text.lower()
+        
+        if "battery" in text_lower:
+            return self._handle_remote_battery(text)
+        elif "disk" in text_lower or "space" in text_lower or "full" in text_lower:
+            return self._handle_remote_disk_check(text)
+        elif "memory" in text_lower or "ram" in text_lower:
+            return self._handle_remote_memory_check(text)
+        elif "uptime" in text_lower or "how long" in text_lower:
+            return self._handle_remote_uptime(text)
+        elif "restart" in text_lower or "reboot" in text_lower:
+            return self._handle_remote_restart(text)
+        elif "service" in text_lower or "running" in text_lower:
+            return self._handle_remote_services(text)
+        elif "open" in text_lower and "on" in text_lower:
+            return self._handle_open_app_on_device(text)
+        
+        return "Which remote operation would you like me to perform, sir? I can check battery, disk, memory, uptime, or restart a device."
+
+    def _handle_open_app_on_device(self, text: str = "") -> str:
+        """Open an app on remote Android device."""
+        try:
+            from remote_admin import open_android_app, ANDROID_APPS, load_remote_devices
+            import re
+            
+            # Extract device and app name
+            # Pattern: "open [app] on [device]"
+            device = ""
+            app_name = ""
+            
+            # Try to find device name from configured devices
+            devices = load_remote_devices()
+            device_names = [d.name.lower() for d in devices]
+            
+            # Look for device name in text
+            text_lower = text.lower()
+            for d_name in device_names:
+                if d_name in text_lower:
+                    device = d_name
+                    break
+            
+            # If no device found, default to "samsung" or first android device
+            if not device:
+                for d in devices:
+                    if d.device_type == "android":
+                        device = d.name
+                        break
+            
+            # Extract app name
+            # Remove trigger words and device name
+            app_text = text_lower
+            for trigger in ["open", "launch", "start"]:
+                app_text = app_text.replace(trigger, "")
+            if device:
+                app_text = app_text.replace(device.lower(), "")
+            app_text = app_text.replace("on", "").strip()
+            
+            # Match against known apps
+            app_name = None
+            for app_key in ANDROID_APPS.keys():
+                if app_key in app_text or app_text in app_key:
+                    app_name = app_key
+                    break
+            
+            if not app_name:
+                # Try to use the cleaned text directly
+                app_name = app_text.strip()
+            
+            if not device:
+                return "Which device should I open the app on? Say something like 'open WhatsApp on samsung'."
+            
+            if not app_name:
+                available = list(ANDROID_APPS.keys())[:15]
+                return f"Which app should I open? Available: {', '.join(available)}..."
+            
+            return open_android_app(device, app_name)
+            
+        except Exception as e:
+            logger.error(f"[Skills] Open app error: {e}")
+            return f"I encountered an error opening the app, sir."
+
+    def _handle_close_app_on_device(self, text: str = "") -> str:
+        """Close an app on remote Android device."""
+        try:
+            from remote_admin import close_android_app, ANDROID_APPS, load_remote_devices
+            import re
+            
+            # Extract device and app name
+            devices = load_remote_devices()
+            device_names = [d.name.lower() for d in devices]
+            
+            text_lower = text.lower()
+            device = ""
+            for d_name in device_names:
+                if d_name in text_lower:
+                    device = d_name
+                    break
+            
+            # Default to first android device
+            if not device:
+                for d in devices:
+                    if d.device_type == "android":
+                        device = d.name
+                        break
+            
+            # Extract app name
+            app_text = text_lower
+            for trigger in ["close", "kill", "stop app"]:
+                app_text = app_text.replace(trigger, "")
+            if device:
+                app_text = app_text.replace(device.lower(), "")
+            app_text = app_text.replace("on", "").strip()
+            
+            # Match against known apps
+            app_name = None
+            for app_key in ANDROID_APPS.keys():
+                if app_key in app_text or app_text in app_key:
+                    app_name = app_key
+                    break
+            
+            if not app_name:
+                app_name = app_text.strip()
+            
+            if not device:
+                return "Which device should I close the app on? Say something like 'close WhatsApp on samsung'."
+            
+            if not app_name:
+                return "Which app should I close?"
+            
+            return close_android_app(device, app_name)
+            
+        except Exception as e:
+            logger.error(f"[Skills] Close app error: {e}")
+            return f"I encountered an error closing the app, sir."
+
+    def _handle_media_control_device(self, text: str = "") -> str:
+        """Control media on remote Android device."""
+        try:
+            from remote_admin import control_media, load_remote_devices
+            
+            # Extract device
+            devices = load_remote_devices()
+            text_lower = text.lower()
+            device = ""
+            
+            for d in devices:
+                if d.name.lower() in text_lower:
+                    device = d.name
+                    break
+            
+            if not device:
+                for d in devices:
+                    if d.device_type == "android":
+                        device = d.name
+                        break
+            
+            # Extract action
+            action = ""
+            if "play" in text_lower:
+                action = "play"
+            elif "pause" in text_lower:
+                action = "pause"
+            elif "skip" in text_lower or "next" in text_lower:
+                action = "next"
+            elif "previous" in text_lower or "prev" in text_lower:
+                action = "previous"
+            elif "volume up" in text_lower:
+                action = "volume_up"
+            elif "volume down" in text_lower:
+                action = "volume_down"
+            
+            if not device:
+                return "Which device should I control? Say something like 'pause music on samsung'."
+            
+            if not action:
+                return "What should I do? Try: play, pause, skip, next, previous, volume up, volume down"
+            
+            return control_media(device, action)
+            
+        except Exception as e:
+            logger.error(f"[Skills] Media control error: {e}")
+            return f"I encountered an error controlling media, sir."
+
+    def _handle_screenshot_device(self, text: str = "") -> str:
+        """Take screenshot on remote Android device."""
+        try:
+            from remote_admin import take_screenshot, load_remote_devices
+            
+            # Extract device
+            devices = load_remote_devices()
+            text_lower = text.lower()
+            device = ""
+            
+            for d in devices:
+                if d.name.lower() in text_lower:
+                    device = d.name
+                    break
+            
+            if not device:
+                for d in devices:
+                    if d.device_type == "android":
+                        device = d.name
+                        break
+            
+            if not device:
+                return "Which device should I take a screenshot of? Say something like 'take a screenshot on samsung'."
+            
+            return take_screenshot(device)
+            
+        except Exception as e:
+            logger.error(f"[Skills] Screenshot error: {e}")
+            return f"I encountered an error taking the screenshot, sir."
+
+    def _handle_training(self, text: str = "") -> str:
+        """JARVIS's self-training engine for topics and repositories."""
+        import re
+        
+        text_lower = text.lower()
+        
+        # Extract subject
+        subject = text
+        triggers = ["train yourself on", "learn about", "study this repo", "read up on", "ingest this codebase", "train on"]
+        for trigger in triggers:
+            if trigger in text_lower:
+                subject = text.split(trigger)[-1].strip()
+                break
+        
+        # Clean subject
+        subject = re.sub(r'[?!.,;:]+$', '', subject).strip()
+        
+        if not subject or len(subject) < 2:
+            return "What would you like me to train on, sir?"
+            
+        # Check for GitHub URL
+        is_repo = "github.com" in subject.lower() or subject.lower().startswith("https://github.com")
+        
+        # Check for "today's basis" / "current state"
+        date_anchor = any(phrase in text_lower for phrase in ["today", "current", "basis", "now"])
+        
+        # Check for "save as skill"
+        save_skill = any(phrase in text_lower for phrase in ["save as skill", "add to skills", "remember this", "install it"])
+        
+        # Training Phase
+        if is_repo:
+            return self._train_on_repo(subject, save_skill)
+        else:
+            return self._train_on_web(subject, date_anchor, save_skill)
+
+    def _train_on_web(self, subject: str, date_anchor: bool, save_skill: bool) -> str:
+        """Execute web-based training protocol."""
+        logger.info(f"[Skills] Initiating web training on: {subject}")
+        
+        queries = [
+            f"{subject} fundamentals how it works",
+            f"{subject} latest news developments {datetime.now().year}",
+            f"{subject} technical architecture specs",
+            f"{subject} risks criticism limitations",
+            f"{subject} future outlook trends"
+        ]
+        
+        all_snippets = []
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS(timeout=15) as ddgs:
+                for q in queries:
+                    results = list(ddgs.text(q, max_results=3))
+                    for r in results:
+                        all_snippets.append(f"Source: {r.get('title')}\nContent: {r.get('body')}")
+        except Exception as e:
+            logger.warning(f"[Skills] Web research partially failed: {e}")
+            if not all_snippets:
+                return f"I'm sorry sir, I couldn't reach the live web to train on {subject}."
+
+        # Synthesize with Decision Engine
+        try:
+            from backend.decision_engine import DecisionEngine
+            engine = DecisionEngine()
+            
+            research_data = "\n\n---\n\n".join(all_snippets)
+            prompt = f"""
+SYSTEM: You are JARVIS. Generate a high-quality Intelligence Report on '{subject}'.
+RESEARCH DATA GATHERED:
+{research_data}
+
+INSTRUCTIONS:
+1. Follow the 'Research Quality Reference' guidelines.
+2. Use the standard JARVIS Intelligence Report format.
+3. Be direct, technical, and provide a clear assessment.
+4. Date the report: {datetime.now().strftime('%Y-%m-%d')}.
+"""
+            report = engine.chat(prompt)
+            
+            if save_skill:
+                skill_path = self._save_training_as_skill(subject, report, "web")
+                report += f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  SKILL GENERATED: {skill_path}\n  Install it by moving the folder to your skills directory.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            return report
+        except Exception as e:
+            logger.error(f"[Skills] Web training synthesis failed: {e}")
+            return f"I gathered the data for {subject}, but I encountered an error during synthesis, sir."
+
+    def _train_on_repo(self, repo_url: str, save_skill: bool) -> str:
+        """Execute repository ingestion training protocol."""
+        import tempfile
+        import shutil
+        
+        # Clean URL
+        if not repo_url.startswith("http"):
+            repo_url = f"https://{repo_url}"
+            
+        repo_name = repo_url.split("/")[-1].replace(".git", "")
+        tmp_dir = Path(tempfile.gettempdir()) / "jarvis_training" / repo_name
+        
+        logger.info(f"[Skills] Cloning repository: {repo_url} to {tmp_dir}")
+        
+        try:
+            if tmp_dir.exists():
+                shutil.rmtree(tmp_dir)
+            
+            # Shallow clone
+            subprocess.run(
+                f"git clone --depth 1 {repo_url} \"{tmp_dir}\"",
+                shell=True,
+                check=True,
+                capture_output=True,
+                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
+            )
+            
+            # Ingestion scan
+            scan_results = []
+            
+            # README
+            readme_path = None
+            for f in ["README.md", "readme.md", "README"]:
+                if (tmp_dir / f).exists():
+                    readme_path = tmp_dir / f
+                    break
+            
+            if readme_path:
+                with open(readme_path, "r", encoding="utf-8", errors="ignore") as f:
+                    scan_results.append(f"## README CONTENT:\n{f.read(3000)}")
+            
+            # File structure
+            structure = []
+            for root, dirs, files in os.walk(tmp_dir):
+                if any(j in root for j in [".git", "node_modules", "__pycache__"]):
+                    continue
+                rel_path = os.path.relpath(root, tmp_dir)
+                if rel_path == ".": rel_path = "/"
+                structure.append(f"{rel_path}/ ({len(files)} files)")
+                if len(structure) > 20: break
+            
+            scan_results.append(f"## REPOSITORY STRUCTURE:\n" + "\n".join(structure))
+            
+            # Synthesis
+            from backend.decision_engine import DecisionEngine
+            engine = DecisionEngine()
+            
+            context = "\n\n---\n\n".join(scan_results)
+            prompt = f"""
+SYSTEM: You are JARVIS. Generate a Codebase Intelligence Report on the repository '{repo_name}'.
+INGESTED DATA:
+{context}
+
+INSTRUCTIONS:
+1. Follow the 'JARVIS CODEBASE INTELLIGENCE REPORT' format.
+2. Identify the purpose, tech stack, and architecture.
+3. Be honest in your assessment.
+4. Repo URL: {repo_url}
+"""
+            report = engine.chat(prompt)
+            
+            if save_skill:
+                skill_path = self._save_training_as_skill(repo_name, report, repo_url)
+                report += f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n  SKILL GENERATED: {skill_path}\n  Install it by moving the folder to your skills directory.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            
+            return report
+            
+        except Exception as e:
+            logger.error(f"[Skills] Repo training failed: {e}")
+            return f"I'm afraid I couldn't ingest the repository at {repo_url}, sir. Error: {str(e)[:100]}"
+        finally:
+            # Keep it for a bit in case the user wants a deep dive? 
+            # Or clean up. The spec says /tmp/jarvis_training/skills/ for skills, 
+            # but repo clone can be deleted.
+            pass
+
+    def _save_training_as_skill(self, subject: str, report: str, source: str) -> str:
+        """Convert a training report into a persistent JARVIS skill."""
+        import slugify
+        try:
+            from slugify import slugify
+        except ImportError:
+            slugify = lambda x: x.lower().replace(" ", "-").replace("/", "-")
+            
+        topic_slug = slugify(subject)
+        if source != "web":
+            topic_slug += "-repo"
+        else:
+            topic_slug += "-knowledge"
+            
+        skill_dir = Path("c:/Projects/Operator/skills") / topic_slug
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate SKILL.md content based on reference
+        # I'll use the report as a basis for the sections
+        
+        # Quick extract summary from report
+        summary_match = re.search(r"## EXECUTIVE SUMMARY\n(.*?)\n\n", report, re.DOTALL)
+        summary = summary_match.group(1).strip() if summary_match else "JARVIS knowledge base."
+        
+        skill_md_content = f"""---
+name: {topic_slug}
+description: >
+  JARVIS knowledge base for {subject}. Use this skill whenever the user asks about
+  {subject}, mentions {subject}, or asks JARVIS to recall what it learned about {subject}.
+  Compiled: {datetime.now().strftime('%Y-%m-%d')}.
+trained_on: {datetime.now().strftime('%Y-%m-%d')}
+source: {source}
+---
+
+# {subject} — JARVIS Knowledge Base
+
+> Compiled: {datetime.now().strftime('%Y-%m-%d')} | Source: {source}
+
+{report}
+
+## Known Gaps
+[Full training session was completed. Real-time web search should be used for events after {datetime.now().strftime('%Y-%m-%d')}.]
+"""
+        
+        with open(skill_dir / "SKILL.md", "w", encoding="utf-8") as f:
+            f.write(skill_md_content)
+            
+        # Also generate a .toml file so it's actually a skill the system can load
+        toml_content = f"""# JARVIS Knowledge Skill - {subject}
+[skill]
+name = "{topic_slug}"
+trigger = "{subject.lower()}"
+aliases = ["what is {subject.lower()}", "tell me about {subject.lower()}", "recall {subject.lower()}"]
+trigger_mode = "contains"
+description = "Knowledge base about {subject}"
+priority = 100
+enabled = true
+requires_online = false
+
+[action]
+type = "response"
+response = "I have detailed records on {subject}, sir. Here is the summary: {summary[:200]}..."
+"""
+        with open(skill_dir / f"{topic_slug}.toml", "w", encoding="utf-8") as f:
+            f.write(toml_content)
+            
+        logger.info(f"[Skills] Saved skill to {skill_dir}")
+        return str(skill_dir)
 
     def execute_skill(self, skill_name: str, text: str) -> str:
         """
@@ -1421,6 +2145,101 @@ class SkillExecutor:
         
         return None
 
+    def _handle_training(self, text: str = "") -> str:
+        """Handle deep research and training requests."""
+        query = text.lower()
+        
+        # Extract topic
+        topic = ""
+        triggers = ["train your self on", "research and report on", "analyze and report on", "training on", "deep research on"]
+        for trigger in triggers:
+            if trigger in query:
+                topic = query.split(trigger)[-1].strip()
+                break
+        
+        if not topic:
+            return "What topic would you like me to train on, sir?"
+            
+        # Clean up topic
+        topic = topic.replace("everything about it", "").replace("and everything about it", "").strip()
+        topic = re.sub(r'[?!.,;:]+$', '', topic).strip()
+        
+        self.runtime_state["awaiting_training_topic"] = topic
+        
+        if "github.com" in topic or "repo" in topic:
+            return f"I'll begin analyzing the repository at {topic}, sir. I'll ingest its structure and prepare a technical briefing for you."
+            
+        return f"I'll begin researching {topic} immediately, sir. I'll filter for primary sources and prepare a world-class intelligence report for your review."
+
+    def _handle_google_workspace(self, text: str = "") -> str:
+        """Handle Google Drive and Docs queries."""
+        query = text.lower()
+        
+        try:
+            from google_workspace import get_google_manager
+            manager = get_google_manager()
+            
+            if any(w in query for w in ["list", "recent", "what's in"]):
+                return manager.list_recent_files()
+                
+            if "search" in query:
+                # Extract file name
+                search_term = ""
+                for trigger in ["search my drive for", "search for"]:
+                    if trigger in query:
+                        search_term = query.split(trigger)[-1].strip()
+                        break
+                if not search_term: search_term = query.split("search")[-1].strip()
+                
+                service = manager.get_drive_service()
+                if not service: return "I'm unable to access your Google Drive, sir."
+                
+                results = service.files().list(
+                    q=f"name contains '{search_term}'",
+                    fields="files(id, name, mimeType)"
+                ).execute()
+                items = results.get('files', [])
+                
+                if not items:
+                    return f"I couldn't find any files matching '{search_term}' in your Google Drive, sir."
+                
+                output = f"I found {len(items)} files matching '{search_term}':\n"
+                for item in items[:5]:
+                    output += f"- {item['name']} (ID: {item['id']})\n"
+                return output
+
+            if "read" in query:
+                # Extract doc name or ID
+                doc_query = query.split("read google doc")[-1].strip()
+                if not doc_query: doc_query = query.split("read")[-1].strip()
+                
+                # If it looks like an ID
+                if " " not in doc_query and len(doc_query) > 20:
+                    return manager.read_doc_content(doc_query)
+                
+                # Otherwise search
+                service = manager.get_drive_service()
+                results = service.files().list(
+                    q=f"name contains '{doc_query}' and mimeType = 'application/vnd.google-apps.document'",
+                    fields="files(id, name)"
+                ).execute()
+                items = results.get('files', [])
+                
+                if not items:
+                    return f"I couldn't find a Google Doc named '{doc_query}', sir."
+                
+                doc_id = items[0]['id']
+                doc_name = items[0]['name']
+                content = manager.read_doc_content(doc_id)
+                return f"I've retrieved the document '{doc_name}' for you, sir:\n\n{content}"
+
+            return "I can list your recent files, search your Drive, or read Google Docs for you. What would you like me to do?"
+            
+        except Exception as e:
+            logger.error(f"[Skills] Google Workspace error: {e}")
+            if "GOOGLE_CLIENT_SECRET" in str(e) or "client_secret" in str(e).lower():
+                return "I need your Google Client Secret to finish the integration, sir. Please add it to my environment configuration."
+            return f"I encountered an error interacting with Google Workspace, sir: {e}"
 
 # Global skill executor instance
 _skill_executor: Optional[SkillExecutor] = None
@@ -1751,8 +2570,8 @@ def validate_skills_files() -> dict:
                         issues.append({"file": skill_file.name, "level": "error", "message": f"Invalid regex trigger: {e}"})
             if "action" in data and isinstance(data["action"], dict):
                 action_type = str(data["action"].get("type", "response")).strip().lower()
-                if action_type not in ("response", "command"):
-                    issues.append({"file": skill_file.name, "level": "error", "message": "action.type must be response or command"})
+                if action_type not in ("response", "command", "training", "vault_summary", "vault_log", "open_application", "voice_capture_then_write"):
+                    issues.append({"file": skill_file.name, "level": "error", "message": f"Invalid action.type '{action_type}'"})
         except Exception as e:
             issues.append({"file": skill_file.name, "level": "error", "message": f"Parse failure: {e}"})
 

@@ -97,6 +97,7 @@ export const SkillGallery: React.FC<SkillGalleryProps> = ({
         <div className="skill-gallery-controls">
           <input
             type="text"
+            autoComplete="off"
             placeholder="Search skills..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

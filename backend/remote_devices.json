@@ -1,0 +1,22 @@
+[
+  {
+    "name": "test-server",
+    "host": "test.tailnet.ts.net",
+    "user": "admin",
+    "auth_method": "key",
+    "key_path": null,
+    "password": null,
+    "device_type": "server",
+    "port": 22
+  },
+  {
+    "name": "samsung",
+    "host": "100.89.159.84",
+    "user": "u0_a404",
+    "auth_method": "key",
+    "key_path": "C:\\Users\\olami\\.ssh\\id_rsa",
+    "password": null,
+    "device_type": "android",
+    "port": 8022
+  }
+]

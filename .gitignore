@@ -10,6 +10,8 @@ telegram_config.json
 # Build output
 frontend/dist/
 frontend/build/
+frontend/src-tauri/target/
+target/
 
 # Logs
 logs/
@@ -27,6 +29,9 @@ database/*.db
 *.sqlite3-journal
 .chromadata/
 chromadata/
+data/chroma_db/
+*.bin
+indexed_hashes.json
 
 # GitNexus index
 .gitnexus/

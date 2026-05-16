@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode, useEffect } from 'react';
 import { getWebSocketUrl, getVoiceServiceUrl } from '../utils/urls';
+import { pushNotification } from '../utils/notifications';
 
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'offline' | 'hotword';
 
@@ -16,6 +17,8 @@ interface VoiceContextType {
   toggleConversationMode: () => void;
   ttsSource: 'browser' | 'server';
   setTtsSource: (source: 'browser' | 'server') => void;
+  vadSensitivity: number;
+  setVadSensitivity: (value: number) => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -25,6 +28,7 @@ interface VoiceProviderProps {
 }
 
 const FOLLOW_UP_WINDOW_MS = 20 * 1000; // 20 second conversation follow-up window
+export const MAX_RECORDING_MS = 12000;   // Maximum note-capture recording length (ms)
 const VOICE_SERVICE_URL = getVoiceServiceUrl(); // Local or Remote Whisper voice service
 
 /**
@@ -58,6 +62,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const [ttsSource, setTtsSourceState] = useState<'browser' | 'server'>(
     () => (localStorage.getItem('jarvis_tts_source') as 'browser' | 'server') || 'browser'
   );
+  const [vadSensitivity, setVadSensitivityState] = useState<number>(
+    () => Number(localStorage.getItem('jarvis_vad_sensitivity') || '60')
+  );
 
   // Main JARVIS WebSocket (port 8765)
   const ws = useRef<WebSocket | null>(null);
@@ -75,6 +82,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const ttsDurationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speakCooldown = useRef<boolean>(false);
+  const vadInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const stateWatchdogRef = useRef<{ state: VoiceState; since: number }>({ state: 'idle', since: Date.now() });
 
@@ -87,6 +95,18 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
   const setTtsSource = useCallback((source: 'browser' | 'server') => {
     setTtsSourceState(source);
     localStorage.setItem('jarvis_tts_source', source);
+  }, []);
+
+  const setVadSensitivity = useCallback((value: number) => {
+    setVadSensitivityState(value);
+    localStorage.setItem('jarvis_vad_sensitivity', String(value));
+    if (voiceWs.current?.readyState === WebSocket.OPEN) {
+      try {
+        voiceWs.current.send(JSON.stringify({ type: 'config', vadSensitivity: value }));
+      } catch {
+        // ignore if voice service is unavailable
+      }
+    }
   }, []);
 
   const setVoiceState = useCallback((newState: VoiceState, offline = false) => {
@@ -126,7 +146,7 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
     };
     window.addEventListener('jarvis:wake', handleManualWake);
 
-    // Listen for vision events (face detection) from HandTracker
+    // Listen for vision events (face detection) from VisionTracker
     const handleVisionEvent = (e: any) => {
       if (ws.current?.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({
@@ -193,6 +213,11 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       voiceWs.current.onopen = () => {
         isVoiceServiceConnecting.current = false;
         console.log('[Voice] Connected to Voice Service');
+        try {
+          voiceWs.current?.send(JSON.stringify({ type: 'config', vadSensitivity: Number(localStorage.getItem('jarvis_vad_sensitivity') || '60') }));
+        } catch {
+          // ignore config send failure
+        }
         connected = true;
         resolve(true);
       };
@@ -303,6 +328,11 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             setLastResponse(responseText);
             setVoiceState('speaking');
 
+            // Notify if hidden
+            if (document.visibilityState === 'hidden') {
+              pushNotification('JARVIS', responseText);
+            }
+
             if (data.server_tts && ttsSource === 'server') {
               console.log(`[Voice] Server TTS active — waiting for tts_done event`);
               isSpeakingRef.current = true;
@@ -321,10 +351,14 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
             }
 
           } else if (data.type === 'tts_done') {
-            console.log('[Voice] Server TTS finished (tts_done received) — resetting state');
+            console.log('[Voice] Server TTS finished (tts_done received) — speaking via browser');
             if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
             isSpeakingRef.current = false;
-            onSpeechFinished();
+            
+            // If we are in server_tts mode but server skipped, we MUST speak now
+            const textToSpeak = lastResponse || "I'm sorry sir, I didn't catch that.";
+            const cleanText = cleanTextForSpeech(textToSpeak);
+            speak(cleanText, onSpeechFinished);
           } else if (data.type === 'tts_fallback') {
             console.log(`[Voice] Server TTS failed (${data.reason}) — using browser fallback`);
             if (ttsDurationTimeout.current) clearTimeout(ttsDurationTimeout.current);
@@ -335,6 +369,12 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           } else if (data.type === 'stream_chunk') {
             // Reset watchdog since we are active
             stateWatchdogRef.current.since = Date.now();
+          } else if (data.type === 'face_register_start') {
+            console.log('[Voice] Face registration triggered by server');
+            window.dispatchEvent(new CustomEvent('vision:register', { detail: { prompt: data.prompt } }));
+          } else if (data.type === 'face_identify_start') {
+            console.log('[Voice] Face identification triggered by server');
+            window.dispatchEvent(new CustomEvent('vision:identify', { detail: { prompt: data.prompt } }));
           } else if (data.type === 'state') {
             if (data.state === 'thinking') setVoiceState('thinking');
           } else if (data.type === 'ack') {
@@ -531,6 +571,11 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
           recognitionRef.current.stop();
         } catch (e) {}
       }
+      // Clear any running VAD poll interval
+      if (vadInterval.current) {
+        clearInterval(vadInterval.current);
+        vadInterval.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -548,7 +593,9 @@ export const VoiceProvider: React.FC<VoiceProviderProps> = ({ children }) => {
       isConversationMode,
       toggleConversationMode,
       ttsSource,
-      setTtsSource
+      setTtsSource,
+      vadSensitivity,
+      setVadSensitivity
     }}>
       {children}
     </VoiceContext.Provider>

@@ -1,56 +1,46 @@
 {
-  "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:1420",
-    "frontendDist": "../dist"
-  },
-  "bundle": {
-    "active": true,
-    "category": "DeveloperTool",
-    "copyright": "",
-    "targets": "all",
-    "externalBin": [],
-    "icon": [],
-    "longDescription": "",
-    "macOS": {
-      "entitlements": null,
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": null,
-      "signingIdentity": null
-    },
-    "resources": [],
-    "shortDescription": "",
-    "linux": {
-      "deb": {
-        "depends": []
-      }
-    },
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    }
-  },
+  "$schema": "https://raw.githubusercontent.com/nicknisi/tauri-v2-json-schema/main/tauri-v2-schema.json",
   "productName": "Operator",
   "version": "1.0.0",
   "identifier": "com.operator.dev",
-  "plugins": {},
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:8081",
+    "frontendDist": "../dist"
+  },
   "app": {
     "security": {
       "csp": null
     },
     "windows": [
       {
-        "fullscreen": false,
-        "height": 800,
-        "resizable": true,
         "title": "Operator Dashboard",
-        "width": 1200,
-        "minWidth": 800,
-        "minHeight": 600
+        "width": 1280,
+        "height": 720,
+        "minWidth": 900,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true
       }
     ]
+  },
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "targets": "all",
+    "icon": ["icons/icon.ico"],
+    "resources": ["icons/icon.ico"],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "plugins": {
+    "notification": {
+      "permissionState": "prompt"
+    }
   }
 }

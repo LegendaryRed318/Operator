@@ -1011,6 +1011,39 @@ async def trigger_skill(request: SkillTriggerRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/remote/devices")
+async def get_remote_devices():
+    """Get the status of all registered remote devices."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from remote_bridge import get_remote_bridge
+        bridge = await get_remote_bridge()
+        devices = await bridge.get_all_status()
+        return {"status": "ok", "devices": devices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RemoteCommandRequest(BaseModel):
+    device_name: str
+    command: str
+
+@app.post("/remote/command")
+async def run_remote_command(request: RemoteCommandRequest, raw_req: Request):
+    """Execute a command on a remote device."""
+    try:
+        _require_admin(raw_req)
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from remote_bridge import get_remote_bridge
+        bridge = await get_remote_bridge()
+        result = await bridge.run_command(request.device_name, request.command)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/skills")
 async def get_skills():
     """List built-in and TOML skills with metadata."""

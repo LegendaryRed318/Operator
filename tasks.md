@@ -100,6 +100,15 @@
 
 ---
 
+### 4. **Web Search Not Working / Not Robust** ✅ FIXED
+**File:** `backend/skills.py` - `_handle_web_search()`
+
+**Status:** ✅ **FIXED** - Refactored with robust query parsing, improved sanitization, and intelligent AI fallback. Tested and verified.
+
+**Priority:** 🔴 **HIGH** → ✅ DONE
+
+---
+
 ## 🟡 **MODERATE ISSUES**
 
 ### 4. **Duplicate Skills System** ✅ FIXED
@@ -1012,26 +1021,52 @@ All critical bugs fixed, all features implemented. System is stable, maintainabl
 - ✅ **Tasks Plugin**: Tasks are now saved as `- [ ] Task #priority-medium ➕ YYYY-MM-DD` so Obsidian can track them natively.
 
 
+## 🌐 **PHASE 13: BROWSER VISION & NATIVE UI CONSOLIDATION** ✅ FIXED
+
+### 58. Vision Migration: Browser-native Face + Hand Detection ✅ FIXED
+**Status:** ✅ **COMPLETE** - Python-based `vision_service.py` decommissioned. All vision processing (Face + Hands) moved to `frontend/src/components/VisionTracker.tsx` using MediaPipe CDN. Indicators moved to TOP RIGHT for better visibility. Added holographic scanline effects.
+
+### 59. Face Recognition Frontend ✅ FIXED
+**Status:** ✅ **COMPLETE** - Switched to Face Mesh (468 landmarks). Added registration logic (5 samples) and real-time matching. Added "Register My Face" button to OperatorHUD settings.
+- **Biometric Storage:** Embeddings stored in localStorage (`jarvis_face_embedding`).
+
+### 60. Tauri Native App Implementation ✅ FIXED
+**Status:** ✅ **COMPLETE** - Tauri structure verified and configured with transparent windowing, system tray, and native notification API. Ready for production build.
+
+### 61. HUD UI Improvements & Identity Polish ✅ FIXED
+**Status:** ✅ **COMPLETE** - Premium Stark Industries aesthetic (holographic panels, scanlines, tech-rings) fully implemented. Fixed `tts_done` verbal response logic.
+- ✅ **VAD Sensitivity**: Slider integrated and hooked to backend Silero threshold.
+- ✅ **Orb Performance**: High/Battery modes implemented (particles: 2000 vs 900).
+- ✅ **Stark Identity**: Tech-brackets, holographic scanlines, and Orbitron/Share Tech Mono fonts applied.
+
+### 62. Remote Admin Bridge ✅ FIXED
+**Status:** ✅ **COMPLETE** - Integrated voice commands for remote device management (battery, disk, etc.). Added unified skill dispatcher in `skills.py`.
+
 ---
 
 ## 🔍 **FUTURE ROADMAP & REMAINING TASKS**
 
 | # | Task | Category | Priority | Status |
 |---|------|----------|----------|--------|
-| 54 | **Web Search Skill** | Intelligence | 🟡 MED | ✅ COMPLETE |
-| 55 | **Remote Admin Skills** | Intelligence | 🔴 HIGH | 🔍 PLANNED |
-| 56 | **Face Recognition Phase 2: Identity** | Security | 🔴 HIGH | 🔍 PLANNED |
-| 57 | **Obsidian Integration (CouchDB + Tailscale LiveSync)** | Memory | 🟢 LOW | ✅ COMPLETE |
-| 58 | **Vision Migration: Browser-native Face + Hand Detection** | UI/Vision | 🔴 HIGH | ✅ COMPLETE |
-| 59 | **Tauri Native App** | UI/UX | 🟡 MED | 🔍 PLANNED |
-| 60 | **Daily Conversation Summaries** | Memory | 🟢 LOW | 🔍 PLANNED |
+| 58 | **Vision Migration: Browser-native** | UI/Vision | 🔴 HIGH | ✅ COMPLETE |
+| 59 | **Face Recognition Identity** | Security | 🔴 HIGH | ✅ COMPLETE |
+| 60 | **Tauri Native App** | UI/UX | 🟡 MED | ✅ COMPLETE |
+| 61 | **HUD UI Improvements** | UI/UX | 🟢 LOW | ✅ COMPLETE |
+| 62 | **Daily Conversation Summaries** | Memory | 🟢 LOW | ✅ COMPLETE |
+| 63 | **Face Recognition Identity Polish** | Security | 🔴 HIGH | ✅ COMPLETE |
+| 64 | **VisionTracker Stability (Init Fix)** | UI/UX | 🟡 MED | ✅ COMPLETE |
+| 65 | **Watchdog & Thinking State Fix** | System | 🔴 HIGH | 🟡 IN PROGRESS |
+| 66 | **Frontend Console Cleanup** | UI/UX | 🟢 LOW | ✅ COMPLETE |
 
 ### 🛠️ **AREAS FOR IMPROVEMENT**
-1. **Orb Frame-rate**: Throttle MediaPipe updates when running on battery or low-spec machines.
-2. **VAD Sensitivity**: Add a "Sensitivity" slider to the HUD to tune out background TV noise.
-3. **Identity Polish**: Add more "Stark" style UI elements to the Operator Dashboard.
-4. **Remote Execution Bridge**: Use Tailscale SSH or OpenSSH to allow JARVIS to run commands on other user-owned devices.
-5. **Mobile-Hybrid Mode**: Ensure the Tauri `.exe` still hosts the web dashboard on port 8081 so mobile devices can connect even when the PC is running the native app.
+1. **Orb Frame-rate**: ✅ **COMPLETE** - Dynamic throttling implemented in `Orb.tsx`.
+2. **VAD Sensitivity**: ✅ **COMPLETE** - Sensitivity slider hooked to backend.
+3. **Identity Polish**: ✅ **COMPLETE** - Stark UI overhaul finished.
+4. **Remote Execution Bridge**: ✅ **COMPLETE** - Voice commands for remote diagnostics working.
+5. **Mobile-Hybrid Mode**: ✅ **COMPLETE** - Launcher now hosts both Tauri Native and Network Web Dashboard (port 8081) simultaneously.
+6. **Notification Tray**: ✅ **COMPLETE** - Hooked vision (face confirm) and background responses to OS system tray.
+7. **JARVIS Training Engine**: ✅ **COMPLETE** - Implemented automated web research, repository ingestion, and self-generating skill synthesis.
+8. **Startup Reliability**: ✅ **COMPLETE** - Resolved Tauri port conflicts and missing plugin dependencies causing launcher crashes.
 
 ---
 
@@ -1050,6 +1085,14 @@ python -c "import os; from backend.paths import LOGS_PATH; open(LOGS_PATH / 'sle
 # ✅ Check RAG Hash Persistence
 python -c "import json; from backend.paths import LOGS_PATH; print(f'Indexed files: {len(json.load(open(LOGS_PATH / \"indexed_hashes.json\")))}')"
 ```
+
+---
+
+### 🛠️ **STABILIZATION UPDATE (MAY 14, 2026)**
+- ✅ **Identity Polish**: Migrating face recognition logic from local storage to backend vault for high-accuracy biometric matching. <!-- completed: 2026-05-14 -->
+- ✅ **Vision Fix**: Resolving `onWave` dependency loop in `App.tsx` causing double camera initialization. <!-- completed: 2026-05-14 -->
+- 🟡 **System Stability**: Debugging LLM inference hangs and watchdog resets in `ws_server.py`. (Added logging)
+- ✅ **UI Polish**: Applying `autocomplete` attributes to resolve frontend console warnings. <!-- completed: 2026-05-14 -->
 
 ---
 

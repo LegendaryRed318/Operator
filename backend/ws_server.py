@@ -58,6 +58,12 @@ try:
     if env_path.exists():
         load_dotenv(env_path)
         logging.info("[Config] Loaded environment from .env file")
+    
+    # Import training engine
+    from training_engine import start_training_task
+    
+    # Import remote admin bridge
+    from remote_bridge import get_remote_bridge
 except ImportError:
     logging.warning("[Config] python-dotenv not installed, using system environment only")
 
@@ -508,6 +514,17 @@ async def query_gemini(prompt: str) -> str:
         return f"The Gemini service is unavailable, sir. Error: {e}"
 
 
+async def call_llm(prompt: str, model: str = "gemini-1.5-flash") -> str:
+    """Utility to call LLM (Gemini or Ollama) from background tasks."""
+    if "gemini" in model:
+        return await query_gemini(prompt)
+    else:
+        full_response = ""
+        async for chunk in stream_ollama(prompt, model=model):
+            full_response += chunk
+        return full_response
+
+
 def classify_intent(text: str) -> str:
     """Classify the intent of the user's message."""
     lowered = text.lower()
@@ -625,6 +642,8 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
     detected_intent = intent or classify_intent(text)
     logger.info(f"[Voice] Command: '{text[:50]}...' | Intent: {detected_intent}")
 
+    logger.debug("[Voice] Checking memory queries...")
+
     # Check for memory queries FIRST (do you remember, did I say, etc.)
     if INLINE_IMPORTS_AVAILABLE:
         try:
@@ -642,6 +661,8 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                 return
         except Exception as e:
             logger.debug(f"[Voice] Memory query error: {e}")
+
+    logger.debug("[Voice] Checking built-in skills...")
 
     # Check for built-in skill triggers (instant response, no AI needed)
     if INLINE_IMPORTS_AVAILABLE:
@@ -662,6 +683,47 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
                     speak_server(skill_response, force=False)
                     return
                 
+                # Special handling for face registration
+                if skill_result.get("awaiting_face_register"):
+                    logger.info("[Voice] Triggering face registration flow")
+                    await websocket.send(json.dumps({
+                        "type": "face_register_start",
+                        "prompt": skill_response
+                    }))
+                    await broadcast({"type": "state", "state": "speaking"})
+                    speak_server(skill_response, force=False)
+                    return
+
+                # Special handling for face identification
+                if skill_result.get("awaiting_face_identify"):
+                    logger.info("[Voice] Triggering face identification flow")
+                    await websocket.send(json.dumps({
+                        "type": "face_identify_start",
+                        "prompt": skill_response
+                    }))
+                    await broadcast({"type": "state", "state": "speaking"})
+                    speak_server(skill_response, force=False)
+                    return
+
+                # Special handling for Training Skill
+                if skill_result.get("awaiting_training_topic"):
+                    topic = skill_result.get("awaiting_training_topic")
+                    logger.info(f"[Voice] Triggering training task for: {topic}")
+                    
+                    # Send immediate acknowledgment
+                    await websocket.send(json.dumps({
+                        "type": "response",
+                        "text": skill_response,
+                        "model": "jarvis:system",
+                        "server_tts": False
+                    }))
+                    await broadcast({"type": "state", "state": "speaking"})
+                    speak_server(skill_response, force=False)
+                    
+                    # Start background training task
+                    asyncio.create_task(start_training_task(topic, websocket))
+                    return
+
                 await websocket.send(json.dumps({
                     "type": "response",
                     "text": skill_response,
@@ -686,6 +748,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
     history = conversation_histories.get(websocket, [])
 
     # Get vault context
+    logger.debug("[Voice] Fetching vault context...")
     vault_context = ""
     if INLINE_IMPORTS_AVAILABLE:
         try:
@@ -707,6 +770,7 @@ async def handle_voice_command(websocket, text: str, intent: str = None):
         prompt_text = f"{vault_context}\n\nQuery: {text}" if vault_context else text
 
     try:
+        logger.debug("[Voice] Selecting AI model and route...")
         selected_model = select_model_for_intent(text)
         route, route_reason = choose_route(text, selected_model)
         use_gemini = route == "gemini"
@@ -984,6 +1048,31 @@ async def handler(websocket):
                 }
             elif data.get("type") == "wake_diagnostics":
                 await websocket.send(json.dumps({"type": "wake_diagnostics", "telemetry": WAKE_TELEMETRY}))
+            elif data.get("type") == "get_remote_status":
+                try:
+                    bridge = await get_remote_bridge()
+                    status_list = await bridge.get_all_status()
+                    await websocket.send(json.dumps({
+                        "type": "remote_status_list",
+                        "devices": status_list
+                    }))
+                except Exception as e:
+                    logger.error(f"[RemoteBridge] Status error: {e}")
+            elif data.get("type") == "remote_command":
+                try:
+                    bridge = await get_remote_bridge()
+                    device_name = data.get("device_name", "")
+                    command = data.get("command", "")
+                    if device_name and command:
+                        result = await bridge.run_command(device_name, command)
+                        await websocket.send(json.dumps({
+                            "type": "remote_command_result",
+                            "device_name": device_name,
+                            "command": command,
+                            "result": result
+                        }))
+                except Exception as e:
+                    logger.error(f"[RemoteBridge] Command error: {e}")
             elif data.get("type") == "tts_done":
                 await broadcast({"type": "state", "state": "idle"})
             elif data.get("type") == "gaming_mode":
@@ -998,9 +1087,13 @@ async def handler(websocket):
                 speak_server(result["message"], force=False)
             elif data.get("type") == "vision_event":
                 event = data.get("event")
-                if event == "face_detected" and data.get("data", {}).get("new_arrival"):
-                    # Only greet if they just arrived after being gone a while
+                event_data = data.get("data", {})
+                
+                if event == "face_detected" and event_data.get("new_arrival"):
                     greeting = "Welcome back, sir. I've been monitoring the system while you were away."
+                    
+                    # If we already have a recognition label from a concurrent or very recent face_recognition event
+                    # (In practice, we might want to wait a split second for recognition to kick in)
                     await broadcast({"type": "state", "state": "speaking"})
                     await broadcast({
                         "type": "response",
@@ -1008,8 +1101,183 @@ async def handler(websocket):
                         "model": "system:vision",
                         "server_tts": False
                     })
-                    # Also speak via server TTS if browser isn't talking
                     speak_server(greeting, force=False)
+                    
+                elif event == "face_identify":
+                    landmarks = event_data.get("landmarks")
+                    if landmarks:
+                        try:
+                            from face_recognition import identify_face
+                            result = await asyncio.to_thread(identify_face, landmarks)
+                            
+                            identified = result.get("identified", False)
+                            label = result.get("name", "Unknown")
+                            confidence = result.get("confidence", 0)
+                            
+                            # Send recognition result back to frontend
+                            await websocket.send(json.dumps({
+                                "type": "vision:event",
+                                "event": "face_recognition",
+                                "data": {
+                                    "recognized": identified,
+                                    "label": label,
+                                    "confidence": confidence
+                                }
+                            }))
+                            
+                            if identified and confidence > 0.85:
+                                # Special greeting for RED if they just arrived
+                                now = time.time()
+                                last_greeted = getattr(websocket, "last_greeted_name", "")
+                                last_greet_time = getattr(websocket, "last_greet_time", 0)
+                                
+                                if label == "RED" and (label != last_greeted or now - last_greet_time > 600):
+                                    websocket.last_greeted_name = label
+                                    websocket.last_greet_time = now
+                                    personal_greeting = f"Identity confirmed. Welcome home, {label}. All systems are under your control."
+                                    
+                                    await broadcast({"type": "state", "state": "speaking"})
+                                    await broadcast({
+                                        "type": "response",
+                                        "text": personal_greeting,
+                                        "model": "system:vision",
+                                        "server_tts": False
+                                    })
+                                    speak_server(personal_greeting, force=False)
+                        except Exception as e:
+                            logger.error(f"[Vision] Identification error: {e}")
+
+                elif event == "face_register_sample":
+                    person_id = event_data.get("person_id")
+                    name = event_data.get("name")
+                    landmarks = event_data.get("landmarks")
+                    sample_idx = event_data.get("sample_index")
+                    
+                    if person_id and name and landmarks:
+                        try:
+                            from face_recognition import register_face
+                            result = await asyncio.to_thread(register_face, person_id, name, landmarks)
+                            
+                            # Notify frontend of progress
+                            await websocket.send(json.dumps({
+                                "type": "vision:event",
+                                "event": "face_register_progress",
+                                "data": {
+                                    "captured": sample_idx,
+                                    "total": event_data.get("total_samples", 5),
+                                    "success": result.get("success", False)
+                                }
+                            }))
+                            
+                            if sample_idx >= event_data.get("total_samples", 5) and result.get("success"):
+                                logger.info(f"[Vision] Face registration complete for {name}")
+                                await websocket.send(json.dumps({
+                                    "type": "vision:event",
+                                    "event": "face_registered",
+                                    "data": { "label": name }
+                                }))
+                                
+                                # Confirm via voice
+                                confirm_msg = f"Biometric registration complete. I have secured your profile, {name}."
+                                await websocket.send(json.dumps({
+                                    "type": "response",
+                                    "text": confirm_msg,
+                                    "model": "system:vision",
+                                    "server_tts": False
+                                }))
+                                speak_server(confirm_msg, force=False)
+                        except Exception as e:
+                            logger.error(f"[Vision] Registration error: {e}")
+                    
+                elif event == "face_lost":
+                    # Log face departure
+                    duration = event_data.get("duration", 0)
+                    logger.info(f"[Vision] Face left camera area (was present for {duration:.1f}s)")
+                    
+                else:
+                    await websocket.send(json.dumps({
+                        "type": "face_register_result",
+                        "success": False,
+                        "message": "Missing person_id, name, or landmarks"
+                    }))
+                    
+            elif data.get("type") == "face_identify":
+                # Identify a face from landmarks
+                landmarks = data.get("landmarks")
+                
+                if landmarks:
+                    try:
+                        from face_recognition import identify_face
+                        result = identify_face(landmarks)
+                        
+                        await websocket.send(json.dumps({
+                            "type": "face_identify_result",
+                            "identified": result.get("identified", False),
+                            "person_id": result.get("person_id"),
+                            "name": result.get("name", "Unknown"),
+                            "confidence": result.get("confidence", 0.0),
+                            "confidence_level": result.get("confidence_level", "none"),
+                            "message": result.get("message", "")
+                        }))
+                    except Exception as e:
+                        logger.error(f"[FaceRecognition] Identification error: {e}")
+                        await websocket.send(json.dumps({
+                            "type": "face_identify_result",
+                            "identified": False,
+                            "name": "Error",
+                            "message": f"Identification failed: {e}"
+                        }))
+                else:
+                    await websocket.send(json.dumps({
+                        "type": "face_identify_result",
+                        "identified": False,
+                        "name": "Unknown",
+                        "message": "No face data provided"
+                    }))
+                    
+            elif data.get("type") == "face_list_profiles":
+                # List all registered face profiles
+                try:
+                    from face_recognition import list_face_profiles
+                    profiles = list_face_profiles()
+                    
+                    await websocket.send(json.dumps({
+                        "type": "face_profiles",
+                        "count": len(profiles),
+                        "profiles": profiles
+                    }))
+                except Exception as e:
+                    logger.error(f"[FaceRecognition] List profiles error: {e}")
+                    await websocket.send(json.dumps({
+                        "type": "face_profiles",
+                        "count": 0,
+                        "profiles": [],
+                        "error": str(e)
+                    }))
+                    
+            elif data.get("type") == "face_delete_profile":
+                # Delete a face profile
+                person_id = data.get("person_id")
+                if person_id:
+                    try:
+                        from face_recognition import delete_face_profile
+                        success = delete_face_profile(person_id)
+                        
+                        await websocket.send(json.dumps({
+                            "type": "face_delete_result",
+                            "success": success,
+                            "person_id": person_id,
+                            "message": f"Profile {person_id} deleted" if success else f"Profile {person_id} not found"
+                        }))
+                    except Exception as e:
+                        logger.error(f"[FaceRecognition] Delete profile error: {e}")
+                        await websocket.send(json.dumps({
+                            "type": "face_delete_result",
+                            "success": False,
+                            "person_id": person_id,
+                            "message": f"Delete failed: {e}"
+                        }))
+                    
             elif data.get("type") == "system_identify":
                 client_name = data.get("client")
                 logger.info(f"[WebSocket] System component identified: {client_name}")
@@ -1197,6 +1465,13 @@ async def main():
             logger.error(f"[RAG] Failed to initialize: {e}")
 
     asyncio.create_task(proactive_alert_loop())
+
+    # Initialize remote admin bridge
+    try:
+        await get_remote_bridge(broadcast)
+        logger.info("[RemoteBridge] Initialized successfully")
+    except Exception as e:
+        logger.error(f"[RemoteBridge] Failed to initialize: {e}")
 
     # Pre-warm Ollama model to avoid first-query delay
     asyncio.create_task(prewarm_ollama_model())

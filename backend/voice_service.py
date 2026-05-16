@@ -125,6 +125,7 @@ class VoiceService:
         self.stream = None
         self.loop = None  # Will be set from main()
         self._utterance_queue = queue.Queue()  # Thread-safe queue for audio buffers
+        self.vad_threshold = SILERO_THRESHOLD
         
     def is_speech_silero(self, audio_chunk: np.ndarray) -> bool:
         """Check if audio chunk contains speech using Silero VAD."""
@@ -133,7 +134,7 @@ class VoiceService:
             tensor = torch.FloatTensor(audio_chunk)
             # Get speech probability
             speech_prob = silero_model(tensor, SAMPLE_RATE).item()
-            return speech_prob > SILERO_THRESHOLD
+            return speech_prob > self.vad_threshold
         except Exception as e:
             logger.debug(f"[VAD] Silero error: {e}")
             return False
@@ -420,7 +421,14 @@ class VoiceService:
                     logger.debug(f"Received from client: {data}")
                     
                     # Handle any client commands here
-                    if data.get("action") == "ping":
+                    if data.get("type") == "config":
+                        if "vadSensitivity" in data:
+                            # Map 0-100 sensitivity to 0.1-0.9 threshold (inverted: higher sensitivity = lower threshold)
+                            sensitivity = data["vadSensitivity"]
+                            self.vad_threshold = 1.0 - (max(10, min(95, sensitivity)) / 100.0)
+                            logger.info(f"[Config] VAD Sensitivity updated to {sensitivity}% (Threshold: {self.vad_threshold:.2f})")
+                            
+                    elif data.get("action") == "ping":
                         await websocket.send(json.dumps({"type": "pong"}))
                         
                 except json.JSONDecodeError:

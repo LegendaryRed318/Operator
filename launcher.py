@@ -198,12 +198,20 @@ SERVICES = {
     # },
     "frontend": {
         "name": "Frontend (Vite)",
-        # Use cmd.exe /c to run npm without spawning PowerShell window
+        "#": "Always active in Hybrid mode to host dashboard for mobile devices",
         "cmd": ["cmd.exe", "/c", "npm", "run", "dev"],
         "cwd": str(FRONTEND_DIR),
         "log": LOGS_DIR / "frontend.log",
         "delay": 60,  # Wait for ws_server RAG indexing to finish
     },
+    "tauri": {
+        "name": "Tauri Native Desktop",
+        "cmd": ["cmd.exe", "/c", "npm", "run", "tauri", "dev"],
+        "cwd": str(FRONTEND_DIR),
+        "log": LOGS_DIR / "tauri.log",
+        "delay": 10,
+        "optional": True,
+    }
 }
 
 # Track running processes

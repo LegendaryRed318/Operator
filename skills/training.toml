@@ -1,0 +1,24 @@
+# JARVIS Training Engine - Self-training on topics or repositories
+[skill]
+name = "training"
+trigger = "train yourself on"
+aliases = [
+    "learn about", 
+    "study this repo", 
+    "read up on", 
+    "ingest this codebase", 
+    "train on this github repo", 
+    "give me a report after learning",
+    "train on"
+]
+trigger_mode = "contains"
+description = "Self-training engine for learning new topics or repositories"
+priority = 80
+enabled = true
+requires_online = true
+cooldown_seconds = 10
+timeout_seconds = 600
+
+[action]
+type = "training"
+response = "Initiating training sequence, sir. Stand by."

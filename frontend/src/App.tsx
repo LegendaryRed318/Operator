@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingScreen } from './components/LoadingScreen';
 import { LockScreen } from './components/LockScreen';
 import { OperatorHUD } from './components/dashboard/OperatorHUD';
-import HandTracker from './components/HandTracker';
+import VisionTracker from './components/VisionTracker';
 import { VoiceProvider, useVoice } from './contexts/VoiceContext';
 import type { ErrorItem, Project } from './types';
 
@@ -307,6 +307,11 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const handleWave = useCallback(() => {
+    console.log('[App] Wave detected — entering hotword mode');
+    window.dispatchEvent(new CustomEvent('jarvis:wake'));
+  }, []);
+
   // Check if on mobile device on load + load saved preference
   useEffect(() => {
     const checkMobile = () => {
@@ -371,17 +376,14 @@ const AppContent: React.FC = () => {
         />
       )}
 
-      {/* HandTracker runs regardless so a wave can unlock from the lock screen */}
-      <MemoizedHandTracker onWave={() => {
-        console.log('[App] Wave detected — entering hotword mode');
-        window.dispatchEvent(new CustomEvent('jarvis:wake'));
-      }} />
+      {/* VisionTracker runs regardless so a wave can unlock from the lock screen */}
+      <MemoizedVisionTracker onWave={handleWave} />
     </>
   );
 };
 
 const MemoizedHUD = React.memo(OperatorHUD);
-const MemoizedHandTracker = React.memo(HandTracker);
+const MemoizedVisionTracker = React.memo(VisionTracker);
 
 // Main App wrapped with VoiceProvider
 const App: React.FC = () => {

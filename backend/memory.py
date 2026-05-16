@@ -539,7 +539,7 @@ source: speech-to-text
 
 def summarize_conversations_for_date(date_str: str = None) -> str:
     """
-    Summarize all conversations from a specific date.
+    Summarize all conversations from a specific date using the Decision Engine.
     Returns the summary text or empty string if no conversations.
     """
     if not ensure_vault():
@@ -556,45 +556,54 @@ def summarize_conversations_for_date(date_str: str = None) -> str:
         content = conv_file.read_text(encoding="utf-8")
         # Count conversation turns
         turns = content.count("**RED:**")
-        if turns < 3:
+        if turns < 2:
             return ""  # Not enough to summarize
 
-        # Extract just the conversation (skip header)
-        lines = content.split("\n")
-        conversation_lines = []
-        for line in lines:
-            if line.startswith("**RED:**") or line.startswith("**JARVIS:**"):
-                conversation_lines.append(line)
+        logger.info(f"[Memory] Summarizing {turns} exchanges for {date_str}")
 
-        # Simple extraction of topics (look for key terms)
-        topics = set()
-        topic_keywords = ["code", "build", "project", "error", "bug", "fix", "weather", "schedule", "reminder", "note", "idea", "question"]
-        content_lower = content.lower()
-        for keyword in topic_keywords:
-            if keyword in content_lower:
-                topics.add(keyword)
+        # Use DecisionEngine for intelligent summarization
+        try:
+            from decision_engine import DecisionEngine
+            engine = DecisionEngine()
+            
+            # Prepare the prompt
+            prompt = f"""You are Jarvis. Please provide a concise but comprehensive summary of today's conversation log for RED.
+            
+DATE: {date_str}
+LOG CONTENT:
+{content[:15000]}  # Truncate if extremely long
 
-        summary_topics = ", ".join(sorted(topics)) if topics else "general conversation"
+SUMMARY GUIDELINES:
+1. Identify the main topics discussed.
+2. List any key decisions or changes made to the system/projects.
+3. Note any pending tasks or reminders RED mentioned.
+4. Keep the tone loyal and helpful.
+5. Format the output in clean markdown.
+
+Output only the summary markdown."""
+            
+            summary_body = engine.chat(prompt)
+            
+            if not summary_body or len(summary_body) < 50:
+                raise Exception("LLM returned empty or too short summary")
+                
+        except Exception as e:
+            logger.warning(f"[Memory] LLM summarization failed, falling back to basic: {e}")
+            # Basic fallback
+            summary_body = f"Today involved {turns} exchanges covering various topics."
 
         summary = f"""---
 date: {date_str}
 type: conversation_summary
-topics: {summary_topics}
+exchanges: {turns}
 ---
 
 # Conversation Summary — {date_str}
 
-**Total exchanges:** {turns}
-**Topics discussed:** {summary_topics}
+{summary_body}
 
-## Key Points
+*Full log: [[conversations/{date_str}]]*
 """
-
-        # Extract key exchanges (first and last few)
-        key_exchanges = conversation_lines[:4] + (["..."] if turns > 8 else []) + conversation_lines[-4:]
-        summary += "\n".join(key_exchanges)
-        summary += f"\n\n*Full log: [[conversations/{date_str}]]*\n"
-
         return summary
     except Exception as e:
         logger.error(f"[Memory] Failed to summarize conversations: {e}")

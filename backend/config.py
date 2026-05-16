@@ -182,7 +182,6 @@ _HOMELAB_MODE_CONFIG = {
     ),
     "network": NetworkConfig(
         enable_remote_access=True,
-        tailscale_vpn=True,
         ngrok_enabled=False,
     ),
 }

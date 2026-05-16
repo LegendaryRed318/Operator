@@ -10,6 +10,13 @@ import logging
 import requests
 import psutil
 
+# Import config for centralized model settings
+try:
+    from config import ai_config, get_config
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -188,13 +195,8 @@ def select_model_by_ram() -> str | None:
     """
     Select the best Ollama model based on available RAM.
     Checks if model is installed, falls back to available models.
+    Uses config.py AIModelConfig when available, with hardcoded fallback.
     Returns None to skip Ollama entirely and use Gemini fallback.
-
-    New Priority Logic:
-      > 6GB free  → deepseek-r1:7b (fallback: qwen2.5-coder:7b)
-      > 4GB free  → qwen2.5-coder:7b (fallback: llama3.2:3b)
-      > 2GB free  → llama3.2:3b (fallback: qwen2.5-coder:1.5b-base)
-      <= 2GB free → qwen2.5-coder:1.5b-base (fallback: None/Gemini)
     """
     try:
         available_gb = psutil.virtual_memory().available / (1024 ** 3)
@@ -204,24 +206,46 @@ def select_model_by_ram() -> str | None:
             logger.warning("[AI] No Ollama models installed, using Gemini")
             return None
 
-        # Priority selection based on RAM
-        if available_gb > 6:
-            preferred = "deepseek-r1:7b"
-            fallback = "qwen2.5-coder:7b"
-            tier = "> 6GB"
-        elif available_gb > 4:
-            preferred = "llama3.2:3b"
-            fallback = "qwen2.5-coder:7b"
-            tier = "> 4GB"
-        elif available_gb > 2:
-            preferred = "llama3.2:3b"
-            fallback = "qwen2.5-coder:1.5b-base"
-            tier = "> 2GB"
+        # Use config.py values if available, otherwise use hardcoded defaults
+        if CONFIG_AVAILABLE:
+            cfg = ai_config
+            large_threshold = cfg.large_model_ram_gb
+            medium_threshold = cfg.medium_model_ram_gb
+            small_threshold = cfg.small_model_ram_gb
+            large_model = cfg.large_model
+            reasoning_model = cfg.reasoning_model
+            fast_model = cfg.fast_model
+            fallback_model = cfg.fallback_model
+            logger.info(f"[AI] Using config.py model configuration")
         else:
-            # For very low RAM, prefer llama3.2:3b (conversation) over qwen2.5-coder:1.5b-base (code-only)
-            preferred = "llama3.2:3b"
-            fallback = "qwen2.5-coder:1.5b-base"
-            tier = "<= 2GB"
+            # Hardcoded defaults (fallback)
+            large_threshold = 6.0
+            medium_threshold = 4.0
+            small_threshold = 2.0
+            large_model = "qwen2.5-coder:7b"
+            reasoning_model = "deepseek-r1:7b"
+            fast_model = "llama3.2:3b"
+            fallback_model = "qwen2.5-coder:1.5b-base"
+            logger.info(f"[AI] Using hardcoded model configuration (config.py unavailable)")
+
+        # Priority selection based on RAM thresholds
+        if available_gb > large_threshold:
+            preferred = reasoning_model  # deepseek-r1:7b for high RAM
+            fallback = large_model       # qwen2.5-coder:7b
+            tier = f"> {large_threshold}GB"
+        elif available_gb > medium_threshold:
+            preferred = fast_model       # llama3.2:3b for medium RAM
+            fallback = large_model       # qwen2.5-coder:7b
+            tier = f"> {medium_threshold}GB"
+        elif available_gb > small_threshold:
+            preferred = fast_model       # llama3.2:3b
+            fallback = fallback_model    # qwen2.5-coder:1.5b-base
+            tier = f"> {small_threshold}GB"
+        else:
+            # For very low RAM, prefer conversation model over code-only
+            preferred = fast_model       # llama3.2:3b
+            fallback = fallback_model    # qwen2.5-coder:1.5b-base
+            tier = f"<= {small_threshold}GB"
         
         # 1. Try preferred
         if preferred in installed:
@@ -240,11 +264,19 @@ def select_model_by_ram() -> str | None:
             logger.info(f"[AI] Selected guzesqdro/Claude_Sonnet_4.6_Reduced:latest (Smart small model, RAM: {available_gb:.1f}GB)")
             return "guzesqdro/Claude_Sonnet_4.6_Reduced:latest"
         
-        # 4. Next tier down logic (Manual fallback sequence)
-        fallback_sequence = ["deepseek-r1:7b", "qwen2.5-coder:7b", "llama3.2:3b", "qwen2.5-coder:1.5b-base"]
+        # 4. Next tier down logic (Dynamic fallback sequence from config)
+        fallback_sequence = [reasoning_model, large_model, fast_model, fallback_model]
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_sequence = []
+        for m in fallback_sequence:
+            if m not in seen:
+                seen.add(m)
+                unique_sequence.append(m)
+        
         try:
-            start_idx = fallback_sequence.index(preferred)
-            for model in fallback_sequence[start_idx+1:]:
+            start_idx = unique_sequence.index(preferred)
+            for model in unique_sequence[start_idx+1:]:
                 if model in installed:
                     logger.info(f"[AI] Selected {model} (Tier-down fallback, RAM: {available_gb:.1f}GB)")
                     return model
@@ -256,12 +288,16 @@ def select_model_by_ram() -> str | None:
             
     except Exception as e:
         logger.error(f"[AI] Error selecting model: {e}")
-        # Prefer llama3.2:3b for conversation, fallback to qwen2.5-coder:1.5b-base only as last resort
+        # Final fallback: use config fast_model, then fallback_model
         installed = get_installed_models() or []
-        if "llama3.2:3b" in installed:
-            return "llama3.2:3b"
-        elif "qwen2.5-coder:1.5b-base" in installed:
-            return "qwen2.5-coder:1.5b-base"
+        # Get fallback models from config or use hardcoded
+        final_fallback_1 = fast_model if 'fast_model' in locals() else "llama3.2:3b"
+        final_fallback_2 = fallback_model if 'fallback_model' in locals() else "qwen2.5-coder:1.5b-base"
+        
+        if final_fallback_1 in installed:
+            return final_fallback_1
+        elif final_fallback_2 in installed:
+            return final_fallback_2
         return None
 
 
